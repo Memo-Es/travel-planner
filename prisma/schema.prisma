@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  MEMBER
+}
+
+enum ItemSection {
+  STAY
+  TRANSPORT
+  ACTIVITIES
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  memberships  Membership[]
+  invitesSent  Invite[]     @relation("InviteCreatedBy")
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  name        String
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+  trips       Trip[]
+  tasks       Task[]
+  invites     Invite[]
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  role      Role     @default(MEMBER)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+
+  @@unique([userId, teamId])
+}
+
+model Invite {
+  id            String    @id @default(cuid())
+  token         String    @unique @default(cuid())
+  team          Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId        String
+  createdBy     User      @relation("InviteCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById   String
+  createdAt     DateTime  @default(now())
+  acceptedAt    DateTime?
+  acceptedEmail String?
+}
+
+model Trip {
+  id        String     @id @default(cuid())
+  team      Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  label     String
+  start     DateTime
+  end       DateTime
+  order     Int        @default(0)
+  createdAt DateTime   @default(now())
+  items     TripItem[]
+
+  @@index([teamId])
+}
+
+model TripItem {
+  id      String      @id @default(cuid())
+  trip    Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId  String
+  section ItemSection
+  title   String
+  url     String      @default("")
+  cost    String      @default("")
+  order   Int         @default(0)
+
+  @@index([tripId])
+}
+
+model Task {
+  id        String   @id @default(cuid())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  title     String
+  tag       String   @default("unscheduled")
+  done      Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([teamId])
+}
