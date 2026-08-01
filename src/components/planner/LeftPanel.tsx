@@ -2,6 +2,7 @@
 
 import type { TripData, TeamOption } from "@/lib/types";
 import { fmtRange } from "@/lib/dates";
+import { logout } from "@/actions/team";
 
 const ACCENT = "oklch(0.62 0.19 285)";
 const ACCENT_SOFT = "oklch(0.93 0.045 288)";
@@ -113,6 +114,15 @@ export default function LeftPanel({
         </div>
         <span className="w-[17px] h-[17px] rounded-full border-[1.5px] border-line block flex-none" />
       </div>
+
+      <form action={logout} className="mt-3">
+        <button
+          type="submit"
+          className="text-[12.5px] text-muted-3 bg-transparent border-0 p-0 cursor-pointer hover:text-muted"
+        >
+          Sign out
+        </button>
+      </form>
     </aside>
   );
 }

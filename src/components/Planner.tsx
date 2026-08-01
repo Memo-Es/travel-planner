@@ -9,7 +9,7 @@ import { HOLIDAY_NOTES } from "@/lib/demoData";
 import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
 import { createTrip, addItem, updateItem, deleteItem, updateStopDates } from "@/actions/trips";
 import { createTask, toggleTask } from "@/actions/tasks";
-import { logout, switchTeam, updateTeamName, updateTeamCurrency, createInvite } from "@/actions/team";
+import { switchTeam, updateTeamName, updateTeamCurrency, createInvite } from "@/actions/team";
 
 import LeftPanel from "@/components/planner/LeftPanel";
 import LeftRail from "@/components/planner/LeftRail";
@@ -427,15 +427,6 @@ export default function Planner({
           onChange={setMobileTab}
         />
       )}
-
-      <form action={logout} className="fixed top-3 right-3 z-50">
-        <button
-          type="submit"
-          className="h-7 px-2.5 rounded-lg border border-line bg-white/90 backdrop-blur-sm text-[12px] text-muted-3 cursor-pointer hover:text-muted hover:bg-white"
-        >
-          Sign out
-        </button>
-      </form>
     </div>
   );
 }
