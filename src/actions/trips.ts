@@ -41,6 +41,12 @@ export async function createTrip(teamId: string) {
   return trip.id;
 }
 
+export async function deleteTrip(tripId: string) {
+  await requireTripAccess(tripId);
+  await prisma.trip.delete({ where: { id: tripId } });
+  revalidatePath("/");
+}
+
 const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date");
 
 export async function updateStopDates(tripId: string, start: string, end: string) {

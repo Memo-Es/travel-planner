@@ -19,6 +19,8 @@ export default function LeftPanel({
   onOpenSettings,
   onSelectTrip,
   onAddTrip,
+  addingTrip,
+  onDeleteTrip,
   onClose,
   showClose,
   todayLabel,
@@ -34,6 +36,8 @@ export default function LeftPanel({
   onOpenSettings: () => void;
   onSelectTrip: (t: TripData) => void;
   onAddTrip: () => void;
+  addingTrip: boolean;
+  onDeleteTrip: (id: string, label: string) => void;
   onClose: () => void;
   showClose: boolean;
   todayLabel: string;
@@ -81,27 +85,36 @@ export default function LeftPanel({
 
       <nav className={"flex flex-col gap-[3px]" + (teams.length > 1 ? "" : " mt-5")}>
         {trips.map((t, i) => (
-          <button
-            key={t.id}
-            onClick={() => onSelectTrip(t)}
-            className="grid items-center gap-2.5 bg-transparent border-0 py-2.5 px-2 -mx-2 rounded-lg cursor-pointer text-left text-[14.5px] text-ink-soft hover:bg-hover"
-            style={{ gridTemplateColumns: "22px 1fr auto" }}
-          >
-            <span
-              className="w-3 h-3 rounded block"
-              style={{ background: i % 2 ? ACCENT_SOFT : ACCENT }}
-            />
-            <span className="overflow-hidden text-ellipsis whitespace-nowrap">{t.label}</span>
-            <span className="text-[12px] text-muted-3 whitespace-nowrap [font-variant-numeric:tabular-nums]">
-              {fmtRange(t.start, t.end)}
-            </span>
-          </button>
+          <div key={t.id} className="flex items-center gap-0.5 -mx-2">
+            <button
+              onClick={() => onSelectTrip(t)}
+              className="flex-1 min-w-0 grid items-center gap-2.5 bg-transparent border-0 py-2.5 px-2 rounded-lg cursor-pointer text-left text-[14.5px] text-ink-soft hover:bg-hover"
+              style={{ gridTemplateColumns: "22px 1fr auto" }}
+            >
+              <span
+                className="w-3 h-3 rounded block"
+                style={{ background: i % 2 ? ACCENT_SOFT : ACCENT }}
+              />
+              <span className="overflow-hidden text-ellipsis whitespace-nowrap">{t.label}</span>
+              <span className="text-[12px] text-muted-3 whitespace-nowrap [font-variant-numeric:tabular-nums]">
+                {fmtRange(t.start, t.end)}
+              </span>
+            </button>
+            <button
+              onClick={() => onDeleteTrip(t.id, t.label)}
+              title="Delete stop"
+              className="w-7 h-7 flex-none border-0 rounded-lg bg-transparent cursor-pointer text-muted-4 text-[12px] hover:bg-line-soft hover:text-ink-soft"
+            >
+              ✕
+            </button>
+          </div>
         ))}
         <button
           onClick={onAddTrip}
-          className="flex items-center gap-2.5 bg-transparent border-0 py-2.5 px-2 mt-1 -mx-2 rounded-lg cursor-pointer text-[18px] leading-none text-muted-4 hover:bg-hover hover:text-ink"
+          disabled={addingTrip}
+          className="flex items-center gap-2.5 bg-transparent border-0 py-2.5 px-2 mt-1 -mx-2 rounded-lg cursor-pointer text-[18px] leading-none text-muted-4 hover:bg-hover hover:text-ink disabled:opacity-50 disabled:cursor-default"
         >
-          +
+          {addingTrip ? "…" : "+"}
         </button>
       </nav>
 

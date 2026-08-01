@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { TripData, TaskData, TeamOption, InviteData, ItemSectionKey } from "@/lib/types";
 import { buildWeeks, layoutMode, mainWidth, type CalendarEvent } from "@/lib/calendar";
 import { MONTHS_LONG, DAY, ms, toDateInput } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
 import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
-import { createTrip, addItem, updateItem, deleteItem, updateStopDates } from "@/actions/trips";
+import { createTrip, addItem, updateItem, deleteItem, deleteTrip, updateStopDates } from "@/actions/trips";
 import { createTask, toggleTask } from "@/actions/tasks";
 import { switchTeam, updateTeamName, updateTeamCurrency, createInvite } from "@/actions/team";
 
@@ -79,6 +79,11 @@ export default function Planner({
   const [draft, setDraft] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dragging, setDragging] = useState<DragState>(null);
+  const [addingTrip, setAddingTrip] = useState(false);
+  // React state updates aren't synchronous, so a state-only guard can miss
+  // clicks that land before the first re-render (e.g. a fast double-click).
+  // A ref is mutated immediately, so it closes that race.
+  const addingTripRef = useRef(false);
 
   useEffect(() => {
     // A plain `resize` listener can miss the real viewport width on first
@@ -149,9 +154,24 @@ export default function Planner({
   }
 
   async function handleAddTrip() {
-    const id = await createTrip(teamId);
-    setPendingOpenTripId(id);
-    setOverlay(null);
+    if (addingTripRef.current) return;
+    addingTripRef.current = true;
+    setAddingTrip(true);
+    try {
+      const id = await createTrip(teamId);
+      setPendingOpenTripId(id);
+      setOverlay(null);
+      refresh();
+    } finally {
+      addingTripRef.current = false;
+      setAddingTrip(false);
+    }
+  }
+
+  async function handleDeleteTrip(tripId: string, label: string) {
+    if (!window.confirm(`Delete "${label}"? This removes its stay, transport and activity entries too.`)) return;
+    if (openTripId === tripId) closeDrawer();
+    await deleteTrip(tripId);
     refresh();
   }
 
@@ -341,6 +361,8 @@ export default function Planner({
           onOpenSettings={openSettings}
           onSelectTrip={(t) => jumpToTrip(t)}
           onAddTrip={handleAddTrip}
+          addingTrip={addingTrip}
+          onDeleteTrip={handleDeleteTrip}
           onClose={closeOverlay}
           showClose={!!activeOverlay}
           todayLabel={todayLabel}
