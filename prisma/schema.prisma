@@ -3,8 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Neon's Vercel integration sets this automatically alongside DATABASE_URL.
+  // Prisma Migrate needs a non-pooled connection for its advisory locks.
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 enum Role {
