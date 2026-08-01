@@ -316,6 +316,14 @@ export default function Planner({
         />
       )}
 
+      {isMobile && (
+        <MobileTabs
+          active={mobileTab}
+          openCount={openCount}
+          onChange={setMobileTab}
+        />
+      )}
+
       {showLeftRail && (
         <LeftRail trips={trips} onOpenLinks={() => setOverlay("links")} onOpenTrip={(t) => jumpToTrip(t)} />
       )}
@@ -424,14 +432,6 @@ export default function Planner({
           onRename={onRenameTeam}
           onChangeCurrency={onChangeTeamCurrency}
           onCreateInvite={handleCreateInvite}
-        />
-      )}
-
-      {isMobile && (
-        <MobileTabs
-          active={mobileTab}
-          openCount={openCount}
-          onChange={setMobileTab}
         />
       )}
     </div>
