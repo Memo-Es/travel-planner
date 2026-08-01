@@ -13,6 +13,7 @@ export default function TripDrawer({
   isMobile,
   editing,
   form,
+  formError,
   onFormChange,
   onClose,
   onStartAdd,
@@ -27,6 +28,7 @@ export default function TripDrawer({
   isMobile: boolean;
   editing: Editing;
   form: FormState;
+  formError: string | null;
   onFormChange: (f: FormState) => void;
   onClose: () => void;
   onStartAdd: (key: ItemSectionKey) => void;
@@ -224,14 +226,16 @@ export default function TripDrawer({
                     onKeyDown={handleKeyDown}
                     placeholder={sec.placeholder}
                     autoFocus
-                    className="h-10 border border-line rounded-[9px] bg-[#fbfaf9] px-3 text-[14px] text-ink box-border"
+                    className="h-10 rounded-[9px] bg-[#fbfaf9] px-3 text-[14px] text-ink box-border"
+                    style={{ border: `1px solid ${formError?.startsWith("Name") ? "#d64545" : "#e6e4e0"}` }}
                   />
                   <input
                     value={form.url}
                     onChange={(e) => onFormChange({ ...form, url: e.target.value })}
                     onKeyDown={handleKeyDown}
                     placeholder="Booking link (https://…)"
-                    className="h-10 border border-line rounded-[9px] bg-[#fbfaf9] px-3 text-[14px] text-ink box-border"
+                    className="h-10 rounded-[9px] bg-[#fbfaf9] px-3 text-[14px] text-ink box-border"
+                    style={{ border: `1px solid ${formError?.startsWith("Link") ? "#d64545" : "#e6e4e0"}` }}
                   />
                   <div className="flex items-center h-10 border border-line rounded-[9px] bg-[#fbfaf9] px-3 gap-1.5">
                     <span className="text-[14px] text-muted-2 flex-none">{currencySymbol(currency)}</span>
@@ -244,9 +248,15 @@ export default function TripDrawer({
                       className="h-full flex-1 min-w-0 border-0 bg-transparent text-[14px] text-ink outline-none"
                     />
                   </div>
-                  <div className="text-[12px] text-muted-2 leading-[1.4]">
-                    Name, link and cost filled → the item is scheduled automatically.
-                  </div>
+                  {formError ? (
+                    <div className="text-[12px] leading-[1.4]" style={{ color: "#d64545" }}>
+                      {formError}
+                    </div>
+                  ) : (
+                    <div className="text-[12px] text-muted-2 leading-[1.4]">
+                      Name, link and cost filled → the item is scheduled automatically.
+                    </div>
+                  )}
                   <div className="flex gap-2 justify-end">
                     <button
                       onClick={onCancelForm}

@@ -17,12 +17,12 @@ const handleStyle = {
 export default function CalendarView({
   weeks,
   width,
-  onOpenTrip,
+  onBarPointerDown,
   onResizeStart,
 }: {
   weeks: CalendarWeek[];
   width: number;
-  onOpenTrip: (tripId: string) => void;
+  onBarPointerDown: (tripId: string, clientX: number) => void;
   onResizeStart: (tripId: string, edge: "left" | "right", clientX: number) => void;
 }) {
   const weekdays = width / 7 < 48 ? WEEKDAYS_SHORT : WEEKDAYS_FULL;
@@ -60,8 +60,8 @@ export default function CalendarView({
             {week.bars.map((bar) => (
               <div
                 key={bar.key}
-                style={bar.style}
-                onClick={bar.tripId ? () => onOpenTrip(bar.tripId!) : undefined}
+                style={{ ...bar.style, touchAction: bar.tripId ? "none" : bar.style.touchAction }}
+                onPointerDown={bar.tripId ? (e) => onBarPointerDown(bar.tripId!, e.clientX) : undefined}
               >
                 {bar.canDragLeft && (
                   <div

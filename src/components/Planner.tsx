@@ -75,6 +75,7 @@ export default function Planner({
   const [pendingOpenTripId, setPendingOpenTripId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Editing>(null);
   const [form, setForm] = useState<FormState>({ t: "", url: "", cost: "" });
+  const [formError, setFormError] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("calendar");
   const [draft, setDraft] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -196,15 +197,31 @@ export default function Planner({
   function startAdd(key: ItemSectionKey) {
     setEditing({ key, itemId: null });
     setForm({ t: "", url: "", cost: "" });
+    setFormError(null);
   }
 
   function startEdit(key: ItemSectionKey, itemId: string, current: FormState) {
     setEditing({ key, itemId });
     setForm(current);
+    setFormError(null);
+  }
+
+  function onFormChange(f: FormState) {
+    setForm(f);
+    setFormError(null);
   }
 
   async function saveForm() {
-    if (!editing || !trip || !form.t.trim()) return;
+    if (!editing || !trip) return;
+    if (!form.t.trim()) {
+      setFormError("Name is required.");
+      return;
+    }
+    if (form.url.trim() && !/^https?:\/\//i.test(form.url.trim())) {
+      setFormError("Link must start with http:// or https://");
+      return;
+    }
+    setFormError(null);
     const payload = { title: form.t.trim(), url: form.url.trim(), costAmount: parseCost(form.cost) };
     const section = editing.key.toUpperCase() as "STAY" | "TRANSPORT" | "ACTIVITIES";
     if (editing.itemId === null) {
@@ -286,6 +303,54 @@ export default function Planner({
     async function onUp() {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      document.body.style.userSelect = "";
+      setDragging(null);
+      if (cur.start !== origStart || cur.end !== origEnd) {
+        await updateStopDates(tripId, cur.start, cur.end);
+        refresh();
+      }
+    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
+
+  // Dragging the body of a bar shifts both dates together (moves the stop
+  // without changing its length); a plain click (no meaningful movement)
+  // opens the drawer instead. CLICK_THRESHOLD_PX tells them apart.
+  const CLICK_THRESHOLD_PX = 4;
+
+  function onBarPointerDown(tripId: string, startClientX: number) {
+    const t = trips.find((x) => x.id === tripId);
+    if (!t) return;
+    const origStart = t.start;
+    const origEnd = t.end;
+    const cellW = Math.max(28, width / 7);
+    let cur = { start: origStart, end: origEnd };
+    let hasMoved = false;
+
+    function onMove(e: PointerEvent) {
+      const deltaPx = e.clientX - startClientX;
+      if (!hasMoved) {
+        if (Math.abs(deltaPx) < CLICK_THRESHOLD_PX) return;
+        hasMoved = true;
+        document.body.style.userSelect = "none";
+      }
+      const deltaDays = Math.round(deltaPx / cellW);
+      cur = {
+        start: toDateInput(ms(origStart) + deltaDays * DAY),
+        end: toDateInput(ms(origEnd) + deltaDays * DAY),
+      };
+      setDragging({ tripId, curStart: cur.start, curEnd: cur.end });
+    }
+
+    async function onUp() {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      if (!hasMoved) {
+        setOpenTripId(tripId);
+        return;
+      }
       document.body.style.userSelect = "";
       setDragging(null);
       if (cur.start !== origStart || cur.end !== origEnd) {
@@ -403,7 +468,7 @@ export default function Planner({
           <CalendarView
             weeks={weeks}
             width={width}
-            onOpenTrip={(id) => setOpenTripId(id)}
+            onBarPointerDown={onBarPointerDown}
             onResizeStart={onResizeStart}
           />
         </main>
@@ -434,11 +499,15 @@ export default function Planner({
           isMobile={isMobile}
           editing={editing}
           form={form}
-          onFormChange={setForm}
+          formError={formError}
+          onFormChange={onFormChange}
           onClose={closeDrawer}
           onStartAdd={startAdd}
           onStartEdit={startEdit}
-          onCancelForm={() => setEditing(null)}
+          onCancelForm={() => {
+            setEditing(null);
+            setFormError(null);
+          }}
           onSaveForm={saveForm}
           onDeleteItem={removeItem}
           onUpdateDates={onUpdateStopDates}
