@@ -72,6 +72,7 @@ model Trip {
   label     String
   start     DateTime
   end       DateTime
+  currency  String     @default("EUR")
   order     Int        @default(0)
   createdAt DateTime   @default(now())
   items     TripItem[]
@@ -80,14 +81,14 @@ model Trip {
 }
 
 model TripItem {
-  id      String      @id @default(cuid())
-  trip    Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  tripId  String
-  section ItemSection
-  title   String
-  url     String      @default("")
-  cost    String      @default("")
-  order   Int         @default(0)
+  id         String      @id @default(cuid())
+  trip       Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId     String
+  section    ItemSection
+  title      String
+  url        String      @default("")
+  costAmount Float?
+  order      Int         @default(0)
 
   @@index([tripId])
 }

@@ -7,7 +7,7 @@ import { buildWeeks, layoutMode, mainWidth, type CalendarEvent } from "@/lib/cal
 import { MONTHS_LONG } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
 import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
-import { createTrip, addItem, updateItem, deleteItem } from "@/actions/trips";
+import { createTrip, addItem, updateItem, deleteItem, updateTripCurrency } from "@/actions/trips";
 import { createTask, toggleTask } from "@/actions/tasks";
 import { logout, switchTeam } from "@/actions/team";
 
@@ -21,6 +21,13 @@ import MobileTabs from "@/components/planner/MobileTabs";
 
 export type Editing = { key: ItemSectionKey; itemId: string | null } | null;
 export type FormState = { t: string; url: string; cost: string };
+
+function parseCost(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) ? n : null;
+}
 export type Overlay = "links" | "tasks" | null;
 export type MobileTab = "links" | "calendar" | "tasks";
 
@@ -150,7 +157,7 @@ export default function Planner({
 
   async function saveForm() {
     if (!editing || !trip || !form.t.trim()) return;
-    const payload = { title: form.t.trim(), url: form.url.trim(), cost: form.cost.trim() };
+    const payload = { title: form.t.trim(), url: form.url.trim(), costAmount: parseCost(form.cost) };
     const section = editing.key.toUpperCase() as "STAY" | "TRANSPORT" | "ACTIVITIES";
     if (editing.itemId === null) {
       await addItem(trip.id, section, payload);
@@ -182,6 +189,12 @@ export default function Planner({
 
   async function onSwitchTeam(id: string) {
     await switchTeam(id);
+    refresh();
+  }
+
+  async function onChangeCurrency(currency: string) {
+    if (!trip) return;
+    await updateTripCurrency(trip.id, currency);
     refresh();
   }
 
@@ -310,6 +323,7 @@ export default function Planner({
           onCancelForm={() => setEditing(null)}
           onSaveForm={saveForm}
           onDeleteItem={removeItem}
+          onChangeCurrency={onChangeCurrency}
         />
       )}
 

@@ -2,7 +2,7 @@ export type ItemData = {
   id: string;
   t: string;
   url: string;
-  cost: string;
+  costAmount: number | null;
 };
 
 export type TripData = {
@@ -10,6 +10,7 @@ export type TripData = {
   label: string;
   start: string;
   end: string;
+  currency: string;
   stay: ItemData[];
   transport: ItemData[];
   activities: ItemData[];

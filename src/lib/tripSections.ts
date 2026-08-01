@@ -7,7 +7,11 @@ export const SECTION_DEFS: { key: ItemSectionKey; name: string; placeholder: str
 ];
 
 export function isScheduled(item: ItemData): boolean {
-  return !!(item.t.trim() && item.url.trim() && item.cost.trim());
+  return !!(item.t.trim() && item.url.trim() && item.costAmount !== null);
+}
+
+export function sectionTotal(items: ItemData[]): number {
+  return items.reduce((sum, item) => sum + (item.costAmount ?? 0), 0);
 }
 
 export function hostFromUrl(url: string): string {

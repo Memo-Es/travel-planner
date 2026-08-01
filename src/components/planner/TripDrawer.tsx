@@ -3,7 +3,8 @@
 import type { KeyboardEvent } from "react";
 import type { TripData, ItemSectionKey, ItemData } from "@/lib/types";
 import { fmtRange, nightsBetween } from "@/lib/dates";
-import { SECTION_DEFS, isScheduled, hostFromUrl } from "@/lib/tripSections";
+import { SECTION_DEFS, isScheduled, sectionTotal, hostFromUrl } from "@/lib/tripSections";
+import { CURRENCIES, currencySymbol, formatCost, formatTotal } from "@/lib/currency";
 import type { Editing, FormState } from "@/components/Planner";
 
 export default function TripDrawer({
@@ -18,6 +19,7 @@ export default function TripDrawer({
   onCancelForm,
   onSaveForm,
   onDeleteItem,
+  onChangeCurrency,
 }: {
   trip: TripData;
   isMobile: boolean;
@@ -30,8 +32,11 @@ export default function TripDrawer({
   onCancelForm: () => void;
   onSaveForm: () => void;
   onDeleteItem: (itemId: string) => void;
+  onChangeCurrency: (currency: string) => void;
 }) {
   const bottomSheet = isMobile;
+  const tripTotal =
+    sectionTotal(trip.stay) + sectionTotal(trip.transport) + sectionTotal(trip.activities);
 
   const drawerClass = bottomSheet
     ? "absolute z-30 bg-white box-border flex flex-col overflow-hidden left-2.5 right-2.5 bottom-2.5 max-h-[78vh] rounded-2xl border border-line shadow-[0_-14px_44px_rgba(28,27,25,0.2)] p-[18px_18px_14px]"
@@ -49,20 +54,36 @@ export default function TripDrawer({
           <h2 className="m-0 mb-1 text-[22px] font-semibold tracking-[-0.015em] text-ink">{trip.label}</h2>
           <div className="text-[13px] text-muted-2">
             {fmtRange(trip.start, trip.end)} · {nightsBetween(trip.start, trip.end)} nights
+            {tripTotal > 0 && <> · {formatTotal(tripTotal, trip.currency)} total</>}
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="w-8 h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft text-[13px] flex-none hover:bg-hover"
-        >
-          ✕
-        </button>
+        <div className="flex items-center gap-2 flex-none">
+          <select
+            value={trip.currency}
+            onChange={(e) => onChangeCurrency(e.target.value)}
+            title="Trip currency"
+            className="h-8 rounded-[9px] border border-line bg-white text-[12.5px] text-ink-soft px-1.5 cursor-pointer"
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.symbol} {c.code}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft text-[13px] flex-none hover:bg-hover"
+          >
+            ✕
+          </button>
+        </div>
       </header>
 
       <div className="flex flex-col gap-[22px] pt-[18px] pb-1 overflow-y-auto overflow-x-hidden min-h-0">
         {SECTION_DEFS.map((sec) => {
           const items: ItemData[] = trip[sec.key];
           const scheduledCount = items.filter(isScheduled).length;
+          const total = sectionTotal(items);
           const showForm = editing?.key === sec.key;
           const saveLabel = editing && editing.itemId !== null ? "Save" : "Add";
 
@@ -74,6 +95,7 @@ export default function TripDrawer({
                 </h3>
                 <span className="text-[12px] text-muted-3">
                   {scheduledCount}/{items.length} scheduled
+                  {total > 0 && <> · {formatTotal(total, trip.currency)}</>}
                 </span>
               </div>
 
@@ -83,9 +105,15 @@ export default function TripDrawer({
                   className="flex items-center gap-2 bg-[#fbfaf9] border border-line-soft rounded-[11px] py-2 pl-3 pr-2.5 min-h-[48px] box-border"
                 >
                   <button
-                    onClick={() => onStartEdit(sec.key, item.id, { t: item.t, url: item.url, cost: item.cost })}
+                    onClick={() =>
+                      onStartEdit(sec.key, item.id, {
+                        t: item.t,
+                        url: item.url,
+                        cost: item.costAmount === null ? "" : String(item.costAmount),
+                      })
+                    }
                     title="Edit details"
-                    className="flex-1 min-w-0 block text-left bg-transparent border-0 py-[3px] cursor-text"
+                    className="flex-1 min-w-0 block text-left bg-transparent border-0 py-[3px] cursor-pointer"
                   >
                     <span className="block text-[14.5px] text-ink overflow-hidden text-ellipsis whitespace-nowrap">
                       {item.t}
@@ -93,9 +121,9 @@ export default function TripDrawer({
                     <span className="flex items-center gap-2 mt-[3px] min-w-0">
                       <span
                         className="text-[12px] [font-variant-numeric:tabular-nums]"
-                        style={{ color: item.cost ? "#56534e" : "#b0aca6" }}
+                        style={{ color: item.costAmount !== null ? "#56534e" : "#b0aca6" }}
                       >
-                        {item.cost || "no cost yet"}
+                        {formatCost(item.costAmount, trip.currency)}
                       </span>
                       <span className="text-[#ddd9d3] text-[11px]">·</span>
                       {item.url ? (
@@ -125,6 +153,19 @@ export default function TripDrawer({
                     {isScheduled(item) ? "Scheduled" : "Incomplete"}
                   </span>
                   <button
+                    onClick={() =>
+                      onStartEdit(sec.key, item.id, {
+                        t: item.t,
+                        url: item.url,
+                        cost: item.costAmount === null ? "" : String(item.costAmount),
+                      })
+                    }
+                    title="Edit"
+                    className="w-7 h-7 flex-none border-0 rounded-lg bg-transparent cursor-pointer text-muted-4 text-[13px] hover:bg-line-soft hover:text-ink-soft"
+                  >
+                    ✎
+                  </button>
+                  <button
                     onClick={() => onDeleteItem(item.id)}
                     title="Remove"
                     className="w-7 h-7 flex-none border-0 rounded-lg bg-transparent cursor-pointer text-muted-4 text-[12px] hover:bg-line-soft hover:text-ink-soft"
@@ -151,13 +192,17 @@ export default function TripDrawer({
                     placeholder="Booking link (https://…)"
                     className="h-10 border border-line rounded-[9px] bg-[#fbfaf9] px-3 text-[14px] text-ink box-border"
                   />
-                  <input
-                    value={form.cost}
-                    onChange={(e) => onFormChange({ ...form, cost: e.target.value })}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Cost (e.g. €410)"
-                    className="h-10 border border-line rounded-[9px] bg-[#fbfaf9] px-3 text-[14px] text-ink box-border"
-                  />
+                  <div className="flex items-center h-10 border border-line rounded-[9px] bg-[#fbfaf9] px-3 gap-1.5">
+                    <span className="text-[14px] text-muted-2 flex-none">{currencySymbol(trip.currency)}</span>
+                    <input
+                      value={form.cost}
+                      onChange={(e) => onFormChange({ ...form, cost: e.target.value })}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Cost (e.g. 410)"
+                      inputMode="decimal"
+                      className="h-full flex-1 min-w-0 border-0 bg-transparent text-[14px] text-ink outline-none"
+                    />
+                  </div>
                   <div className="text-[12px] text-muted-2 leading-[1.4]">
                     Name, link and cost filled → the item is scheduled automatically.
                   </div>

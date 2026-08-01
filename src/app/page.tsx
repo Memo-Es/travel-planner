@@ -21,6 +21,7 @@ export default async function HomePage() {
     label: t.label,
     start: t.start.toISOString().slice(0, 10),
     end: t.end.toISOString().slice(0, 10),
+    currency: t.currency,
     stay: t.items.filter((i) => i.section === "STAY").map(toItem),
     transport: t.items.filter((i) => i.section === "TRANSPORT").map(toItem),
     activities: t.items.filter((i) => i.section === "ACTIVITIES").map(toItem),
@@ -49,6 +50,6 @@ export default async function HomePage() {
   );
 }
 
-function toItem(i: { id: string; title: string; url: string; cost: string }): ItemData {
-  return { id: i.id, t: i.title, url: i.url, cost: i.cost };
+function toItem(i: { id: string; title: string; url: string; costAmount: number | null }): ItemData {
+  return { id: i.id, t: i.title, url: i.url, costAmount: i.costAmount };
 }

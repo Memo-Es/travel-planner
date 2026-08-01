@@ -54,7 +54,7 @@ export async function signup(_prev: ActionState, formData: FormData): Promise<Ac
         section: item.section,
         title: item.title,
         url: item.url,
-        cost: item.cost,
+        costAmount: item.costAmount,
         order: i,
       })),
     );
