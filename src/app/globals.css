@@ -6,6 +6,10 @@ html,
 body {
   margin: 0;
   padding: 0;
+  /* Belt-and-suspenders: nothing in this layout is meant to scroll
+     horizontally, so don't let a transient sizing glitch produce a
+     scrollable page on mobile. */
+  overflow-x: hidden;
 }
 
 body {

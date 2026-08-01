@@ -81,10 +81,17 @@ export default function Planner({
   const [dragging, setDragging] = useState<DragState>(null);
 
   useEffect(() => {
-    const onResize = () => setVw(window.innerWidth);
-    onResize();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    // A plain `resize` listener can miss the real viewport width on first
+    // mount on mobile browsers (the layout viewport can still be settling
+    // — toolbar collapse, zoom negotiation — with no further resize event
+    // to correct it). ResizeObserver measures the actual rendered box
+    // directly, including on its first callback, so it can't get stuck.
+    const ro = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (width) setVw(width);
+    });
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
   }, []);
 
   useEffect(() => {
