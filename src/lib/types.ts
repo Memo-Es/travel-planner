@@ -10,7 +10,6 @@ export type TripData = {
   label: string;
   start: string;
   end: string;
-  currency: string;
   stay: ItemData[];
   transport: ItemData[];
   activities: ItemData[];
@@ -29,4 +28,13 @@ export type TeamOption = {
   id: string;
   name: string;
   active: boolean;
+};
+
+export type InviteData = {
+  id: string;
+  token: string;
+  createdAt: string;
+  createdByName: string;
+  acceptedAt: string | null;
+  acceptedEmail: string | null;
 };

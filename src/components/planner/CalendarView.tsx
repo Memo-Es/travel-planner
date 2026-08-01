@@ -5,14 +5,25 @@ import type { CalendarWeek } from "@/lib/calendar";
 const WEEKDAYS_FULL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAYS_SHORT = ["S", "M", "T", "W", "T", "F", "S"];
 
+const handleStyle = {
+  position: "absolute" as const,
+  top: 0,
+  bottom: 0,
+  width: 7,
+  cursor: "ew-resize",
+  touchAction: "none" as const,
+};
+
 export default function CalendarView({
   weeks,
   width,
   onOpenTrip,
+  onResizeStart,
 }: {
   weeks: CalendarWeek[];
   width: number;
   onOpenTrip: (tripId: string) => void;
+  onResizeStart: (tripId: string, edge: "left" | "right", clientX: number) => void;
 }) {
   const weekdays = width / 7 < 48 ? WEEKDAYS_SHORT : WEEKDAYS_FULL;
 
@@ -52,8 +63,28 @@ export default function CalendarView({
                 style={bar.style}
                 onClick={bar.tripId ? () => onOpenTrip(bar.tripId!) : undefined}
               >
+                {bar.canDragLeft && (
+                  <div
+                    style={{ ...handleStyle, left: 0 }}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      onResizeStart(bar.tripId!, "left", e.clientX);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                )}
                 {bar.showDot && <span style={bar.dotStyle} />}
                 <span className="overflow-hidden text-ellipsis whitespace-nowrap">{bar.label}</span>
+                {bar.canDragRight && (
+                  <div
+                    style={{ ...handleStyle, right: 0 }}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      onResizeStart(bar.tripId!, "right", e.clientX);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                )}
               </div>
             ))}
           </div>

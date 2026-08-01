@@ -24,6 +24,8 @@ export type BarPill = {
   showDot: boolean;
   style: CSSProperties;
   dotStyle: CSSProperties;
+  canDragLeft: boolean;
+  canDragRight: boolean;
 };
 
 export type CalendarWeek = {
@@ -109,6 +111,10 @@ export function buildWeeks(
         tripId: e.isNote ? null : e.id,
         label: e.label,
         showDot: !e.isNote && !contL && span > 1,
+        // Dragging only makes sense on a segment showing the stop's real edge,
+        // and not on the fixed-width "wide" pills used for very short stops.
+        canDragLeft: !e.isNote && !wide && !contL,
+        canDragRight: !e.isNote && !wide && !contR,
         dotStyle: {
           width: 8,
           height: 8,

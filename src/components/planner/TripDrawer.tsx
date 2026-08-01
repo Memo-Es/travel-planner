@@ -1,14 +1,15 @@
 "use client";
 
-import type { KeyboardEvent } from "react";
+import { useState, type KeyboardEvent } from "react";
 import type { TripData, ItemSectionKey, ItemData } from "@/lib/types";
 import { fmtRange, nightsBetween } from "@/lib/dates";
 import { SECTION_DEFS, isScheduled, sectionTotal, hostFromUrl } from "@/lib/tripSections";
-import { CURRENCIES, currencySymbol, formatCost, formatTotal } from "@/lib/currency";
+import { currencySymbol, formatCost, formatTotal } from "@/lib/currency";
 import type { Editing, FormState } from "@/components/Planner";
 
 export default function TripDrawer({
   trip,
+  currency,
   isMobile,
   editing,
   form,
@@ -19,9 +20,10 @@ export default function TripDrawer({
   onCancelForm,
   onSaveForm,
   onDeleteItem,
-  onChangeCurrency,
+  onUpdateDates,
 }: {
   trip: TripData;
+  currency: string;
   isMobile: boolean;
   editing: Editing;
   form: FormState;
@@ -32,11 +34,14 @@ export default function TripDrawer({
   onCancelForm: () => void;
   onSaveForm: () => void;
   onDeleteItem: (itemId: string) => void;
-  onChangeCurrency: (currency: string) => void;
+  onUpdateDates: (tripId: string, start: string, end: string) => void;
 }) {
   const bottomSheet = isMobile;
-  const tripTotal =
-    sectionTotal(trip.stay) + sectionTotal(trip.transport) + sectionTotal(trip.activities);
+  const tripTotal = sectionTotal(trip.stay) + sectionTotal(trip.transport) + sectionTotal(trip.activities);
+
+  const [editingDates, setEditingDates] = useState(false);
+  const [startDraft, setStartDraft] = useState(trip.start);
+  const [endDraft, setEndDraft] = useState(trip.end);
 
   const drawerClass = bottomSheet
     ? "absolute z-30 bg-white box-border flex flex-col overflow-hidden left-2.5 right-2.5 bottom-2.5 max-h-[78vh] rounded-2xl border border-line shadow-[0_-14px_44px_rgba(28,27,25,0.2)] p-[18px_18px_14px]"
@@ -47,36 +52,72 @@ export default function TripDrawer({
     if (e.key === "Escape") onCancelForm();
   }
 
+  function startEditDates() {
+    setStartDraft(trip.start);
+    setEndDraft(trip.end);
+    setEditingDates(true);
+  }
+
+  function saveDates() {
+    if (endDraft >= startDraft) onUpdateDates(trip.id, startDraft, endDraft);
+    setEditingDates(false);
+  }
+
   return (
     <section className={drawerClass}>
       <header className="flex items-start justify-between gap-3 pb-4 border-b border-line-soft">
-        <div>
+        <div className="min-w-0 flex-1">
           <h2 className="m-0 mb-1 text-[22px] font-semibold tracking-[-0.015em] text-ink">{trip.label}</h2>
-          <div className="text-[13px] text-muted-2">
-            {fmtRange(trip.start, trip.end)} · {nightsBetween(trip.start, trip.end)} nights
-            {tripTotal > 0 && <> · {formatTotal(tripTotal, trip.currency)} total</>}
-          </div>
+
+          {editingDates ? (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <input
+                type="date"
+                value={startDraft}
+                onChange={(e) => setStartDraft(e.target.value)}
+                className="h-8 border border-line rounded-[8px] bg-[#fbfaf9] px-2 text-[12.5px] text-ink box-border"
+              />
+              <span className="text-muted-3 text-[12px]">–</span>
+              <input
+                type="date"
+                value={endDraft}
+                min={startDraft}
+                onChange={(e) => setEndDraft(e.target.value)}
+                className="h-8 border border-line rounded-[8px] bg-[#fbfaf9] px-2 text-[12.5px] text-ink box-border"
+              />
+              <button
+                onClick={saveDates}
+                className="h-8 px-2.5 rounded-[8px] border-0 bg-accent hover:bg-accent-hover text-white cursor-pointer text-[12px]"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setEditingDates(false)}
+                className="h-8 px-2.5 rounded-[8px] border border-line bg-white cursor-pointer text-[12px] text-ink-soft hover:bg-hover"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={startEditDates}
+              title="Edit dates"
+              className="flex items-center gap-1.5 bg-transparent border-0 p-0 cursor-pointer text-[13px] text-muted-2 hover:text-ink group"
+            >
+              <span>
+                {fmtRange(trip.start, trip.end)} · {nightsBetween(trip.start, trip.end)} nights
+                {tripTotal > 0 && <> · {formatTotal(tripTotal, currency)} total</>}
+              </span>
+              <span className="text-[12px] text-muted-4 group-hover:text-ink">✎</span>
+            </button>
+          )}
         </div>
-        <div className="flex items-center gap-2 flex-none">
-          <select
-            value={trip.currency}
-            onChange={(e) => onChangeCurrency(e.target.value)}
-            title="Trip currency"
-            className="h-8 rounded-[9px] border border-line bg-white text-[12.5px] text-ink-soft px-1.5 cursor-pointer"
-          >
-            {CURRENCIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.symbol} {c.code}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft text-[13px] flex-none hover:bg-hover"
-          >
-            ✕
-          </button>
-        </div>
+        <button
+          onClick={onClose}
+          className="w-8 h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft text-[13px] flex-none"
+        >
+          ✕
+        </button>
       </header>
 
       <div className="flex flex-col gap-[22px] pt-[18px] pb-1 overflow-y-auto overflow-x-hidden min-h-0">
@@ -95,7 +136,7 @@ export default function TripDrawer({
                 </h3>
                 <span className="text-[12px] text-muted-3">
                   {scheduledCount}/{items.length} scheduled
-                  {total > 0 && <> · {formatTotal(total, trip.currency)}</>}
+                  {total > 0 && <> · {formatTotal(total, currency)}</>}
                 </span>
               </div>
 
@@ -123,7 +164,7 @@ export default function TripDrawer({
                         className="text-[12px] [font-variant-numeric:tabular-nums]"
                         style={{ color: item.costAmount !== null ? "#56534e" : "#b0aca6" }}
                       >
-                        {formatCost(item.costAmount, trip.currency)}
+                        {formatCost(item.costAmount, currency)}
                       </span>
                       <span className="text-[#ddd9d3] text-[11px]">·</span>
                       {item.url ? (
@@ -193,7 +234,7 @@ export default function TripDrawer({
                     className="h-10 border border-line rounded-[9px] bg-[#fbfaf9] px-3 text-[14px] text-ink box-border"
                   />
                   <div className="flex items-center h-10 border border-line rounded-[9px] bg-[#fbfaf9] px-3 gap-1.5">
-                    <span className="text-[14px] text-muted-2 flex-none">{currencySymbol(trip.currency)}</span>
+                    <span className="text-[14px] text-muted-2 flex-none">{currencySymbol(currency)}</span>
                     <input
                       value={form.cost}
                       onChange={(e) => onFormChange({ ...form, cost: e.target.value })}

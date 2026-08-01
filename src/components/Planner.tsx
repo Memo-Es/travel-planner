@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { TripData, TaskData, TeamOption, ItemSectionKey } from "@/lib/types";
+import type { TripData, TaskData, TeamOption, InviteData, ItemSectionKey } from "@/lib/types";
 import { buildWeeks, layoutMode, mainWidth, type CalendarEvent } from "@/lib/calendar";
-import { MONTHS_LONG } from "@/lib/dates";
+import { MONTHS_LONG, DAY, ms, toDateInput } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
 import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
-import { createTrip, addItem, updateItem, deleteItem, updateTripCurrency } from "@/actions/trips";
+import { createTrip, addItem, updateItem, deleteItem, updateStopDates } from "@/actions/trips";
 import { createTask, toggleTask } from "@/actions/tasks";
-import { logout, switchTeam } from "@/actions/team";
+import { logout, switchTeam, updateTeamName, updateTeamCurrency, createInvite } from "@/actions/team";
 
 import LeftPanel from "@/components/planner/LeftPanel";
 import LeftRail from "@/components/planner/LeftRail";
@@ -17,10 +17,13 @@ import RightPanel from "@/components/planner/RightPanel";
 import RightRail from "@/components/planner/RightRail";
 import CalendarView from "@/components/planner/CalendarView";
 import TripDrawer from "@/components/planner/TripDrawer";
+import TripSettingsModal from "@/components/planner/TripSettingsModal";
 import MobileTabs from "@/components/planner/MobileTabs";
 
 export type Editing = { key: ItemSectionKey; itemId: string | null } | null;
 export type FormState = { t: string; url: string; cost: string };
+export type Overlay = "links" | "tasks" | null;
+export type MobileTab = "links" | "calendar" | "tasks";
 
 function parseCost(raw: string): number | null {
   const trimmed = raw.trim();
@@ -28,8 +31,6 @@ function parseCost(raw: string): number | null {
   const n = Number(trimmed);
   return Number.isFinite(n) ? n : null;
 }
-export type Overlay = "links" | "tasks" | null;
-export type MobileTab = "links" | "calendar" | "tasks";
 
 const CARD = "bg-white rounded-card border border-line box-border overflow-hidden flex flex-col";
 
@@ -38,14 +39,22 @@ function startOfTodayUTC(): number {
   return Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
+type DragState = { tripId: string; curStart: string; curEnd: string } | null;
+
 export default function Planner({
   teamId,
+  teamName,
+  teamCurrency,
   teams,
+  invites,
   initialTrips,
   initialTasks,
 }: {
   teamId: string;
+  teamName: string;
+  teamCurrency: string;
   teams: TeamOption[];
+  invites: InviteData[];
   initialTrips: TripData[];
   initialTasks: TaskData[];
 }) {
@@ -68,6 +77,8 @@ export default function Planner({
   const [form, setForm] = useState<FormState>({ t: "", url: "", cost: "" });
   const [mobileTab, setMobileTab] = useState<MobileTab>("calendar");
   const [draft, setDraft] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [dragging, setDragging] = useState<DragState>(null);
 
   useEffect(() => {
     const onResize = () => setVw(window.innerWidth);
@@ -104,15 +115,18 @@ export default function Planner({
       end: n.end,
       isNote: true,
     }));
-    const tripEvents: CalendarEvent[] = trips.map((t) => ({
-      id: t.id,
-      label: t.label,
-      start: t.start,
-      end: t.end,
-      isNote: false,
-    }));
+    const tripEvents: CalendarEvent[] = trips.map((t) => {
+      const override = dragging && dragging.tripId === t.id;
+      return {
+        id: t.id,
+        label: t.label,
+        start: override ? dragging!.curStart : t.start,
+        end: override ? dragging!.curEnd : t.end,
+        isNote: false,
+      };
+    });
     return noteEvents.concat(tripEvents);
-  }, [trips]);
+  }, [trips, dragging]);
 
   const weeks = useMemo(
     () => buildWeeks(cursor, events, { startWeekOn: "Sunday", mainWidth: width, todayMs }),
@@ -143,6 +157,13 @@ export default function Planner({
     setOverlay(null);
     setOpenTripId(null);
     setEditing(null);
+    setSettingsOpen(false);
+  }
+
+  function openSettings() {
+    setOpenTripId(null);
+    setEditing(null);
+    setSettingsOpen(true);
   }
 
   function startAdd(key: ItemSectionKey) {
@@ -192,10 +213,62 @@ export default function Planner({
     refresh();
   }
 
-  async function onChangeCurrency(currency: string) {
-    if (!trip) return;
-    await updateTripCurrency(trip.id, currency);
+  async function onRenameTeam(name: string) {
+    await updateTeamName(teamId, name);
     refresh();
+  }
+
+  async function onChangeTeamCurrency(currency: string) {
+    await updateTeamCurrency(teamId, currency);
+    refresh();
+  }
+
+  async function handleCreateInvite() {
+    const token = await createInvite(teamId);
+    refresh();
+    return token;
+  }
+
+  async function onUpdateStopDates(tripId: string, start: string, end: string) {
+    await updateStopDates(tripId, start, end);
+    refresh();
+  }
+
+  function onResizeStart(tripId: string, edge: "left" | "right", startClientX: number) {
+    const t = trips.find((x) => x.id === tripId);
+    if (!t) return;
+    const origStart = t.start;
+    const origEnd = t.end;
+    const cellW = Math.max(28, width / 7);
+    let cur = { start: origStart, end: origEnd };
+    setDragging({ tripId, curStart: origStart, curEnd: origEnd });
+    document.body.style.userSelect = "none";
+
+    function onMove(e: PointerEvent) {
+      const deltaDays = Math.round((e.clientX - startClientX) / cellW);
+      if (edge === "left") {
+        const startMs = Math.min(ms(origStart) + deltaDays * DAY, ms(origEnd));
+        cur = { start: toDateInput(startMs), end: origEnd };
+      } else {
+        const endMs = Math.max(ms(origEnd) + deltaDays * DAY, ms(origStart));
+        cur = { start: origStart, end: toDateInput(endMs) };
+      }
+      setDragging({ tripId, curStart: cur.start, curEnd: cur.end });
+    }
+
+    async function onUp() {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      document.body.style.userSelect = "";
+      setDragging(null);
+      if (cur.start !== origStart || cur.end !== origEnd) {
+        await updateStopDates(tripId, cur.start, cur.end);
+        refresh();
+      }
+    }
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
   }
 
   const openCount = tasks.filter((t) => !t.done).length;
@@ -211,7 +284,7 @@ export default function Planner({
           : `${LEFT_W}px minmax(${MIN_MAIN}px,1fr) ${RIGHT_W}px`,
       };
 
-  const showBackdrop = !!activeOverlay || !!trip;
+  const showBackdrop = !!activeOverlay || !!trip || settingsOpen;
   const showLeftRail = isCompact;
   const showRightRail = isCompact;
   const showLeftPanel = isMobile ? mobileTab === "links" : mode === "full" || activeOverlay === "links";
@@ -248,7 +321,9 @@ export default function Planner({
           trips={trips}
           teams={teams}
           teamId={teamId}
+          teamName={teamName}
           onSwitchTeam={onSwitchTeam}
+          onOpenSettings={openSettings}
           onSelectTrip={(t) => jumpToTrip(t)}
           onAddTrip={handleAddTrip}
           onClose={closeOverlay}
@@ -288,7 +363,12 @@ export default function Planner({
             </div>
           </header>
 
-          <CalendarView weeks={weeks} width={width} onOpenTrip={(id) => setOpenTripId(id)} />
+          <CalendarView
+            weeks={weeks}
+            width={width}
+            onOpenTrip={(id) => setOpenTripId(id)}
+            onResizeStart={onResizeStart}
+          />
         </main>
       )}
 
@@ -313,6 +393,7 @@ export default function Planner({
       {trip && (
         <TripDrawer
           trip={trip}
+          currency={teamCurrency}
           isMobile={isMobile}
           editing={editing}
           form={form}
@@ -323,7 +404,19 @@ export default function Planner({
           onCancelForm={() => setEditing(null)}
           onSaveForm={saveForm}
           onDeleteItem={removeItem}
-          onChangeCurrency={onChangeCurrency}
+          onUpdateDates={onUpdateStopDates}
+        />
+      )}
+
+      {settingsOpen && (
+        <TripSettingsModal
+          teamName={teamName}
+          currency={teamCurrency}
+          invites={invites}
+          onClose={() => setSettingsOpen(false)}
+          onRename={onRenameTeam}
+          onChangeCurrency={onChangeTeamCurrency}
+          onCreateInvite={handleCreateInvite}
         />
       )}
 

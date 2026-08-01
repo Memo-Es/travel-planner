@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/team";
-import { CURRENCIES } from "@/lib/currency";
 
 async function requireTeamMembership(teamId: string) {
   const user = await requireUser();
@@ -42,12 +41,17 @@ export async function createTrip(teamId: string) {
   return trip.id;
 }
 
-const CURRENCY_CODES = CURRENCIES.map((c) => c.code) as [string, ...string[]];
+const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date");
 
-export async function updateTripCurrency(tripId: string, currency: string) {
+export async function updateStopDates(tripId: string, start: string, end: string) {
   await requireTripAccess(tripId);
-  const code = z.enum(CURRENCY_CODES).parse(currency);
-  await prisma.trip.update({ where: { id: tripId }, data: { currency: code } });
+  const s = dateStringSchema.parse(start);
+  const e = dateStringSchema.parse(end);
+  if (e < s) throw new Error("End date can't be before start date");
+  await prisma.trip.update({
+    where: { id: tripId },
+    data: { start: new Date(s), end: new Date(e) },
+  });
   revalidatePath("/");
 }
 

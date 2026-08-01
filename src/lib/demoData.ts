@@ -16,7 +16,6 @@ export function demoTrips(teamId: string): Prisma.TripCreateManyInput[] {
     label: r.label,
     start: new Date(r.start),
     end: new Date(r.end),
-    currency: "EUR",
     order: i,
   }));
 }

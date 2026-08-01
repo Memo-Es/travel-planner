@@ -2,7 +2,6 @@
 
 import type { TripData, TeamOption } from "@/lib/types";
 import { fmtRange } from "@/lib/dates";
-import InviteButton from "@/components/planner/InviteButton";
 
 const ACCENT = "oklch(0.62 0.19 285)";
 const ACCENT_SOFT = "oklch(0.93 0.045 288)";
@@ -14,7 +13,9 @@ export default function LeftPanel({
   trips,
   teams,
   teamId,
+  teamName,
   onSwitchTeam,
+  onOpenSettings,
   onSelectTrip,
   onAddTrip,
   onClose,
@@ -27,7 +28,9 @@ export default function LeftPanel({
   trips: TripData[];
   teams: TeamOption[];
   teamId: string;
+  teamName: string;
   onSwitchTeam: (id: string) => void;
+  onOpenSettings: () => void;
   onSelectTrip: (t: TripData) => void;
   onAddTrip: () => void;
   onClose: () => void;
@@ -40,41 +43,42 @@ export default function LeftPanel({
 
   return (
     <aside className={card + " p-[22px_20px] " + positionClass}>
-      <div className="flex items-center justify-between gap-2.5 mb-2">
-        <div className="flex items-center gap-2.5">
-          <span className="w-[11px] h-[11px] rounded-full block" style={{ background: ACCENT }} />
-          <h2 className="m-0 text-[21px] font-semibold tracking-[-0.01em] text-ink">Trips</h2>
-        </div>
+      <div className="flex items-center justify-between gap-2.5 mb-1">
+        <button
+          onClick={onOpenSettings}
+          title="Trip settings"
+          className="flex items-center gap-2.5 bg-transparent border-0 p-0 -m-0.5 pr-1.5 rounded-lg cursor-pointer text-left min-w-0 hover:bg-hover"
+        >
+          <span className="w-[11px] h-[11px] rounded-full block flex-none" style={{ background: ACCENT }} />
+          <h2 className="m-0 text-[21px] font-semibold tracking-[-0.01em] text-ink overflow-hidden text-ellipsis whitespace-nowrap">
+            {teamName}
+          </h2>
+        </button>
         {showClose && (
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-lg border border-line bg-white cursor-pointer text-ink-soft text-[13px] hover:bg-hover"
+            className="w-7 h-7 rounded-lg border border-line bg-white cursor-pointer text-ink-soft text-[13px] flex-none hover:bg-hover"
           >
             ✕
           </button>
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-2 mb-5">
-        {teams.length > 1 ? (
-          <select
-            value={teamId}
-            onChange={(e) => onSwitchTeam(e.target.value)}
-            className="text-[12px] text-muted-2 bg-transparent border-0 cursor-pointer max-w-[140px] truncate"
-          >
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <span className="text-[12px] text-muted-2 truncate">{teams[0]?.name}</span>
-        )}
-        <InviteButton teamId={teamId} />
-      </div>
+      {teams.length > 1 && (
+        <select
+          value={teamId}
+          onChange={(e) => onSwitchTeam(e.target.value)}
+          className="text-[12px] text-muted-2 bg-transparent border-0 cursor-pointer mb-4 -mt-0.5"
+        >
+          {teams.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+      )}
 
-      <nav className="flex flex-col gap-[3px]">
+      <nav className={"flex flex-col gap-[3px]" + (teams.length > 1 ? "" : " mt-5")}>
         {trips.map((t, i) => (
           <button
             key={t.id}
@@ -105,7 +109,7 @@ export default function LeftPanel({
       <div className="flex items-end justify-between gap-2">
         <div className="text-[13px] leading-[1.45] text-muted-2">
           <div>{todayLabel}</div>
-          <div>{trips.length} trips planned</div>
+          <div>{trips.length} stops planned</div>
         </div>
         <span className="w-[17px] h-[17px] rounded-full border-[1.5px] border-line block flex-none" />
       </div>
