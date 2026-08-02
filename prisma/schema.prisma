@@ -22,13 +22,14 @@ enum ItemSection {
 }
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  name         String
-  passwordHash String
-  createdAt    DateTime     @default(now())
-  memberships  Membership[]
-  invitesSent  Invite[]     @relation("InviteCreatedBy")
+  id             String       @id @default(cuid())
+  email          String       @unique
+  name           String
+  passwordHash   String
+  createdAt      DateTime     @default(now())
+  memberships    Membership[]
+  invitesSent    Invite[]     @relation("InviteCreatedBy")
+  assignedTasks  Task[]       @relation("TaskAssignee")
 }
 
 model Team {
@@ -94,14 +95,17 @@ model TripItem {
 }
 
 model Task {
-  id        String   @id @default(cuid())
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  teamId    String
-  title     String
-  tag       String   @default("unscheduled")
-  done      Boolean  @default(false)
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId     String
+  title      String
+  tag        String   @default("unscheduled")
+  done       Boolean  @default(false)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  assignee   User?    @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  assigneeId String?
 
   @@index([teamId])
+  @@index([assigneeId])
 }

@@ -1,23 +1,32 @@
 import { prisma } from "@/lib/prisma";
 import { requireUser, requireActiveTeam } from "@/lib/team";
 import Planner from "@/components/Planner";
-import type { TripData, TaskData, TeamOption, ItemData, InviteData } from "@/lib/types";
+import type { TripData, TaskData, TeamOption, ItemData, InviteData, MemberOption } from "@/lib/types";
 
 export default async function HomePage() {
   const user = await requireUser();
   const { team, memberships } = await requireActiveTeam(user.id);
 
-  const [trips, tasks, invites] = await Promise.all([
+  const [trips, tasks, invites, teamMembers] = await Promise.all([
     prisma.trip.findMany({
       where: { teamId: team.id },
       orderBy: { order: "asc" },
       include: { items: { orderBy: { order: "asc" } } },
     }),
-    prisma.task.findMany({ where: { teamId: team.id }, orderBy: { order: "asc" } }),
+    prisma.task.findMany({
+      where: { teamId: team.id },
+      orderBy: { order: "asc" },
+      include: { assignee: true },
+    }),
     prisma.invite.findMany({
       where: { teamId: team.id },
       orderBy: { createdAt: "desc" },
       include: { createdBy: true },
+    }),
+    prisma.membership.findMany({
+      where: { teamId: team.id },
+      include: { user: true },
+      orderBy: { createdAt: "asc" },
     }),
   ]);
 
@@ -36,6 +45,8 @@ export default async function HomePage() {
     title: t.title,
     tag: t.tag,
     done: t.done,
+    assigneeId: t.assigneeId,
+    assigneeName: t.assignee?.name ?? null,
   }));
 
   const teamOptions: TeamOption[] = memberships.map((m) => ({
@@ -53,6 +64,11 @@ export default async function HomePage() {
     acceptedEmail: i.acceptedEmail,
   }));
 
+  const memberOptions: MemberOption[] = teamMembers.map((m) => ({
+    id: m.user.id,
+    name: m.user.name,
+  }));
+
   return (
     <Planner
       teamId={team.id}
@@ -60,6 +76,7 @@ export default async function HomePage() {
       teamCurrency={team.currency}
       teams={teamOptions}
       invites={inviteData}
+      members={memberOptions}
       initialTrips={tripData}
       initialTasks={taskData}
     />

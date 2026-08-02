@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { TripData, TaskData, TeamOption, InviteData, ItemSectionKey } from "@/lib/types";
+import type { TripData, TaskData, TeamOption, InviteData, MemberOption, ItemSectionKey } from "@/lib/types";
 import { buildWeeks, layoutMode, mainWidth, type CalendarEvent } from "@/lib/calendar";
 import { MONTHS_LONG, DAY, ms, toDateInput } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
 import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
 import { createTrip, addItem, updateItem, deleteItem, deleteTrip, updateStopDates } from "@/actions/trips";
-import { createTask, toggleTask } from "@/actions/tasks";
+import { createTask, toggleTask, updateTask, deleteTask } from "@/actions/tasks";
 import { switchTeam, updateTeamName, updateTeamCurrency, createInvite } from "@/actions/team";
 
 import LeftPanel from "@/components/planner/LeftPanel";
@@ -24,6 +24,7 @@ export type Editing = { key: ItemSectionKey; itemId: string | null } | null;
 export type FormState = { t: string; url: string; cost: string };
 export type Overlay = "links" | "tasks" | null;
 export type MobileTab = "links" | "calendar" | "tasks";
+export type TaskFormState = { title: string; tag: string; assigneeId: string | null };
 
 function parseCost(raw: string): number | null {
   const trimmed = raw.trim();
@@ -47,6 +48,7 @@ export default function Planner({
   teamCurrency,
   teams,
   invites,
+  members,
   initialTrips,
   initialTasks,
 }: {
@@ -55,6 +57,7 @@ export default function Planner({
   teamCurrency: string;
   teams: TeamOption[];
   invites: InviteData[];
+  members: MemberOption[];
   initialTrips: TripData[];
   initialTasks: TaskData[];
 }) {
@@ -78,6 +81,9 @@ export default function Planner({
   const [formError, setFormError] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("calendar");
   const [draft, setDraft] = useState("");
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [taskForm, setTaskForm] = useState<TaskFormState>({ title: "", tag: "", assigneeId: null });
+  const [taskFormError, setTaskFormError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dragging, setDragging] = useState<DragState>(null);
   const [addingTrip, setAddingTrip] = useState(false);
@@ -186,6 +192,7 @@ export default function Planner({
     setOpenTripId(null);
     setEditing(null);
     setSettingsOpen(false);
+    setEditingTaskId(null);
   }
 
   function openSettings() {
@@ -249,6 +256,43 @@ export default function Planner({
     if (!value) return;
     setDraft("");
     await createTask(teamId, value);
+    refresh();
+  }
+
+  function startEditTask(task: TaskData) {
+    setEditingTaskId(task.id);
+    setTaskForm({ title: task.title, tag: task.tag, assigneeId: task.assigneeId });
+    setTaskFormError(null);
+  }
+
+  function onTaskFormChange(f: TaskFormState) {
+    setTaskForm(f);
+    setTaskFormError(null);
+  }
+
+  function cancelTaskEdit() {
+    setEditingTaskId(null);
+    setTaskFormError(null);
+  }
+
+  async function saveTaskEdit() {
+    if (!editingTaskId) return;
+    if (!taskForm.title.trim()) {
+      setTaskFormError("Title is required.");
+      return;
+    }
+    await updateTask(editingTaskId, {
+      title: taskForm.title.trim(),
+      tag: taskForm.tag.trim(),
+      assigneeId: taskForm.assigneeId,
+    });
+    setEditingTaskId(null);
+    refresh();
+  }
+
+  async function removeTask(taskId: string) {
+    if (editingTaskId === taskId) setEditingTaskId(null);
+    await deleteTask(taskId);
     refresh();
   }
 
@@ -480,11 +524,20 @@ export default function Planner({
           overlay={activeOverlay === "tasks"}
           isMobile={isMobile}
           tasks={tasks}
+          members={members}
           openCount={openCount}
           draft={draft}
           onDraftChange={setDraft}
           onDraftSubmit={submitDraftTask}
           onToggleTask={onToggleTask}
+          editingTaskId={editingTaskId}
+          taskForm={taskForm}
+          taskFormError={taskFormError}
+          onStartEditTask={startEditTask}
+          onTaskFormChange={onTaskFormChange}
+          onCancelTaskEdit={cancelTaskEdit}
+          onSaveTaskEdit={saveTaskEdit}
+          onDeleteTask={removeTask}
           onClose={closeOverlay}
           showClose={!!activeOverlay}
         />

@@ -22,6 +22,13 @@ export type TaskData = {
   title: string;
   tag: string;
   done: boolean;
+  assigneeId: string | null;
+  assigneeName: string | null;
+};
+
+export type MemberOption = {
+  id: string;
+  name: string;
 };
 
 export type TeamOption = {
