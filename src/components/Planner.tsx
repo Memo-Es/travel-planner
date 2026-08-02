@@ -9,7 +9,7 @@ import { HOLIDAY_NOTES } from "@/lib/demoData";
 import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
 import { createTrip, addItem, updateItem, deleteItem, deleteTrip, updateStopDates } from "@/actions/trips";
 import { createTask, toggleTask, updateTask, deleteTask } from "@/actions/tasks";
-import { switchTeam, updateTeamName, updateTeamCurrency, createInvite } from "@/actions/team";
+import { switchTeam, updateTeamName, updateTeamCurrency, createInvite, dismissSignedInToast } from "@/actions/team";
 
 import LeftPanel from "@/components/planner/LeftPanel";
 import LeftRail from "@/components/planner/LeftRail";
@@ -19,6 +19,7 @@ import CalendarView from "@/components/planner/CalendarView";
 import TripDrawer from "@/components/planner/TripDrawer";
 import TripSettingsModal from "@/components/planner/TripSettingsModal";
 import MobileTabs from "@/components/planner/MobileTabs";
+import Toast from "@/components/planner/Toast";
 
 export type Editing = { key: ItemSectionKey; itemId: string | null } | null;
 export type FormState = { t: string; url: string; cost: string };
@@ -49,6 +50,8 @@ export default function Planner({
   teams,
   invites,
   members,
+  userName,
+  justSignedIn,
   initialTrips,
   initialTasks,
 }: {
@@ -58,6 +61,8 @@ export default function Planner({
   teams: TeamOption[];
   invites: InviteData[];
   members: MemberOption[];
+  userName: string;
+  justSignedIn: boolean;
   initialTrips: TripData[];
   initialTasks: TaskData[];
 }) {
@@ -91,6 +96,17 @@ export default function Planner({
   // clicks that land before the first re-render (e.g. a fast double-click).
   // A ref is mutated immediately, so it closes that race.
   const addingTripRef = useRef(false);
+  const [showSignedInToast, setShowSignedInToast] = useState(justSignedIn);
+
+  useEffect(() => {
+    if (!justSignedIn) return;
+    // Consume the one-shot flash immediately so a page refresh a moment
+    // later doesn't show the toast again.
+    dismissSignedInToast();
+    const t = setTimeout(() => setShowSignedInToast(false), 3500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     // A plain `resize` listener can miss the real viewport width on first
@@ -437,6 +453,8 @@ export default function Planner({
 
   return (
     <div className={shellClass} style={shellStyle}>
+      {showSignedInToast && <Toast message={`Signed in as ${userName}`} />}
+
       {showBackdrop && (
         <div
           onClick={closeOverlay}
@@ -466,6 +484,7 @@ export default function Planner({
           teams={teams}
           teamId={teamId}
           teamName={teamName}
+          userName={userName}
           onSwitchTeam={onSwitchTeam}
           onOpenSettings={openSettings}
           onSelectTrip={(t) => jumpToTrip(t)}

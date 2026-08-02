@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireUser, setActiveTeamCookie } from "@/lib/team";
+import { requireUser, setActiveTeamCookie, clearSignedInFlash } from "@/lib/team";
 import { signOut } from "@/lib/auth";
 import { CURRENCIES } from "@/lib/currency";
 
@@ -72,6 +72,24 @@ export async function switchTeam(teamId: string) {
 
   await setActiveTeamCookie(teamId);
   revalidatePath("/");
+}
+
+/** Same membership switch as switchTeam, but redirects — for use from a
+ * plain <form> in a server component (e.g. "you're already in this trip"
+ * on the invite page) rather than a client button. */
+export async function goToTeam(teamId: string) {
+  const user = await requireUser();
+  const membership = await prisma.membership.findUnique({
+    where: { userId_teamId: { userId: user.id, teamId } },
+  });
+  if (!membership) throw new Error("Not a member of this team");
+
+  await setActiveTeamCookie(teamId);
+  redirect("/");
+}
+
+export async function dismissSignedInToast() {
+  await clearSignedInFlash();
 }
 
 export async function logout() {

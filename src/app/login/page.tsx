@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { getLastEmail } from "@/lib/team";
 import LoginForm from "@/components/auth/LoginForm";
 
 export default async function LoginPage({
@@ -10,6 +11,7 @@ export default async function LoginPage({
   const session = await auth();
   const { next } = await searchParams;
   if (session?.user) redirect(next && next.startsWith("/") ? next : "/");
+  const lastEmail = await getLastEmail();
 
   return (
     <div className="min-h-screen bg-canvas flex items-center justify-center p-5">
@@ -18,7 +20,7 @@ export default async function LoginPage({
           <span className="w-[11px] h-[11px] rounded-full bg-accent block" />
           <h1 className="m-0 text-[21px] font-semibold tracking-[-0.01em] text-ink">Travel Planner</h1>
         </div>
-        <LoginForm next={next} />
+        <LoginForm next={next} defaultEmail={lastEmail ?? undefined} />
       </div>
     </div>
   );

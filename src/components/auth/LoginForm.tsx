@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { login } from "@/actions/auth";
 
-export default function LoginForm({ next }: { next?: string }) {
+export default function LoginForm({ next, defaultEmail }: { next?: string; defaultEmail?: string }) {
   const [error, setError] = useState<string | undefined>();
   const [pending, startTransition] = useTransition();
 
@@ -25,7 +25,8 @@ export default function LoginForm({ next }: { next?: string }) {
           name="email"
           type="email"
           required
-          autoFocus
+          defaultValue={defaultEmail}
+          autoFocus={!defaultEmail}
           className="h-11 rounded-[9px] border border-line bg-hover px-3.5 text-[14px] text-ink box-border"
         />
       </label>
@@ -35,6 +36,7 @@ export default function LoginForm({ next }: { next?: string }) {
           name="password"
           type="password"
           required
+          autoFocus={!!defaultEmail}
           className="h-11 rounded-[9px] border border-line bg-hover px-3.5 text-[14px] text-ink box-border"
         />
       </label>

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { signIn } from "@/lib/auth";
 import { demoTasks, demoTrips, DEMO_ITEMS_BY_TRIP_LABEL } from "@/lib/demoData";
-import { setActiveTeamCookie } from "@/lib/team";
+import { setActiveTeamCookie, setLastEmailCookie, setSignedInFlash } from "@/lib/team";
 
 const signupSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(80),
@@ -70,6 +70,8 @@ export async function signup(_prev: ActionState, formData: FormData): Promise<Ac
   if (typeof result === "string" && result.includes("error=")) {
     return { error: "Account created, but sign-in failed — try logging in" };
   }
+  await setLastEmailCookie(email);
+  await setSignedInFlash();
   redirect(safeNext(formData.get("next")));
 }
 
@@ -95,6 +97,8 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
   if (typeof result === "string" && result.includes("error=")) {
     return { error: "Invalid email or password" };
   }
+  await setLastEmailCookie(parsed.data.email);
+  await setSignedInFlash();
   redirect(safeNext(formData.get("next")));
 }
 

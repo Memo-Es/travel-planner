@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import { requireUser, requireActiveTeam } from "@/lib/team";
+import { requireUser, requireActiveTeam, hasSignedInFlash } from "@/lib/team";
 import Planner from "@/components/Planner";
 import type { TripData, TaskData, TeamOption, ItemData, InviteData, MemberOption } from "@/lib/types";
 
 export default async function HomePage() {
   const user = await requireUser();
   const { team, memberships } = await requireActiveTeam(user.id);
+  const justSignedIn = await hasSignedInFlash();
 
   const [trips, tasks, invites, teamMembers] = await Promise.all([
     prisma.trip.findMany({
@@ -69,6 +70,8 @@ export default async function HomePage() {
     name: m.user.name,
   }));
 
+  const currentMember = teamMembers.find((m) => m.userId === user.id);
+
   return (
     <Planner
       teamId={team.id}
@@ -77,6 +80,8 @@ export default async function HomePage() {
       teams={teamOptions}
       invites={inviteData}
       members={memberOptions}
+      userName={currentMember?.user.name ?? "You"}
+      justSignedIn={justSignedIn}
       initialTrips={tripData}
       initialTasks={taskData}
     />

@@ -6,6 +6,7 @@ import { logout } from "@/actions/team";
 
 const ACCENT = "oklch(0.62 0.19 285)";
 const ACCENT_SOFT = "oklch(0.93 0.045 288)";
+const ACCENT_INK = "oklch(0.42 0.16 285)";
 
 export default function LeftPanel({
   card,
@@ -15,6 +16,7 @@ export default function LeftPanel({
   teams,
   teamId,
   teamName,
+  userName,
   onSwitchTeam,
   onOpenSettings,
   onSelectTrip,
@@ -32,6 +34,7 @@ export default function LeftPanel({
   teams: TeamOption[];
   teamId: string;
   teamName: string;
+  userName: string;
   onSwitchTeam: (id: string) => void;
   onOpenSettings: () => void;
   onSelectTrip: (t: TripData) => void;
@@ -128,14 +131,34 @@ export default function LeftPanel({
         <span className="w-[17px] h-[17px] rounded-full border-[1.5px] border-line block flex-none" />
       </div>
 
-      <form action={logout} className="mt-3">
-        <button
-          type="submit"
-          className="text-[12.5px] text-muted-3 bg-transparent border-0 p-0 cursor-pointer hover:text-muted"
-        >
-          Sign out
-        </button>
-      </form>
+      <div className="flex items-center justify-between gap-2 mt-3">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span
+            className="w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-semibold flex-none"
+            style={{ background: ACCENT_SOFT, color: ACCENT_INK }}
+          >
+            {initials(userName)}
+          </span>
+          <span className="text-[12.5px] text-muted-2 overflow-hidden text-ellipsis whitespace-nowrap">
+            {userName}
+          </span>
+        </div>
+        <form action={logout} className="flex-none">
+          <button
+            type="submit"
+            className="text-[12.5px] text-muted-3 bg-transparent border-0 p-0 cursor-pointer hover:text-muted whitespace-nowrap"
+          >
+            Sign out
+          </button>
+        </form>
+      </div>
     </aside>
   );
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }

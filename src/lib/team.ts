@@ -4,6 +4,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const ACTIVE_TEAM_COOKIE = "activeTeamId";
+const LAST_EMAIL_COOKIE = "lastEmail";
+const FLASH_SIGNED_IN_COOKIE = "flashSignedIn";
 
 export async function requireUser() {
   const session = await auth();
@@ -40,4 +42,43 @@ export async function setActiveTeamCookie(teamId: string) {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });
+}
+
+/** Remembers the last email used to sign in on this browser, so the login
+ * form can be pre-filled next time instead of showing a blank slate. */
+export async function setLastEmailCookie(email: string) {
+  const cookieStore = await cookies();
+  cookieStore.set(LAST_EMAIL_COOKIE, email, {
+    httpOnly: false,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+}
+
+export async function getLastEmail(): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get(LAST_EMAIL_COOKIE)?.value ?? null;
+}
+
+/** One-shot flag read by the app shell to show a "Signed in as…" toast
+ * right after login/signup, then cleared via a server action on mount. */
+export async function setSignedInFlash() {
+  const cookieStore = await cookies();
+  cookieStore.set(FLASH_SIGNED_IN_COOKIE, "1", {
+    httpOnly: false,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 30,
+  });
+}
+
+export async function hasSignedInFlash(): Promise<boolean> {
+  const cookieStore = await cookies();
+  return !!cookieStore.get(FLASH_SIGNED_IN_COOKIE)?.value;
+}
+
+export async function clearSignedInFlash() {
+  const cookieStore = await cookies();
+  cookieStore.delete(FLASH_SIGNED_IN_COOKIE);
 }
