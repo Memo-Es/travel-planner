@@ -1,6 +1,6 @@
 "use client";
 
-import { Hotel } from "lucide-react";
+import { Hotel, Plane } from "lucide-react";
 import type { TripData, TeamOption } from "@/lib/types";
 import { fmtRange } from "@/lib/dates";
 import { isScheduled } from "@/lib/tripSections";
@@ -101,9 +101,14 @@ export default function LeftPanel({
                 style={{ background: i % 2 ? ACCENT_SOFT : ACCENT }}
               />
               <span className="overflow-hidden text-ellipsis whitespace-nowrap">{t.label}</span>
-              {t.stay.some(isScheduled) && (
-                <Hotel size={13} strokeWidth={2} className="flex-none" style={{ color: ACCENT_INK }} />
-              )}
+              <span className="flex items-center gap-1 flex-none">
+                {t.stay.some(isScheduled) && (
+                  <Hotel size={13} strokeWidth={2} style={{ color: ACCENT_INK }} />
+                )}
+                {t.transport.some(isScheduled) && (
+                  <Plane size={13} strokeWidth={2} style={{ color: ACCENT_INK }} />
+                )}
+              </span>
               <span className="text-[12px] text-muted-3 whitespace-nowrap [font-variant-numeric:tabular-nums]">
                 {fmtRange(t.start, t.end)}
               </span>
