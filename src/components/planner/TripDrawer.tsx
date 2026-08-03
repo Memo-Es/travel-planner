@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type KeyboardEvent } from "react";
+import { Plus, X } from "lucide-react";
 import type { TripData, ItemSectionKey, ItemData } from "@/lib/types";
 import { fmtRange, nightsBetween } from "@/lib/dates";
 import { SECTION_DEFS, isScheduled, sectionTotal, hostFromUrl } from "@/lib/tripSections";
@@ -116,9 +117,9 @@ export default function TripDrawer({
         </div>
         <button
           onClick={onClose}
-          className="w-8 h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft text-[13px] flex-none"
+          className="w-8 h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft flex-none flex items-center justify-center"
         >
-          ✕
+          <X size={14} />
         </button>
       </header>
 
@@ -211,9 +212,9 @@ export default function TripDrawer({
                   <button
                     onClick={() => onDeleteItem(item.id)}
                     title="Remove"
-                    className="w-7 h-7 flex-none border-0 rounded-lg bg-transparent cursor-pointer text-muted-4 text-[12px] hover:bg-line-soft hover:text-ink-soft"
+                    className="w-7 h-7 flex-none border-0 rounded-lg bg-transparent cursor-pointer text-muted-4 flex items-center justify-center hover:bg-line-soft hover:text-ink-soft"
                   >
-                    ✕
+                    <X size={13} />
                   </button>
                 </div>
               ))}
@@ -276,9 +277,9 @@ export default function TripDrawer({
 
               <button
                 onClick={() => onStartAdd(sec.key)}
-                className="self-start bg-transparent border-0 pt-2 pb-0 cursor-pointer text-[13.5px] text-muted-2 hover:text-ink"
+                className="self-start flex items-center gap-1 bg-transparent border-0 pt-2 pb-0 cursor-pointer text-[13.5px] text-muted-2 hover:text-ink"
               >
-                + Add {sec.name.toLowerCase()}
+                <Plus size={13} /> Add {sec.name.toLowerCase()}
               </button>
             </div>
           );

@@ -1,5 +1,6 @@
 "use client";
 
+import { Hotel, Plane } from "lucide-react";
 import type { CalendarWeek } from "@/lib/calendar";
 
 const WEEKDAYS_FULL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -75,6 +76,12 @@ export default function CalendarView({
                 )}
                 {bar.showDot && <span style={bar.dotStyle} />}
                 <span className="overflow-hidden text-ellipsis whitespace-nowrap">{bar.label}</span>
+                {(bar.hasStay || bar.hasTransport) && (
+                  <span className="flex items-center gap-[3px] flex-none">
+                    {bar.hasStay && <Hotel size={11} strokeWidth={2} />}
+                    {bar.hasTransport && <Plane size={11} strokeWidth={2} />}
+                  </span>
+                )}
                 {bar.canDragRight && (
                   <div
                     style={{ ...handleStyle, right: 0 }}

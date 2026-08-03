@@ -8,6 +8,8 @@ export type CalendarEvent = {
   start: string;
   end: string;
   isNote: boolean;
+  hasStay: boolean;
+  hasTransport: boolean;
 };
 
 export type DayCell = {
@@ -22,6 +24,8 @@ export type BarPill = {
   tripId: string | null;
   label: string;
   showDot: boolean;
+  hasStay: boolean;
+  hasTransport: boolean;
   style: CSSProperties;
   dotStyle: CSSProperties;
   canDragLeft: boolean;
@@ -50,9 +54,9 @@ export function buildWeeks(
   const cellW = Math.max(28, opts.mainWidth / 7);
   const pillMin = Math.max(52, Math.min(96, Math.round(cellW * 2.4)));
   const pillCols = Math.min(7, Math.max(1, Math.ceil(pillMin / cellW)));
-  const band = 22;
-  const pitch = 18;
-  const pillH = 17;
+  const band = 24;
+  const pitch = 23;
+  const pillH = 21;
 
   const weeks: CalendarWeek[] = [];
 
@@ -111,6 +115,8 @@ export function buildWeeks(
         tripId: e.isNote ? null : e.id,
         label: e.label,
         showDot: !e.isNote && !contL && span > 1,
+        hasStay: !e.isNote && e.hasStay,
+        hasTransport: !e.isNote && e.hasTransport,
         // Dragging only makes sense on a segment showing the stop's real edge,
         // and not on the fixed-width "wide" pills used for very short stops.
         canDragLeft: !e.isNote && !wide && !contL,
@@ -155,7 +161,7 @@ export function buildWeeks(
       rowStyle: {
         position: "relative",
         flex: "1 1 auto",
-        minHeight: band + Math.max(1, lanes.length) * pitch + 6,
+        minHeight: band + Math.max(1, lanes.length) * pitch + 8,
         display: "grid",
         gridTemplateColumns: "repeat(7,minmax(0,1fr))",
       },

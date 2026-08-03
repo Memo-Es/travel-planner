@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Plus, X } from "lucide-react";
 import type { InviteData } from "@/lib/types";
 import { CURRENCIES } from "@/lib/currency";
 
@@ -55,9 +56,9 @@ export default function TripSettingsModal({
         <h2 className="m-0 text-[20px] font-semibold tracking-[-0.015em] text-ink">Trip settings</h2>
         <button
           onClick={onClose}
-          className="w-8 h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft text-[13px] flex-none hover:bg-hover"
+          className="w-8 h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft flex-none flex items-center justify-center hover:bg-hover"
         >
-          ✕
+          <X size={14} />
         </button>
       </header>
 
@@ -98,9 +99,17 @@ export default function TripSettingsModal({
             <button
               onClick={generateInvite}
               disabled={pending}
-              className="text-[12.5px] text-accent bg-transparent border-0 cursor-pointer hover:text-accent-hover disabled:opacity-60"
+              className="flex items-center gap-1 text-[12.5px] text-accent bg-transparent border-0 cursor-pointer hover:text-accent-hover disabled:opacity-60"
             >
-              {pending ? "Creating…" : copiedId === "new" ? "Copied!" : "+ Generate invite link"}
+              {pending ? (
+                "Creating…"
+              ) : copiedId === "new" ? (
+                "Copied!"
+              ) : (
+                <>
+                  <Plus size={13} /> Generate invite link
+                </>
+              )}
             </button>
           </div>
 

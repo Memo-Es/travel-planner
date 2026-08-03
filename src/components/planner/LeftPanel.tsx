@@ -1,6 +1,6 @@
 "use client";
 
-import { Hotel, Plane } from "lucide-react";
+import { Hotel, Plane, Plus, X } from "lucide-react";
 import type { TripData, TeamOption } from "@/lib/types";
 import { fmtRange } from "@/lib/dates";
 import { isScheduled } from "@/lib/tripSections";
@@ -67,9 +67,9 @@ export default function LeftPanel({
         {showClose && (
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-lg border border-line bg-white cursor-pointer text-ink-soft text-[13px] flex-none hover:bg-hover"
+            className="w-7 h-7 rounded-lg border border-line bg-white cursor-pointer text-ink-soft flex-none flex items-center justify-center hover:bg-hover"
           >
-            ✕
+            <X size={14} />
           </button>
         )}
       </div>
@@ -116,18 +116,18 @@ export default function LeftPanel({
             <button
               onClick={() => onDeleteTrip(t.id, t.label)}
               title="Delete stop"
-              className="w-7 h-7 flex-none border-0 rounded-lg bg-transparent cursor-pointer text-muted-4 text-[12px] hover:bg-line-soft hover:text-ink-soft"
+              className="w-7 h-7 flex-none border-0 rounded-lg bg-transparent cursor-pointer text-muted-4 flex items-center justify-center hover:bg-line-soft hover:text-ink-soft"
             >
-              ✕
+              <X size={13} />
             </button>
           </div>
         ))}
         <button
           onClick={onAddTrip}
           disabled={addingTrip}
-          className="flex items-center gap-2.5 bg-transparent border-0 py-2.5 px-2 mt-1 -mx-2 rounded-lg cursor-pointer text-[18px] leading-none text-muted-4 hover:bg-hover hover:text-ink disabled:opacity-50 disabled:cursor-default"
+          className="flex items-center gap-2.5 bg-transparent border-0 py-2.5 px-2 mt-1 -mx-2 rounded-lg cursor-pointer text-muted-4 hover:bg-hover hover:text-ink disabled:opacity-50 disabled:cursor-default"
         >
-          {addingTrip ? "…" : "+"}
+          {addingTrip ? "…" : <Plus size={16} />}
         </button>
       </nav>
 

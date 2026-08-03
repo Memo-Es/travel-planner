@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { TripData, TaskData, TeamOption, InviteData, MemberOption, ItemSectionKey } from "@/lib/types";
 import { buildWeeks, layoutMode, mainWidth, type CalendarEvent } from "@/lib/calendar";
 import { MONTHS_LONG, DAY, ms, toDateInput } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
+import { isScheduled } from "@/lib/tripSections";
 import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
 import { createTrip, addItem, updateItem, deleteItem, deleteTrip, updateStopDates } from "@/actions/trips";
 import { createTask, toggleTask, updateTask, deleteTask } from "@/actions/tasks";
@@ -149,6 +151,8 @@ export default function Planner({
       start: n.start,
       end: n.end,
       isNote: true,
+      hasStay: false,
+      hasTransport: false,
     }));
     const tripEvents: CalendarEvent[] = trips.map((t) => {
       const override = dragging && dragging.tripId === t.id;
@@ -158,6 +162,8 @@ export default function Planner({
         start: override ? dragging!.curStart : t.start,
         end: override ? dragging!.curEnd : t.end,
         isNote: false,
+        hasStay: t.stay.some(isScheduled),
+        hasTransport: t.transport.some(isScheduled),
       };
     });
     return noteEvents.concat(tripEvents);
@@ -506,9 +512,9 @@ export default function Planner({
             <div className="flex items-center gap-1.5 flex-none">
               <button
                 onClick={() => setCursor((c) => (c.m === 0 ? { y: c.y - 1, m: 11 } : { y: c.y, m: c.m - 1 }))}
-                className="w-[34px] h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft text-[13px] hover:bg-hover"
+                className="w-[34px] h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft flex items-center justify-center hover:bg-hover"
               >
-                ‹
+                <ChevronLeft size={16} />
               </button>
               <button
                 onClick={() => {
@@ -521,9 +527,9 @@ export default function Planner({
               </button>
               <button
                 onClick={() => setCursor((c) => (c.m === 11 ? { y: c.y + 1, m: 0 } : { y: c.y, m: c.m + 1 }))}
-                className="w-[34px] h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft text-[13px] hover:bg-hover"
+                className="w-[34px] h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft flex items-center justify-center hover:bg-hover"
               >
-                ›
+                <ChevronRight size={16} />
               </button>
             </div>
           </header>

@@ -1,6 +1,7 @@
 "use client";
 
 import type { KeyboardEvent } from "react";
+import { CornerDownLeft, Plus, X } from "lucide-react";
 import type { TaskData, MemberOption } from "@/lib/types";
 import type { TaskFormState } from "@/components/Planner";
 
@@ -70,9 +71,9 @@ export default function RightPanel({
         {showClose && (
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-lg border border-line bg-white cursor-pointer text-ink-soft text-[13px] hover:bg-hover"
+            className="w-7 h-7 rounded-lg border border-line bg-white cursor-pointer text-ink-soft flex items-center justify-center hover:bg-hover"
           >
-            ✕
+            <X size={14} />
           </button>
         )}
       </div>
@@ -117,9 +118,9 @@ export default function RightPanel({
               <button
                 onClick={() => onDeleteTask(task.id)}
                 title="Delete"
-                className="w-7 h-7 mt-1.5 flex-none border-0 rounded-lg bg-transparent cursor-pointer text-muted-4 text-[12px] hover:bg-line-soft hover:text-ink-soft"
+                className="w-7 h-7 mt-1.5 flex-none border-0 rounded-lg bg-transparent cursor-pointer text-muted-4 flex items-center justify-center hover:bg-line-soft hover:text-ink-soft"
               >
-                ✕
+                <X size={13} />
               </button>
             </div>
 
@@ -180,15 +181,19 @@ export default function RightPanel({
 
       <div className="flex-1 min-h-3" />
 
-      <input
-        value={draft}
-        onChange={(e) => onDraftChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") onDraftSubmit();
-        }}
-        placeholder="+ New Task (⏎)"
-        className="w-full box-border h-11 border border-line rounded-[10px] bg-[#f7f6f4] px-3.5 text-[14px] text-ink-soft flex-none"
-      />
+      <div className="relative flex-none">
+        <Plus size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-4 pointer-events-none" />
+        <input
+          value={draft}
+          onChange={(e) => onDraftChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onDraftSubmit();
+          }}
+          placeholder="New task"
+          className="w-full box-border h-11 border border-line rounded-[10px] bg-[#f7f6f4] pl-9 pr-9 text-[14px] text-ink-soft"
+        />
+        <CornerDownLeft size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-4 pointer-events-none" />
+      </div>
     </aside>
   );
 }
