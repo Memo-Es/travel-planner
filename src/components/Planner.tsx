@@ -9,7 +9,7 @@ import { MONTHS_LONG, DAY, ms, toDateInput } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
 import { isScheduled } from "@/lib/tripSections";
 import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
-import { createTrip, addItem, updateItem, deleteItem, deleteTrip, updateStopDates } from "@/actions/trips";
+import { createTrip, addItem, updateItem, deleteItem, deleteTrip, updateStopDates, updateTripLabel } from "@/actions/trips";
 import { createTask, toggleTask, updateTask, deleteTask } from "@/actions/tasks";
 import { switchTeam, updateTeamName, updateTeamCurrency, createInvite, dismissSignedInToast } from "@/actions/team";
 
@@ -344,6 +344,11 @@ export default function Planner({
     refresh();
   }
 
+  async function onRenameTrip(tripId: string, label: string) {
+    await updateTripLabel(tripId, label);
+    refresh();
+  }
+
   function onResizeStart(tripId: string, edge: "left" | "right", startClientX: number) {
     const t = trips.find((x) => x.id === tripId);
     if (!t) return;
@@ -589,6 +594,7 @@ export default function Planner({
           onSaveForm={saveForm}
           onDeleteItem={removeItem}
           onUpdateDates={onUpdateStopDates}
+          onRename={onRenameTrip}
         />
       )}
 

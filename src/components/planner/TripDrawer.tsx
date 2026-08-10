@@ -23,6 +23,7 @@ export default function TripDrawer({
   onSaveForm,
   onDeleteItem,
   onUpdateDates,
+  onRename,
 }: {
   trip: TripData;
   currency: string;
@@ -38,6 +39,7 @@ export default function TripDrawer({
   onSaveForm: () => void;
   onDeleteItem: (itemId: string) => void;
   onUpdateDates: (tripId: string, start: string, end: string) => void;
+  onRename: (tripId: string, label: string) => void;
 }) {
   const bottomSheet = isMobile;
   const tripTotal = sectionTotal(trip.stay) + sectionTotal(trip.transport) + sectionTotal(trip.activities);
@@ -45,6 +47,9 @@ export default function TripDrawer({
   const [editingDates, setEditingDates] = useState(false);
   const [startDraft, setStartDraft] = useState(trip.start);
   const [endDraft, setEndDraft] = useState(trip.end);
+
+  const [editingLabel, setEditingLabel] = useState(false);
+  const [labelDraft, setLabelDraft] = useState(trip.label);
 
   const drawerClass = bottomSheet
     ? "absolute z-30 bg-white box-border flex flex-col overflow-hidden left-2.5 right-2.5 bottom-2.5 max-h-[78vh] rounded-2xl border border-line shadow-[0_-14px_44px_rgba(28,27,25,0.2)] p-[18px_18px_14px]"
@@ -66,11 +71,47 @@ export default function TripDrawer({
     setEditingDates(false);
   }
 
+  function startEditLabel() {
+    setLabelDraft(trip.label);
+    setEditingLabel(true);
+  }
+
+  function saveLabel() {
+    const trimmed = labelDraft.trim();
+    if (trimmed && trimmed !== trip.label) onRename(trip.id, trimmed);
+    setEditingLabel(false);
+  }
+
   return (
     <section className={drawerClass}>
       <header className="flex items-start justify-between gap-3 pb-4 border-b border-line-soft">
         <div className="min-w-0 flex-1">
-          <h2 className="m-0 mb-1 text-[22px] font-semibold tracking-[-0.015em] text-ink">{trip.label}</h2>
+          {editingLabel ? (
+            <div className="flex items-center gap-1.5 mb-1">
+              <input
+                value={labelDraft}
+                onChange={(e) => setLabelDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                  if (e.key === "Escape") setEditingLabel(false);
+                }}
+                onBlur={saveLabel}
+                autoFocus
+                className="h-9 min-w-0 flex-1 border border-line rounded-[8px] bg-[#fbfaf9] px-2.5 text-[19px] font-semibold tracking-[-0.015em] text-ink box-border"
+              />
+            </div>
+          ) : (
+            <button
+              onClick={startEditLabel}
+              title="Rename stop"
+              className="flex items-center gap-1.5 bg-transparent border-0 p-0 mb-1 cursor-pointer text-left group max-w-full"
+            >
+              <h2 className="m-0 text-[22px] font-semibold tracking-[-0.015em] text-ink overflow-hidden text-ellipsis whitespace-nowrap">
+                {trip.label}
+              </h2>
+              <span className="text-[12px] text-muted-4 group-hover:text-ink flex-none">✎</span>
+            </button>
+          )}
 
           {editingDates ? (
             <div className="flex items-center gap-1.5 flex-wrap">
