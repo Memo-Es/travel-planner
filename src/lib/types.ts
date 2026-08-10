@@ -8,6 +8,8 @@ export type ItemData = {
 export type TripData = {
   id: string;
   label: string;
+  color: string | null;
+  photoUrl: string | null;
   start: string;
   end: string;
   stay: ItemData[];

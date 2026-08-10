@@ -9,7 +9,7 @@ import { MONTHS_LONG, DAY, ms, toDateInput } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
 import { isScheduled } from "@/lib/tripSections";
 import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
-import { createTrip, addItem, updateItem, deleteItem, deleteTrip, updateStopDates, updateTripLabel } from "@/actions/trips";
+import { createTrip, addItem, updateItem, deleteItem, deleteTrip, updateStopDates, updateTripLabel, updateTripColor } from "@/actions/trips";
 import { createTask, toggleTask, updateTask, deleteTask } from "@/actions/tasks";
 import { switchTeam, updateTeamName, updateTeamCurrency, createInvite, dismissSignedInToast } from "@/actions/team";
 
@@ -153,6 +153,7 @@ export default function Planner({
       isNote: true,
       hasStay: false,
       hasTransport: false,
+      color: null,
     }));
     const tripEvents: CalendarEvent[] = trips.map((t) => {
       const override = dragging && dragging.tripId === t.id;
@@ -164,6 +165,7 @@ export default function Planner({
         isNote: false,
         hasStay: t.stay.some(isScheduled),
         hasTransport: t.transport.some(isScheduled),
+        color: t.color,
       };
     });
     return noteEvents.concat(tripEvents);
@@ -346,6 +348,11 @@ export default function Planner({
 
   async function onRenameTrip(tripId: string, label: string) {
     await updateTripLabel(tripId, label);
+    refresh();
+  }
+
+  async function onChangeTripColor(tripId: string, color: string) {
+    await updateTripColor(tripId, color);
     refresh();
   }
 
@@ -595,6 +602,7 @@ export default function Planner({
           onDeleteItem={removeItem}
           onUpdateDates={onUpdateStopDates}
           onRename={onRenameTrip}
+          onChangeColor={onChangeTripColor}
         />
       )}
 

@@ -34,6 +34,8 @@ export default async function HomePage() {
   const tripData: TripData[] = trips.map((t) => ({
     id: t.id,
     label: t.label,
+    color: t.color,
+    photoUrl: t.photoUrl,
     start: t.start.toISOString().slice(0, 10),
     end: t.end.toISOString().slice(0, 10),
     stay: t.items.filter((i) => i.section === "STAY").map(toItem),

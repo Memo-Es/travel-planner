@@ -5,6 +5,7 @@ import type { TripData, TeamOption } from "@/lib/types";
 import { fmtRange } from "@/lib/dates";
 import { isScheduled } from "@/lib/tripSections";
 import { logout } from "@/actions/team";
+import { stopColor } from "@/lib/theme";
 
 const ACCENT = "oklch(0.62 0.19 285)";
 const ACCENT_SOFT = "oklch(0.93 0.045 288)";
@@ -96,10 +97,15 @@ export default function LeftPanel({
               className="flex-1 min-w-0 grid items-center gap-2 bg-transparent border-0 py-2.5 px-2 rounded-lg cursor-pointer text-left text-[14.5px] text-ink-soft hover:bg-hover"
               style={{ gridTemplateColumns: "22px 1fr auto auto" }}
             >
-              <span
-                className="w-3 h-3 rounded block"
-                style={{ background: i % 2 ? ACCENT_SOFT : ACCENT }}
-              />
+              {t.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={t.photoUrl} alt="" className="w-[22px] h-[22px] rounded object-cover block" />
+              ) : (
+                <span
+                  className="w-3 h-3 rounded block"
+                  style={{ background: t.color ? stopColor(t.color).base : i % 2 ? ACCENT_SOFT : ACCENT }}
+                />
+              )}
               <span className="overflow-hidden text-ellipsis whitespace-nowrap">{t.label}</span>
               <span className="flex items-center gap-1 flex-none">
                 {t.stay.some(isScheduled) && (

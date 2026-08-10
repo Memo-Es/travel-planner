@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { ACCENT, ACCENT_INK, ACCENT_SOFT } from "@/lib/theme";
+import { ACCENT, ACCENT_INK, ACCENT_SOFT, stopColor } from "@/lib/theme";
 import { DAY, MONTHS_SHORT, ms } from "@/lib/dates";
 
 export type CalendarEvent = {
@@ -10,6 +10,7 @@ export type CalendarEvent = {
   isNote: boolean;
   hasStay: boolean;
   hasTransport: boolean;
+  color: string | null;
 };
 
 export type DayCell = {
@@ -109,6 +110,7 @@ export function buildWeeks(
       const contL = s0 < wStart;
       const contR = e0 > wEnd;
       const anchorRight = wide && occStart < col;
+      const c = e.color ? stopColor(e.color) : null;
 
       bars.push({
         key: e.id + ":" + w,
@@ -125,7 +127,7 @@ export function buildWeeks(
           width: 8,
           height: 8,
           borderRadius: "50%",
-          background: ACCENT,
+          background: c ? c.base : ACCENT,
           flex: "none",
           display: "block",
           marginLeft: 1,
@@ -145,8 +147,8 @@ export function buildWeeks(
           boxSizing: "border-box",
           fontSize: 11.5,
           lineHeight: 1,
-          color: e.isNote ? "#7c7873" : ACCENT_INK,
-          background: e.isNote ? "#f4f3f1" : ACCENT_SOFT,
+          color: e.isNote ? "#7c7873" : c ? c.ink : ACCENT_INK,
+          background: e.isNote ? "#f4f3f1" : c ? c.soft : ACCENT_SOFT,
           borderRadius: contL ? "0 999px 999px 0" : contR ? "999px 0 0 999px" : 999,
           opacity: contL ? 0.72 : 1,
           pointerEvents: e.isNote ? "none" : "auto",

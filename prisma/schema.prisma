@@ -72,6 +72,8 @@ model Trip {
   team      Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId    String
   label     String
+  color     String?
+  photoUrl  String?
   start     DateTime
   end       DateTime
   order     Int        @default(0)

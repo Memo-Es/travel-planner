@@ -6,6 +6,7 @@ import type { TripData, ItemSectionKey, ItemData } from "@/lib/types";
 import { fmtRange, nightsBetween } from "@/lib/dates";
 import { SECTION_DEFS, isScheduled, sectionTotal, hostFromUrl } from "@/lib/tripSections";
 import { currencySymbol, formatCost, formatTotal } from "@/lib/currency";
+import { STOP_COLORS } from "@/lib/theme";
 import type { Editing, FormState } from "@/components/Planner";
 
 export default function TripDrawer({
@@ -24,6 +25,7 @@ export default function TripDrawer({
   onDeleteItem,
   onUpdateDates,
   onRename,
+  onChangeColor,
 }: {
   trip: TripData;
   currency: string;
@@ -40,6 +42,7 @@ export default function TripDrawer({
   onDeleteItem: (itemId: string) => void;
   onUpdateDates: (tripId: string, start: string, end: string) => void;
   onRename: (tripId: string, label: string) => void;
+  onChangeColor: (tripId: string, color: string) => void;
 }) {
   const bottomSheet = isMobile;
   const tripTotal = sectionTotal(trip.stay) + sectionTotal(trip.transport) + sectionTotal(trip.activities);
@@ -84,6 +87,14 @@ export default function TripDrawer({
 
   return (
     <section className={drawerClass}>
+      {trip.photoUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={trip.photoUrl}
+          alt=""
+          className="w-full h-24 object-cover rounded-xl mb-3 flex-none"
+        />
+      )}
       <header className="flex items-start justify-between gap-3 pb-4 border-b border-line-soft">
         <div className="min-w-0 flex-1">
           {editingLabel ? (
@@ -163,6 +174,26 @@ export default function TripDrawer({
           <X size={14} />
         </button>
       </header>
+
+      <div className="flex items-center gap-1.5 pt-3 flex-none">
+        <span className="text-[11px] text-muted-3 mr-1">Color</span>
+        {STOP_COLORS.map((c) => {
+          const active = (trip.color ?? "violet") === c.id;
+          return (
+            <button
+              key={c.id}
+              onClick={() => onChangeColor(trip.id, c.id)}
+              title={c.label}
+              className="w-5 h-5 rounded-full flex-none cursor-pointer p-0"
+              style={{
+                background: c.base,
+                border: active ? "2px solid #34322e" : "2px solid transparent",
+                boxShadow: active ? "none" : "0 0 0 1px #e6e4e0",
+              }}
+            />
+          );
+        })}
+      </div>
 
       <div className="flex flex-col gap-[22px] pt-[18px] pb-1 overflow-y-auto overflow-x-hidden min-h-0">
         {SECTION_DEFS.map((sec) => {

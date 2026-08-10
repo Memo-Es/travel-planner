@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/team";
+import { lookupDestinationPhoto } from "@/lib/photo";
+import { STOP_COLORS } from "@/lib/theme";
 
 async function requireTeamMembership(teamId: string) {
   const user = await requireUser();
@@ -52,7 +54,18 @@ const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date")
 export async function updateTripLabel(tripId: string, label: string) {
   await requireTripAccess(tripId);
   const trimmed = z.string().trim().min(1, "Name is required").max(80).parse(label);
-  await prisma.trip.update({ where: { id: tripId }, data: { label: trimmed } });
+  const photoUrl = await lookupDestinationPhoto(trimmed);
+  await prisma.trip.update({ where: { id: tripId }, data: { label: trimmed, photoUrl } });
+  revalidatePath("/");
+}
+
+const colorIds = STOP_COLORS.map((c) => c.id) as [string, ...string[]];
+const colorSchema = z.enum(colorIds);
+
+export async function updateTripColor(tripId: string, color: string) {
+  await requireTripAccess(tripId);
+  const parsed = colorSchema.parse(color);
+  await prisma.trip.update({ where: { id: tripId }, data: { color: parsed } });
   revalidatePath("/");
 }
 
