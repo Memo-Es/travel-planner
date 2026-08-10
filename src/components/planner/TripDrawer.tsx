@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type KeyboardEvent } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import type { TripData, ItemSectionKey, ItemData } from "@/lib/types";
 import { fmtRange, nightsBetween } from "@/lib/dates";
 import { SECTION_DEFS, isScheduled, sectionTotal, hostFromUrl } from "@/lib/tripSections";
@@ -26,6 +26,7 @@ export default function TripDrawer({
   onUpdateDates,
   onRename,
   onChangeColor,
+  onDeleteTrip,
 }: {
   trip: TripData;
   currency: string;
@@ -43,6 +44,7 @@ export default function TripDrawer({
   onUpdateDates: (tripId: string, start: string, end: string) => void;
   onRename: (tripId: string, label: string) => void;
   onChangeColor: (tripId: string, color: string) => void;
+  onDeleteTrip: (tripId: string, label: string) => void;
 }) {
   const bottomSheet = isMobile;
   const tripTotal = sectionTotal(trip.stay) + sectionTotal(trip.transport) + sectionTotal(trip.activities);
@@ -167,12 +169,21 @@ export default function TripDrawer({
             </button>
           )}
         </div>
-        <button
-          onClick={onClose}
-          className="w-8 h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft flex-none flex items-center justify-center"
-        >
-          <X size={14} />
-        </button>
+        <div className="flex items-center gap-1.5 flex-none">
+          <button
+            onClick={() => onDeleteTrip(trip.id, trip.label)}
+            title="Delete stop"
+            className="w-8 h-8 rounded-[9px] border border-line bg-white cursor-pointer text-muted-4 flex items-center justify-center hover:bg-line-soft hover:text-ink-soft"
+          >
+            <Trash2 size={14} />
+          </button>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft flex items-center justify-center"
+          >
+            <X size={14} />
+          </button>
+        </div>
       </header>
 
       <div className="flex items-center gap-1.5 pt-3 flex-none">

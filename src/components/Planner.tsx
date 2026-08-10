@@ -603,6 +603,7 @@ export default function Planner({
           onUpdateDates={onUpdateStopDates}
           onRename={onRenameTrip}
           onChangeColor={onChangeTripColor}
+          onDeleteTrip={handleDeleteTrip}
         />
       )}
 
