@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Plus, X, Copy, Check, Users, Loader2 } from "lucide-react";
+import { Plus, X, Copy, Check, Users, Loader2, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,12 +11,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import type { InviteData } from "@/lib/types";
+import type { InviteData, MemberOption } from "@/lib/types";
 import { CURRENCIES } from "@/lib/currency";
 
 export default function TripSettingsModal({
   teamName,
   currency,
+  members,
+  currentUserId,
   invites,
   onClose,
   onRename,
@@ -25,6 +27,8 @@ export default function TripSettingsModal({
 }: {
   teamName: string;
   currency: string;
+  members: MemberOption[];
+  currentUserId: string;
   invites: InviteData[];
   onClose: () => void;
   onRename: (name: string) => Promise<void>;
@@ -162,16 +166,30 @@ export default function TripSettingsModal({
             className="space-y-3 border-t border-line-soft pt-5"
             aria-labelledby="teammates-heading"
           >
-            <h3
+            <div className="flex items-center justify-between gap-3">
+              <h3
               id="teammates-heading"
               className="flex items-center gap-2 text-sm font-semibold"
-            >
-              <Users className="size-4 text-muted" />
-              Teammates
-            </h3>
-            <p className="text-xs leading-relaxed text-muted">
-              Share an invite link to plan this trip together.
-            </p>
+              >
+                <Users className="size-4 text-muted" />
+                Teammates
+              </h3>
+              <Badge>{members.length} {members.length === 1 ? "person" : "people"}</Badge>
+            </div>
+            <ul aria-labelledby="teammates-heading" className="divide-y divide-line-soft rounded-xl border border-line px-3">
+              {members.map((member) => {
+                const isCurrentUser = member.id === currentUserId;
+                const initials = member.name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
+                return (
+                  <li key={member.id} className="flex items-center gap-3 py-3">
+                    <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-ink">{initials}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{member.name}</span>
+                    {isCurrentUser ? <Badge>You</Badge> : member.role === "OWNER" ? <Badge><Crown className="size-3" />Owner</Badge> : <Badge variant="secondary">Member</Badge>}
+                  </li>
+                );
+              })}
+              {members.length === 0 && <li className="py-3 text-sm text-muted">No teammates yet.</li>}
+            </ul>
             {invites.map((inv) => (
               <div
                 key={inv.id}

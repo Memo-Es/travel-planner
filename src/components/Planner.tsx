@@ -99,6 +99,7 @@ export default function Planner({
   teams,
   invites,
   members,
+  currentUserId,
   userName,
   justSignedIn,
   initialTrips,
@@ -110,6 +111,7 @@ export default function Planner({
   teams: TeamOption[];
   invites: InviteData[];
   members: MemberOption[];
+  currentUserId: string;
   userName: string;
   justSignedIn: boolean;
   initialTrips: TripData[];
@@ -829,6 +831,8 @@ export default function Planner({
             key="settings"
             teamName={teamName}
             currency={teamCurrency}
+            members={members}
+            currentUserId={currentUserId}
             invites={invites}
             onClose={() => setSettingsOpen(false)}
             onRename={onRenameTeam}

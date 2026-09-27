@@ -31,6 +31,7 @@ export type TaskData = {
 export type MemberOption = {
   id: string;
   name: string;
+  role: "OWNER" | "MEMBER";
 };
 
 export type TeamOption = {

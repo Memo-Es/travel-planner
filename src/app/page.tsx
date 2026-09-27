@@ -70,6 +70,7 @@ export default async function HomePage() {
   const memberOptions: MemberOption[] = teamMembers.map((m) => ({
     id: m.user.id,
     name: m.user.name,
+    role: m.role,
   }));
 
   const currentMember = teamMembers.find((m) => m.userId === user.id);
@@ -82,6 +83,7 @@ export default async function HomePage() {
       teams={teamOptions}
       invites={inviteData}
       members={memberOptions}
+      currentUserId={user.id}
       userName={currentMember?.user.name ?? "You"}
       justSignedIn={justSignedIn}
       initialTrips={tripData}
