@@ -1,21 +1,39 @@
 "use client";
 
-import { Hotel, Plane, Plus, X } from "lucide-react";
+import { useId } from "react";
+import { AnimatedBackground } from "@/components/motion/primitives";
+import {
+  Hotel,
+  Plane,
+  Plus,
+  X,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Settings2,
+  MapPin,
+  Loader2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { NativeSelect } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import type { TripData, TeamOption } from "@/lib/types";
 import { fmtRange } from "@/lib/dates";
 import { isScheduled } from "@/lib/tripSections";
 import { logout } from "@/actions/team";
 import { stopColor } from "@/lib/theme";
 
-const ACCENT = "oklch(0.62 0.19 285)";
-const ACCENT_SOFT = "oklch(0.93 0.045 288)";
-const ACCENT_INK = "oklch(0.42 0.16 285)";
-
 export default function LeftPanel({
   card,
   overlay,
   isMobile,
   trips,
+  selectedTripId,
   teams,
   teamId,
   teamName,
@@ -34,6 +52,7 @@ export default function LeftPanel({
   overlay: boolean;
   isMobile: boolean;
   trips: TripData[];
+  selectedTripId: string | null;
   teams: TeamOption[];
   teamId: string;
   teamName: string;
@@ -48,126 +67,177 @@ export default function LeftPanel({
   showClose: boolean;
   todayLabel: string;
 }) {
+  const highlightId = useId();
   const overlayBox =
     "absolute top-3 bottom-3 z-20 w-[272px] shadow-[0_18px_44px_rgba(28,27,25,0.18)] left-[74px]";
   const positionClass = overlay ? overlayBox : isMobile ? "flex-1 min-h-0" : "";
 
   return (
-    <aside className={card + " p-[22px_20px] " + positionClass}>
-      <div className="flex items-center justify-between gap-2.5 mb-1">
-        <button
-          onClick={onOpenSettings}
-          title="Trip settings"
-          className="flex items-center gap-2.5 bg-transparent border-0 p-0 -m-0.5 pr-1.5 rounded-lg cursor-pointer text-left min-w-0 hover:bg-hover"
+    <aside aria-label="Trips" className={card + " p-5 " + positionClass}>
+      <div className="mb-1 flex items-start justify-between gap-1">
+        <div className="min-w-0">
+          <p className="section-label mb-2">Your itinerary</p>
+          <h2 className="panel-heading break-words">{teamName}</h2>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={showClose ? onClose : onOpenSettings}
+          aria-label={showClose ? "Close trips" : "Trip settings"}
         >
-          <span className="w-[11px] h-[11px] rounded-full block flex-none" style={{ background: ACCENT }} />
-          <h2 className="m-0 text-[21px] font-semibold tracking-[-0.01em] text-ink overflow-hidden text-ellipsis whitespace-nowrap">
-            {teamName}
-          </h2>
-        </button>
-        {showClose && (
-          <button
-            onClick={onClose}
-            className="w-7 h-7 rounded-lg border border-line bg-white cursor-pointer text-ink-soft flex-none flex items-center justify-center hover:bg-hover"
-          >
-            <X size={14} />
-          </button>
-        )}
+          {showClose ? <X /> : <Settings2 />}
+        </Button>
       </div>
-
+      {showClose && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-2 self-start"
+          onClick={onOpenSettings}
+        >
+          <Settings2 />
+          Trip settings
+        </Button>
+      )}
       {teams.length > 1 && (
-        <select
+        <NativeSelect
+          aria-label="Workspace"
+          className="mt-3"
           value={teamId}
           onChange={(e) => onSwitchTeam(e.target.value)}
-          className="text-[12px] text-muted-2 bg-transparent border-0 cursor-pointer mb-4 -mt-0.5"
         >
           {teams.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       )}
-
-      <nav className={"flex flex-col gap-[3px]" + (teams.length > 1 ? "" : " mt-5")}>
-        {trips.map((t, i) => (
-          <div key={t.id} className="flex items-center gap-0.5 -mx-2">
+      <nav
+        aria-label="Trip stops"
+        className="-mx-2 mt-5 min-h-0 space-y-1 overflow-y-auto px-1"
+      >
+        {trips.map((t) => (
+          <div
+            key={t.id}
+            className={
+              "relative isolate flex items-center rounded-xl transition-colors " +
+              (selectedTripId === t.id ? "" : "hover:bg-hover")
+            }
+          >
+            {selectedTripId === t.id && (
+              <AnimatedBackground
+                layoutId={highlightId}
+                className="bg-accent-soft"
+              />
+            )}
             <button
               onClick={() => onSelectTrip(t)}
-              className="flex-1 min-w-0 grid items-center gap-2 bg-transparent border-0 py-2.5 px-2 rounded-lg cursor-pointer text-left text-[14.5px] text-ink-soft hover:bg-hover"
-              style={{ gridTemplateColumns: "22px 1fr auto auto" }}
+              aria-current={selectedTripId === t.id ? "true" : undefined}
+              className="flex min-w-0 flex-1 items-center gap-3 rounded-xl py-3 pl-2 text-left"
             >
               {t.photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={t.photoUrl} alt="" className="w-[22px] h-[22px] rounded object-cover block" />
+                <img
+                  src={t.photoUrl}
+                  alt=""
+                  className="size-8 shrink-0 rounded-lg object-cover"
+                />
               ) : (
                 <span
-                  className="w-3 h-3 rounded block"
-                  style={{ background: t.color ? stopColor(t.color).base : i % 2 ? ACCENT_SOFT : ACCENT }}
-                />
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg"
+                  style={{
+                    background: stopColor(t.color).soft,
+                    color: stopColor(t.color).ink,
+                  }}
+                >
+                  <MapPin size={15} />
+                </span>
               )}
-              <span className="overflow-hidden text-ellipsis whitespace-nowrap">{t.label}</span>
-              <span className="flex items-center gap-1 flex-none">
-                {t.stay.some(isScheduled) && (
-                  <Hotel size={13} strokeWidth={2} style={{ color: ACCENT_INK }} />
-                )}
-                {t.transport.some(isScheduled) && (
-                  <Plane size={13} strokeWidth={2} style={{ color: ACCENT_INK }} />
-                )}
-              </span>
-              <span className="text-[12px] text-muted-3 whitespace-nowrap [font-variant-numeric:tabular-nums]">
-                {fmtRange(t.start, t.end)}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-ink">
+                  {t.label}
+                </span>
+                <span className="mt-1 flex items-center gap-2 text-xs tabular-nums text-muted">
+                  {fmtRange(t.start, t.end)}
+                  {t.stay.some(isScheduled) && (
+                    <Hotel size={12} aria-label="Stay scheduled" />
+                  )}
+                  {t.transport.some(isScheduled) && (
+                    <Plane size={12} aria-label="Transport scheduled" />
+                  )}
+                </span>
               </span>
             </button>
-            <button
-              onClick={() => onDeleteTrip(t.id, t.label)}
-              title="Delete stop"
-              className="w-7 h-7 flex-none border-0 rounded-lg bg-transparent cursor-pointer text-muted-4 flex items-center justify-center hover:bg-line-soft hover:text-ink-soft"
-            >
-              <X size={13} />
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Options for ${t.label}`}
+                >
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onSelect={() => onSelectTrip(t)}>
+                  <Pencil />
+                  Edit stop
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  destructive
+                  onSelect={() => onDeleteTrip(t.id, t.label)}
+                >
+                  <Trash2 />
+                  Delete stop
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ))}
-        <button
-          onClick={onAddTrip}
-          disabled={addingTrip}
-          className="flex items-center gap-2.5 bg-transparent border-0 py-2.5 px-2 mt-1 -mx-2 rounded-lg cursor-pointer text-muted-4 hover:bg-hover hover:text-ink disabled:opacity-50 disabled:cursor-default"
-        >
-          {addingTrip ? "…" : <Plus size={16} />}
-        </button>
+        {trips.length === 0 && (
+          <p className="px-2 py-4 text-sm leading-relaxed text-muted">
+            Your next adventure starts with a stop.
+          </p>
+        )}
       </nav>
-
-      <div className="flex-1 min-h-4" />
-
-      <div className="flex items-end justify-between gap-2">
-        <div className="text-[13px] leading-[1.45] text-muted-2">
-          <div>{todayLabel}</div>
-          <div>{trips.length} stops planned</div>
+      <Button
+        variant="outline"
+        onClick={onAddTrip}
+        disabled={addingTrip}
+        className="mt-4 w-full justify-start"
+      >
+        {addingTrip ? <Loader2 className="animate-spin" /> : <Plus />}
+        {addingTrip ? "Adding stop…" : "Add stop"}
+      </Button>
+      <footer className="mt-auto shrink-0 pt-6">
+        <div className="mb-4 text-xs leading-relaxed text-muted">
+          <p>{todayLabel}</p>
+          <p>
+            {trips.length} {trips.length === 1 ? "stop" : "stops"} planned
+          </p>
         </div>
-        <span className="w-[17px] h-[17px] rounded-full border-[1.5px] border-line block flex-none" />
-      </div>
-
-      <div className="flex items-center justify-between gap-2 mt-3">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span
-            className="w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-semibold flex-none"
-            style={{ background: ACCENT_SOFT, color: ACCENT_INK }}
-          >
-            {initials(userName)}
-          </span>
-          <span className="text-[12.5px] text-muted-2 overflow-hidden text-ellipsis whitespace-nowrap">
-            {userName}
-          </span>
+        <div className="flex items-center justify-between gap-2 border-t border-line-soft pt-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-ink">
+              {initials(userName)}
+            </span>
+            <span className="truncate text-xs font-medium text-ink-soft">
+              {userName}
+            </span>
+          </div>
+          <form action={logout}>
+            <Button
+              type="submit"
+              variant="ghost"
+              size="sm"
+              className="px-2 text-xs"
+            >
+              Sign out
+            </Button>
+          </form>
         </div>
-        <form action={logout} className="flex-none">
-          <button
-            type="submit"
-            className="text-[12.5px] text-muted-3 bg-transparent border-0 p-0 cursor-pointer hover:text-muted whitespace-nowrap"
-          >
-            Sign out
-          </button>
-        </form>
-      </div>
+      </footer>
     </aside>
   );
 }

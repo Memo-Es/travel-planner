@@ -19,12 +19,18 @@ export default function CalendarView({
   weeks,
   width,
   onBarPointerDown,
+  onOpenTrip,
   onResizeStart,
 }: {
   weeks: CalendarWeek[];
   width: number;
+  onOpenTrip: (tripId: string) => void;
   onBarPointerDown: (tripId: string, clientX: number) => void;
-  onResizeStart: (tripId: string, edge: "left" | "right", clientX: number) => void;
+  onResizeStart: (
+    tripId: string,
+    edge: "left" | "right",
+    clientX: number,
+  ) => void;
 }) {
   const weekdays = width / 7 < 48 ? WEEKDAYS_SHORT : WEEKDAYS_FULL;
 
@@ -35,7 +41,10 @@ export default function CalendarView({
         style={{ gridTemplateColumns: "repeat(7,minmax(0,1fr))" }}
       >
         {weekdays.map((wd, i) => (
-          <div key={i} className="text-right pr-1.5 text-[12px] text-muted-3 tracking-[0.01em] overflow-hidden">
+          <div
+            key={i}
+            className="text-right pr-1.5 text-[12px] text-muted-3 tracking-[0.01em] overflow-hidden"
+          >
             {wd}
           </div>
         ))}
@@ -61,8 +70,36 @@ export default function CalendarView({
             {week.bars.map((bar) => (
               <div
                 key={bar.key}
-                style={{ ...bar.style, touchAction: bar.tripId ? "none" : bar.style.touchAction }}
-                onPointerDown={bar.tripId ? (e) => onBarPointerDown(bar.tripId!, e.clientX) : undefined}
+                role={bar.tripId ? "button" : undefined}
+                tabIndex={bar.tripId ? 0 : undefined}
+                aria-label={bar.tripId ? `Open ${bar.label}` : undefined}
+                className={
+                  bar.tripId
+                    ? "transition-[filter] duration-150 hover:brightness-95 focus-visible:z-10"
+                    : undefined
+                }
+                onKeyDown={
+                  bar.tripId
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onOpenTrip(bar.tripId!);
+                        }
+                      }
+                    : undefined
+                }
+                style={{
+                  ...bar.style,
+                  touchAction: bar.tripId ? "none" : bar.style.touchAction,
+                }}
+                onPointerDown={
+                  bar.tripId
+                    ? (e) => {
+                        if (e.button === 0)
+                          onBarPointerDown(bar.tripId!, e.clientX);
+                      }
+                    : undefined
+                }
               >
                 {bar.canDragLeft && (
                   <div
@@ -75,7 +112,9 @@ export default function CalendarView({
                   />
                 )}
                 {bar.showDot && <span style={bar.dotStyle} />}
-                <span className="overflow-hidden text-ellipsis whitespace-nowrap">{bar.label}</span>
+                <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                  {bar.label}
+                </span>
                 {(bar.hasStay || bar.hasTransport) && (
                   <span className="flex items-center gap-[3px] flex-none">
                     {bar.hasStay && <Hotel size={11} strokeWidth={2} />}

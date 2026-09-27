@@ -1,12 +1,45 @@
 "use client";
 
+import { AnimatedNumber, Disclosure } from "@/components/motion/primitives";
 import { useState, type KeyboardEvent } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  X,
+  Pencil,
+  MoreHorizontal,
+  ArrowUpRight,
+  CalendarDays,
+  Hotel,
+  Plane,
+  MapPin,
+  Check,
+} from "lucide-react";
 import type { TripData, ItemSectionKey, ItemData } from "@/lib/types";
 import { fmtRange, nightsBetween } from "@/lib/dates";
-import { SECTION_DEFS, isScheduled, sectionTotal, hostFromUrl } from "@/lib/tripSections";
+import {
+  SECTION_DEFS,
+  isScheduled,
+  sectionTotal,
+  hostFromUrl,
+} from "@/lib/tripSections";
 import { currencySymbol, formatCost, formatTotal } from "@/lib/currency";
 import { STOP_COLORS } from "@/lib/theme";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import type { Editing, FormState } from "@/components/Planner";
 
 export default function TripDrawer({
@@ -16,6 +49,7 @@ export default function TripDrawer({
   editing,
   form,
   formError,
+  saving,
   onFormChange,
   onClose,
   onStartAdd,
@@ -34,10 +68,15 @@ export default function TripDrawer({
   editing: Editing;
   form: FormState;
   formError: string | null;
+  saving: boolean;
   onFormChange: (f: FormState) => void;
   onClose: () => void;
   onStartAdd: (key: ItemSectionKey) => void;
-  onStartEdit: (key: ItemSectionKey, itemId: string, current: FormState) => void;
+  onStartEdit: (
+    key: ItemSectionKey,
+    itemId: string,
+    current: FormState,
+  ) => void;
   onCancelForm: () => void;
   onSaveForm: () => void;
   onDeleteItem: (itemId: string) => void;
@@ -46,39 +85,26 @@ export default function TripDrawer({
   onChangeColor: (tripId: string, color: string) => void;
   onDeleteTrip: (tripId: string, label: string) => void;
 }) {
-  const bottomSheet = isMobile;
-  const tripTotal = sectionTotal(trip.stay) + sectionTotal(trip.transport) + sectionTotal(trip.activities);
-
+  const tripTotal =
+    sectionTotal(trip.stay) +
+    sectionTotal(trip.transport) +
+    sectionTotal(trip.activities);
   const [editingDates, setEditingDates] = useState(false);
   const [startDraft, setStartDraft] = useState(trip.start);
   const [endDraft, setEndDraft] = useState(trip.end);
-
   const [editingLabel, setEditingLabel] = useState(false);
   const [labelDraft, setLabelDraft] = useState(trip.label);
-
-  const drawerClass = bottomSheet
-    ? "absolute z-30 bg-white box-border flex flex-col overflow-hidden left-2.5 right-2.5 bottom-2.5 max-h-[78vh] rounded-2xl border border-line shadow-[0_-14px_44px_rgba(28,27,25,0.2)] p-[18px_18px_14px]"
-    : "absolute z-30 bg-white box-border flex flex-col overflow-hidden top-3 bottom-3 right-3 w-[min(420px,52vw)] rounded-2xl border border-line shadow-[-18px_0_48px_rgba(28,27,25,0.18)] p-[22px_22px_16px]";
+  const datesValid = !!startDraft && !!endDraft && endDraft >= startDraft;
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") onSaveForm();
-    if (e.key === "Escape") onCancelForm();
-  }
-
-  function startEditDates() {
-    setStartDraft(trip.start);
-    setEndDraft(trip.end);
-    setEditingDates(true);
-  }
-
-  function saveDates() {
-    if (endDraft >= startDraft) onUpdateDates(trip.id, startDraft, endDraft);
-    setEditingDates(false);
-  }
-
-  function startEditLabel() {
-    setLabelDraft(trip.label);
-    setEditingLabel(true);
+    if (e.key === "Enter" && !saving) {
+      e.preventDefault();
+      onSaveForm();
+    }
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      onCancelForm();
+    }
   }
 
   function saveLabel() {
@@ -88,286 +114,441 @@ export default function TripDrawer({
   }
 
   return (
-    <section className={drawerClass}>
-      {trip.photoUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={trip.photoUrl}
-          alt=""
-          className="w-full h-24 object-cover rounded-xl mb-3 flex-none"
-        />
-      )}
-      <header className="flex items-start justify-between gap-3 pb-4 border-b border-line-soft">
-        <div className="min-w-0 flex-1">
-          {editingLabel ? (
-            <div className="flex items-center gap-1.5 mb-1">
-              <input
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent
+        placement={isMobile ? "bottom" : "right"}
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          document.getElementById("close-trip")?.focus();
+        }}
+      >
+        <header className="trip-header flex shrink-0 items-start justify-between gap-3 border-b border-line-soft pb-5">
+          <div className="min-w-0 flex-1">
+            <p className="section-label mb-2">Trip details</p>
+            <DialogTitle className={editingLabel ? "sr-only" : "text-2xl"}>
+              {trip.label}
+            </DialogTitle>
+            {editingLabel ? (
+              <Input
+                aria-label="Stop name"
                 value={labelDraft}
                 onChange={(e) => setLabelDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-                  if (e.key === "Escape") setEditingLabel(false);
-                }}
-                onBlur={saveLabel}
                 autoFocus
-                className="h-9 min-w-0 flex-1 border border-line rounded-[8px] bg-[#fbfaf9] px-2.5 text-[19px] font-semibold tracking-[-0.015em] text-ink box-border"
+                onBlur={saveLabel}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.currentTarget.blur();
+                  if (e.key === "Escape") {
+                    e.stopPropagation();
+                    setEditingLabel(false);
+                  }
+                }}
               />
-            </div>
-          ) : (
-            <button
-              onClick={startEditLabel}
-              title="Rename stop"
-              className="flex items-center gap-1.5 bg-transparent border-0 p-0 mb-1 cursor-pointer text-left group max-w-full"
-            >
-              <h2 className="m-0 text-[22px] font-semibold tracking-[-0.015em] text-ink overflow-hidden text-ellipsis whitespace-nowrap">
-                {trip.label}
-              </h2>
-              <span className="text-[12px] text-muted-4 group-hover:text-ink flex-none">✎</span>
-            </button>
-          )}
-
-          {editingDates ? (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <input
-                type="date"
-                value={startDraft}
-                onChange={(e) => setStartDraft(e.target.value)}
-                className="h-8 border border-line rounded-[8px] bg-[#fbfaf9] px-2 text-[12.5px] text-ink box-border"
-              />
-              <span className="text-muted-3 text-[12px]">–</span>
-              <input
-                type="date"
-                value={endDraft}
-                min={startDraft}
-                onChange={(e) => setEndDraft(e.target.value)}
-                className="h-8 border border-line rounded-[8px] bg-[#fbfaf9] px-2 text-[12.5px] text-ink box-border"
-              />
-              <button
-                onClick={saveDates}
-                className="h-8 px-2.5 rounded-[8px] border-0 bg-accent hover:bg-accent-hover text-white cursor-pointer text-[12px]"
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="-ml-3 mt-1 h-8 text-xs"
+                onClick={() => {
+                  setStartDraft(trip.start);
+                  setEndDraft(trip.end);
+                  setEditingDates(true);
+                }}
               >
-                Save
-              </button>
-              <button
-                onClick={() => setEditingDates(false)}
-                className="h-8 px-2.5 rounded-[8px] border border-line bg-white cursor-pointer text-[12px] text-ink-soft hover:bg-hover"
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={startEditDates}
-              title="Edit dates"
-              className="flex items-center gap-1.5 bg-transparent border-0 p-0 cursor-pointer text-[13px] text-muted-2 hover:text-ink group"
-            >
-              <span>
-                {fmtRange(trip.start, trip.end)} · {nightsBetween(trip.start, trip.end)} nights
-                {tripTotal > 0 && <> · {formatTotal(tripTotal, currency)} total</>}
-              </span>
-              <span className="text-[12px] text-muted-4 group-hover:text-ink">✎</span>
-            </button>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5 flex-none">
-          <button
-            onClick={() => onDeleteTrip(trip.id, trip.label)}
-            title="Delete stop"
-            className="w-8 h-8 rounded-[9px] border border-line bg-white cursor-pointer text-muted-4 flex items-center justify-center hover:bg-line-soft hover:text-ink-soft"
-          >
-            <Trash2 size={14} />
-          </button>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft flex items-center justify-center"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      </header>
-
-      <div className="flex items-center gap-1.5 pt-3 flex-none">
-        <span className="text-[11px] text-muted-3 mr-1">Color</span>
-        {STOP_COLORS.map((c) => {
-          const active = (trip.color ?? "violet") === c.id;
-          return (
-            <button
-              key={c.id}
-              onClick={() => onChangeColor(trip.id, c.id)}
-              title={c.label}
-              className="w-5 h-5 rounded-full flex-none cursor-pointer p-0"
-              style={{
-                background: c.base,
-                border: active ? "2px solid #34322e" : "2px solid transparent",
-                boxShadow: active ? "none" : "0 0 0 1px #e6e4e0",
-              }}
-            />
-          );
-        })}
-      </div>
-
-      <div className="flex flex-col gap-[22px] pt-[18px] pb-1 overflow-y-auto overflow-x-hidden min-h-0">
-        {SECTION_DEFS.map((sec) => {
-          const items: ItemData[] = trip[sec.key];
-          const scheduledCount = items.filter(isScheduled).length;
-          const total = sectionTotal(items);
-          const showForm = editing?.key === sec.key;
-          const saveLabel = editing && editing.itemId !== null ? "Save" : "Add";
-
-          return (
-            <div key={sec.key} className="flex flex-col gap-1.5">
-              <div className="flex items-baseline justify-between gap-2.5">
-                <h3 className="m-0 text-[13px] font-semibold tracking-[0.06em] uppercase text-muted">
-                  {sec.name}
-                </h3>
-                <span className="text-[12px] text-muted-3">
-                  {scheduledCount}/{items.length} scheduled
-                  {total > 0 && <> · {formatTotal(total, currency)}</>}
-                </span>
-              </div>
-
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-2 bg-[#fbfaf9] border border-line-soft rounded-[11px] py-2 pl-3 pr-2.5 min-h-[48px] box-border"
+                <CalendarDays />
+                {fmtRange(trip.start, trip.end)} ·{" "}
+                {nightsBetween(trip.start, trip.end)} nights
+              </Button>
+            )}
+            <DialogDescription className="sr-only">
+              Manage dates and bookings for {trip.label}.
+            </DialogDescription>
+          </div>
+          <div className="flex gap-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Stop options">
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setLabelDraft(trip.label);
+                    setEditingLabel(true);
+                  }}
                 >
+                  <Pencil />
+                  Rename stop
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  destructive
+                  onSelect={() => onDeleteTrip(trip.id, trip.label)}
+                >
+                  <Trash2 />
+                  Delete stop
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              id="close-trip"
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              aria-label="Close trip details"
+            >
+              <X />
+            </Button>
+          </div>
+        </header>
+
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-1 py-5 -mx-1">
+          {trip.photoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={trip.photoUrl}
+              alt=""
+              className="h-32 w-full rounded-xl object-cover"
+            />
+          )}
+          <Disclosure open={editingDates}>
+            <div className="space-y-3 rounded-xl border border-line bg-secondary/50 p-4">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="space-y-2">
+                  <span className="field-label">Arrival</span>
+                  <Input
+                    type="date"
+                    value={startDraft}
+                    onChange={(e) => setStartDraft(e.target.value)}
+                  />
+                </label>
+                <label className="space-y-2">
+                  <span className="field-label">Departure</span>
+                  <Input
+                    type="date"
+                    min={startDraft}
+                    value={endDraft}
+                    onChange={(e) => setEndDraft(e.target.value)}
+                    aria-invalid={!datesValid}
+                    aria-describedby={!datesValid ? "date-error" : undefined}
+                  />
+                </label>
+              </div>
+              {!datesValid && (
+                <p id="date-error" className="field-error" role="alert">
+                  Choose a departure on or after arrival.
+                </p>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditingDates(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={!datesValid}
+                  onClick={() => {
+                    onUpdateDates(trip.id, startDraft, endDraft);
+                    setEditingDates(false);
+                  }}
+                >
+                  Save dates
+                </Button>
+              </div>
+            </div>
+          </Disclosure>
+          <fieldset className="min-w-0">
+            <legend className="field-label mb-2">Calendar color</legend>
+            <div className="flex flex-wrap gap-1">
+              {STOP_COLORS.map((c) => {
+                const active = (trip.color ?? "violet") === c.id;
+                return (
                   <button
-                    onClick={() =>
-                      onStartEdit(sec.key, item.id, {
-                        t: item.t,
-                        url: item.url,
-                        cost: item.costAmount === null ? "" : String(item.costAmount),
-                      })
-                    }
-                    title="Edit details"
-                    className="flex-1 min-w-0 block text-left bg-transparent border-0 py-[3px] cursor-pointer"
+                    key={c.id}
+                    onClick={() => onChangeColor(trip.id, c.id)}
+                    aria-label={c.label}
+                    aria-pressed={active}
+                    title={c.label}
+                    className="flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-hover"
                   >
-                    <span className="block text-[14.5px] text-ink overflow-hidden text-ellipsis whitespace-nowrap">
-                      {item.t}
-                    </span>
-                    <span className="flex items-center gap-2 mt-[3px] min-w-0">
-                      <span
-                        className="text-[12px] [font-variant-numeric:tabular-nums]"
-                        style={{ color: item.costAmount !== null ? "#56534e" : "#b0aca6" }}
-                      >
-                        {formatCost(item.costAmount, currency)}
-                      </span>
-                      <span className="text-[#ddd9d3] text-[11px]">·</span>
-                      {item.url ? (
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap"
-                          style={{ color: "oklch(0.42 0.16 285)" }}
-                        >
-                          {hostFromUrl(item.url)}
-                        </a>
+                    <span
+                      className="flex size-5 items-center justify-center rounded-full"
+                      style={{
+                        background: c.soft,
+                        color: c.ink,
+                        boxShadow: active
+                          ? `0 0 0 2px white, 0 0 0 3px ${c.ink}`
+                          : undefined,
+                      }}
+                    >
+                      {active ? (
+                        <Check size={12} strokeWidth={3} />
                       ) : (
-                        <span className="text-[12px] text-muted-4">no link yet</span>
+                        <span
+                          className="size-2 rounded-full"
+                          style={{ background: c.base }}
+                        />
                       )}
                     </span>
                   </button>
-                  <span
-                    className="text-[11px] py-[5px] px-2.5 rounded-full whitespace-nowrap flex-none border-0"
-                    style={
-                      isScheduled(item)
-                        ? { background: "oklch(0.95 0.05 155)", color: "oklch(0.45 0.11 155)" }
-                        : { background: "#f4f3f1", color: "#8d8983" }
-                    }
-                  >
-                    {isScheduled(item) ? "Scheduled" : "Incomplete"}
-                  </span>
-                  <button
-                    onClick={() =>
-                      onStartEdit(sec.key, item.id, {
-                        t: item.t,
-                        url: item.url,
-                        cost: item.costAmount === null ? "" : String(item.costAmount),
-                      })
-                    }
-                    title="Edit"
-                    className="w-7 h-7 flex-none border-0 rounded-lg bg-transparent cursor-pointer text-muted-4 text-[13px] hover:bg-line-soft hover:text-ink-soft"
-                  >
-                    ✎
-                  </button>
-                  <button
-                    onClick={() => onDeleteItem(item.id)}
-                    title="Remove"
-                    className="w-7 h-7 flex-none border-0 rounded-lg bg-transparent cursor-pointer text-muted-4 flex items-center justify-center hover:bg-line-soft hover:text-ink-soft"
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              ))}
-
-              {showForm && (
-                <div className="flex flex-col gap-2 border border-[#ddd9d3] rounded-[11px] p-3 bg-white">
-                  <input
-                    value={form.t}
-                    onChange={(e) => onFormChange({ ...form, t: e.target.value })}
-                    onKeyDown={handleKeyDown}
-                    placeholder={sec.placeholder}
-                    autoFocus
-                    className="h-10 rounded-[9px] bg-[#fbfaf9] px-3 text-[14px] text-ink box-border"
-                    style={{ border: `1px solid ${formError?.startsWith("Name") ? "#d64545" : "#e6e4e0"}` }}
-                  />
-                  <input
-                    value={form.url}
-                    onChange={(e) => onFormChange({ ...form, url: e.target.value })}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Booking link (https://…)"
-                    className="h-10 rounded-[9px] bg-[#fbfaf9] px-3 text-[14px] text-ink box-border"
-                    style={{ border: `1px solid ${formError?.startsWith("Link") ? "#d64545" : "#e6e4e0"}` }}
-                  />
-                  <div className="flex items-center h-10 border border-line rounded-[9px] bg-[#fbfaf9] px-3 gap-1.5">
-                    <span className="text-[14px] text-muted-2 flex-none">{currencySymbol(currency)}</span>
-                    <input
-                      value={form.cost}
-                      onChange={(e) => onFormChange({ ...form, cost: e.target.value })}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Cost (e.g. 410)"
-                      inputMode="decimal"
-                      className="h-full flex-1 min-w-0 border-0 bg-transparent text-[14px] text-ink outline-none"
-                    />
-                  </div>
-                  {formError ? (
-                    <div className="text-[12px] leading-[1.4]" style={{ color: "#d64545" }}>
-                      {formError}
-                    </div>
-                  ) : (
-                    <div className="text-[12px] text-muted-2 leading-[1.4]">
-                      Name, link and cost filled → the item is scheduled automatically.
-                    </div>
-                  )}
-                  <div className="flex gap-2 justify-end">
-                    <button
-                      onClick={onCancelForm}
-                      className="h-9 px-3.5 rounded-[9px] border border-line bg-white cursor-pointer text-[13.5px] text-ink-soft hover:bg-hover"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={onSaveForm}
-                      className="h-9 px-4 rounded-[9px] border-0 bg-accent hover:bg-accent-hover text-white cursor-pointer text-[13.5px]"
-                    >
-                      {saveLabel}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={() => onStartAdd(sec.key)}
-                className="self-start flex items-center gap-1 bg-transparent border-0 pt-2 pb-0 cursor-pointer text-[13.5px] text-muted-2 hover:text-ink"
-              >
-                <Plus size={13} /> Add {sec.name.toLowerCase()}
-              </button>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
-    </section>
+          </fieldset>
+
+          {SECTION_DEFS.map((sec) => {
+            const items: ItemData[] = trip[sec.key];
+            const total = sectionTotal(items);
+            const showForm = editing?.key === sec.key;
+            const Icon =
+              sec.key === "stay"
+                ? Hotel
+                : sec.key === "transport"
+                  ? Plane
+                  : MapPin;
+            return (
+              <section
+                key={sec.key}
+                className="space-y-3"
+                aria-labelledby={`section-${sec.key}`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <h3
+                    id={`section-${sec.key}`}
+                    className="flex items-center gap-2 text-sm font-semibold"
+                  >
+                    <Icon className="size-4 text-muted" />
+                    {sec.name}
+                    <span className="font-normal text-muted">
+                      {items.length}
+                    </span>
+                  </h3>
+                  {total > 0 && (
+                    <span className="text-xs font-medium tabular-nums text-muted">
+                      {formatTotal(total, currency)}
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  {items.map((item) => (
+                    <div
+                      key={item.id}
+                      className="booking-card rounded-xl border border-line bg-white p-3 shadow-panel hover:border-input"
+                    >
+                      <div className="flex items-start gap-2">
+                        <button
+                          className="min-w-0 flex-1 rounded text-left text-sm font-medium leading-6 text-ink"
+                          onClick={() =>
+                            onStartEdit(sec.key, item.id, {
+                              t: item.t,
+                              url: item.url,
+                              cost:
+                                item.costAmount === null
+                                  ? ""
+                                  : String(item.costAmount),
+                            })
+                          }
+                        >
+                          {item.t}
+                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="-mr-1 -mt-1"
+                              aria-label={`Options for ${item.t}`}
+                            >
+                              <MoreHorizontal />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onSelect={() =>
+                                onStartEdit(sec.key, item.id, {
+                                  t: item.t,
+                                  url: item.url,
+                                  cost:
+                                    item.costAmount === null
+                                      ? ""
+                                      : String(item.costAmount),
+                                })
+                              }
+                            >
+                              <Pencil />
+                              Edit booking
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              destructive
+                              onSelect={() => onDeleteItem(item.id)}
+                            >
+                              <Trash2 />
+                              Remove booking
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between gap-2">
+                        {item.url ? (
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex min-w-0 items-center gap-1 rounded text-xs hover:underline"
+                          >
+                            <span className="truncate">
+                              {hostFromUrl(item.url)}
+                            </span>
+                            <ArrowUpRight className="size-3 shrink-0" />
+                            <span className="sr-only">
+                              {" "}
+                              (opens in a new tab)
+                            </span>
+                          </a>
+                        ) : (
+                          <span className="text-xs text-muted">
+                            Booking link pending
+                          </span>
+                        )}
+                        <span className="shrink-0 text-sm font-medium tabular-nums text-ink-soft">
+                          {formatCost(item.costAmount, currency)}
+                        </span>
+                      </div>
+                      <div className="mt-3">
+                        <Badge
+                          variant={isScheduled(item) ? "success" : "secondary"}
+                        >
+                          {isScheduled(item) && <Check className="size-3" />}
+                          {isScheduled(item) ? "Scheduled" : "Incomplete"}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                  {items.length === 0 && !showForm && (
+                    <p className="rounded-xl border border-dashed border-line px-3 py-4 text-xs leading-relaxed text-muted">
+                      No {sec.name.toLowerCase()} added yet.
+                    </p>
+                  )}
+                </div>
+                <Disclosure open={showForm}>
+                  <div className="space-y-3 rounded-xl border border-line bg-secondary/50 p-4">
+                    <label className="block space-y-2">
+                      <span className="field-label">Name</span>
+                      <Input
+                        value={form.t}
+                        onChange={(e) =>
+                          onFormChange({ ...form, t: e.target.value })
+                        }
+                        onKeyDown={handleKeyDown}
+                        placeholder={sec.placeholder}
+                        autoFocus
+                        aria-invalid={!!formError?.startsWith("Name")}
+                        aria-describedby={
+                          formError ? "booking-error" : undefined
+                        }
+                      />
+                    </label>
+                    <label className="block space-y-2">
+                      <span className="field-label">Booking link</span>
+                      <Input
+                        value={form.url}
+                        onChange={(e) =>
+                          onFormChange({ ...form, url: e.target.value })
+                        }
+                        onKeyDown={handleKeyDown}
+                        placeholder="https://…"
+                        inputMode="url"
+                        aria-invalid={!!formError?.startsWith("Link")}
+                        aria-describedby={
+                          formError ? "booking-error" : undefined
+                        }
+                      />
+                    </label>
+                    <label className="block space-y-2">
+                      <span className="field-label">
+                        Cost ({currencySymbol(currency)})
+                      </span>
+                      <Input
+                        value={form.cost}
+                        onChange={(e) =>
+                          onFormChange({ ...form, cost: e.target.value })
+                        }
+                        onKeyDown={handleKeyDown}
+                        placeholder="0.00"
+                        inputMode="decimal"
+                        aria-describedby={
+                          formError ? "booking-error" : "booking-hint"
+                        }
+                      />
+                    </label>
+                    {formError ? (
+                      <p
+                        id="booking-error"
+                        role="alert"
+                        className="field-error"
+                      >
+                        {formError}
+                      </p>
+                    ) : (
+                      <p
+                        id="booking-hint"
+                        className="text-xs leading-relaxed text-muted"
+                      >
+                        Add a name, link and cost to mark this booking as
+                        scheduled.
+                      </p>
+                    )}
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={saving}
+                        onClick={onCancelForm}
+                      >
+                        Cancel
+                      </Button>
+                      <Button size="sm" disabled={saving} onClick={onSaveForm}>
+                        {saving
+                          ? "Saving…"
+                          : editing?.itemId
+                            ? "Save changes"
+                            : "Add booking"}
+                      </Button>
+                    </div>
+                  </div>
+                </Disclosure>
+                {!showForm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="-ml-2 text-accent-ink"
+                    onClick={() => onStartAdd(sec.key)}
+                  >
+                    <Plus />
+                    Add {sec.name.toLowerCase()}
+                  </Button>
+                )}
+              </section>
+            );
+          })}
+        </div>
+        <footer className="flex shrink-0 items-center justify-between border-t border-line-soft pt-4">
+          <span className="text-sm text-muted">Total planned</span>
+          <span className="text-lg font-semibold tracking-tight tabular-nums">
+            <AnimatedNumber
+              value={tripTotal}
+              format={(value) => formatTotal(value, currency)}
+            />
+          </span>
+        </footer>
+      </DialogContent>
+    </Dialog>
   );
 }

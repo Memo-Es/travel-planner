@@ -1,7 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Plus, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, X, Copy, Check, Users, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input, NativeSelect } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import type { InviteData } from "@/lib/types";
 import { CURRENCIES } from "@/lib/currency";
 
@@ -18,136 +27,218 @@ export default function TripSettingsModal({
   currency: string;
   invites: InviteData[];
   onClose: () => void;
-  onRename: (name: string) => void;
-  onChangeCurrency: (currency: string) => void;
+  onRename: (name: string) => Promise<void>;
+  onChangeCurrency: (currency: string) => Promise<void>;
   onCreateInvite: () => Promise<string>;
 }) {
   const [name, setName] = useState(teamName);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [newToken, setNewToken] = useState<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(timer.current), []);
 
-  function saveName() {
+  async function saveName() {
     const trimmed = name.trim();
-    if (trimmed && trimmed !== teamName) onRename(trimmed);
-    else setName(teamName);
+    if (!trimmed || trimmed === teamName) {
+      setName(teamName);
+      return;
+    }
+    try {
+      await onRename(trimmed);
+      setError(null);
+    } catch {
+      setError("The name could not be saved. Please try again.");
+    }
   }
 
-  function copyLink(token: string, id: string) {
-    const url = `${window.location.origin}/invite/${token}`;
-    navigator.clipboard.writeText(url).then(() => {
+  async function copyLink(token: string, id: string) {
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/invite/${token}`,
+      );
       setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 1500);
-    });
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopiedId(null), 2000);
+      setError(null);
+    } catch {
+      setError("Could not copy the link. You can select and copy it below.");
+      setNewToken(token);
+    }
   }
 
-  function generateInvite() {
-    startTransition(async () => {
+  async function generateInvite() {
+    if (pending) return;
+    setPending(true);
+    setError(null);
+    try {
       const token = await onCreateInvite();
-      copyLink(token, "new");
-    });
+      setNewToken(token);
+      await copyLink(token, "new");
+    } catch {
+      setError("The invite could not be created. Please try again.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
-    <div
-      className="absolute z-40 bg-white box-border flex flex-col overflow-hidden top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(460px,92vw)] max-h-[86vh] rounded-2xl border border-line shadow-[0_24px_60px_rgba(28,27,25,0.22)] p-6"
-      onClick={(e) => e.stopPropagation()}
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
     >
-      <header className="flex items-start justify-between gap-3 pb-4 border-b border-line-soft">
-        <h2 className="m-0 text-[20px] font-semibold tracking-[-0.015em] text-ink">Trip settings</h2>
-        <button
-          onClick={onClose}
-          className="w-8 h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft flex-none flex items-center justify-center hover:bg-hover"
-        >
-          <X size={14} />
-        </button>
-      </header>
-
-      <div className="flex flex-col gap-5 pt-4 overflow-y-auto min-h-0">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[12px] font-semibold tracking-[0.06em] uppercase text-muted">Name</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onBlur={saveName}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-              if (e.key === "Escape") setName(teamName);
-            }}
-            className="h-10 border border-line rounded-[9px] bg-[#fbfaf9] px-3 text-[14px] text-ink box-border"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="text-[12px] font-semibold tracking-[0.06em] uppercase text-muted">Currency</span>
-          <select
-            value={currency}
-            onChange={(e) => onChangeCurrency(e.target.value)}
-            className="h-10 border border-line rounded-[9px] bg-[#fbfaf9] px-3 text-[14px] text-ink box-border cursor-pointer"
+      <DialogContent
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          document.getElementById("close-settings")?.focus();
+        }}
+      >
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line-soft pb-5">
+          <div>
+            <DialogTitle>Trip settings</DialogTitle>
+            <DialogDescription className="mt-1">
+              The details that bring your trip together.
+            </DialogDescription>
+          </div>
+          <Button
+            id="close-settings"
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            aria-label="Close settings"
           >
-            {CURRENCIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.symbol} {c.label}
-              </option>
+            <X />
+          </Button>
+        </header>
+        <div className="-mx-1 min-h-0 space-y-6 overflow-y-auto px-1 pt-5">
+          <label className="block space-y-2">
+            <span className="field-label">Trip name</span>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={saveName}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+                if (e.key === "Escape") {
+                  e.stopPropagation();
+                  setName(teamName);
+                }
+              }}
+            />
+          </label>
+          <label className="block space-y-2">
+            <span className="field-label">Currency</span>
+            <NativeSelect
+              value={currency}
+              onChange={async (e) => {
+                try {
+                  await onChangeCurrency(e.target.value);
+                  setError(null);
+                } catch {
+                  setError(
+                    "The currency could not be saved. Please try again.",
+                  );
+                }
+              }}
+              aria-describedby="currency-help"
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.symbol} {c.label}
+                </option>
+              ))}
+            </NativeSelect>
+            <span
+              id="currency-help"
+              className="block text-xs leading-relaxed text-muted"
+            >
+              Used for booking costs and totals across all stops.
+            </span>
+          </label>
+          <section
+            className="space-y-3 border-t border-line-soft pt-5"
+            aria-labelledby="teammates-heading"
+          >
+            <h3
+              id="teammates-heading"
+              className="flex items-center gap-2 text-sm font-semibold"
+            >
+              <Users className="size-4 text-muted" />
+              Teammates
+            </h3>
+            <p className="text-xs leading-relaxed text-muted">
+              Share an invite link to plan this trip together.
+            </p>
+            {invites.map((inv) => (
+              <div
+                key={inv.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-line p-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">
+                    {inv.acceptedEmail || "Pending invite"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    Created {new Date(inv.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                {inv.acceptedEmail ? (
+                  <Badge variant="success">Joined</Badge>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Copy invite link"
+                    onClick={() => copyLink(inv.token, inv.id)}
+                  >
+                    {copiedId === inv.id ? <Check /> : <Copy />}
+                  </Button>
+                )}
+              </div>
             ))}
-          </select>
-          <span className="text-[12px] text-muted-3">Used for every stop&apos;s booking costs and totals.</span>
-        </label>
-
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-2.5">
-            <span className="text-[12px] font-semibold tracking-[0.06em] uppercase text-muted">Teammates</span>
-            <button
+            <Button
+              variant="outline"
+              className="w-full"
               onClick={generateInvite}
               disabled={pending}
-              className="flex items-center gap-1 text-[12.5px] text-accent bg-transparent border-0 cursor-pointer hover:text-accent-hover disabled:opacity-60"
             >
               {pending ? (
-                "Creating…"
+                <Loader2 className="animate-spin" />
               ) : copiedId === "new" ? (
-                "Copied!"
+                <Check />
               ) : (
-                <>
-                  <Plus size={13} /> Generate invite link
-                </>
+                <Plus />
               )}
-            </button>
-          </div>
-
-          {invites.length === 0 ? (
-            <div className="text-[13px] text-muted-3">No invites yet — generate a link to add a teammate.</div>
-          ) : (
-            <div className="flex flex-col gap-1.5">
-              {invites.map((inv) => (
-                <div
-                  key={inv.id}
-                  className="flex items-center justify-between gap-2 bg-[#fbfaf9] border border-line-soft rounded-[10px] px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <div className="text-[13px] text-ink-soft">
-                      {inv.acceptedEmail ? (
-                        <>Joined: <span className="text-ink">{inv.acceptedEmail}</span></>
-                      ) : (
-                        "Pending invite"
-                      )}
-                    </div>
-                    <div className="text-[11.5px] text-muted-3">
-                      Created {new Date(inv.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                  {!inv.acceptedEmail && (
-                    <button
-                      onClick={() => copyLink(inv.token, inv.id)}
-                      className="text-[12px] text-muted-2 bg-transparent border-0 cursor-pointer hover:text-ink flex-none whitespace-nowrap"
-                    >
-                      {copiedId === inv.id ? "Copied!" : "Copy link"}
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+              {pending
+                ? "Creating invite…"
+                : copiedId === "new"
+                  ? "Invite link copied"
+                  : "Create invite link"}
+            </Button>
+            {newToken && (
+              <label className="block space-y-2">
+                <span className="field-label">Invite link</span>
+                <Input
+                  readOnly
+                  value={`${window.location.origin}/invite/${newToken}`}
+                  onFocus={(e) => e.target.select()}
+                />
+              </label>
+            )}
+            <span role="status" className="sr-only">
+              {copiedId ? "Invite link copied" : ""}
+            </span>
+          </section>
+          {error && (
+            <p className="field-error" role="alert">
+              {error}
+            </p>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

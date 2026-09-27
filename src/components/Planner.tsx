@@ -1,18 +1,60 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { AnimatePresence } from "motion/react";
+import { TransitionText } from "@/components/motion/primitives";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { TripData, TaskData, TeamOption, InviteData, MemberOption, ItemSectionKey } from "@/lib/types";
-import { buildWeeks, layoutMode, mainWidth, type CalendarEvent } from "@/lib/calendar";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import type {
+  TripData,
+  TaskData,
+  TeamOption,
+  InviteData,
+  MemberOption,
+  ItemSectionKey,
+} from "@/lib/types";
+import {
+  buildWeeks,
+  layoutMode,
+  mainWidth,
+  type CalendarEvent,
+} from "@/lib/calendar";
 import { MONTHS_LONG, DAY, ms, toDateInput } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
 import { isScheduled } from "@/lib/tripSections";
 import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
-import { createTrip, addItem, updateItem, deleteItem, deleteTrip, updateStopDates, updateTripLabel, updateTripColor } from "@/actions/trips";
-import { createTask, toggleTask, updateTask, deleteTask } from "@/actions/tasks";
-import { switchTeam, updateTeamName, updateTeamCurrency, createInvite, dismissSignedInToast } from "@/actions/team";
+import {
+  createTrip,
+  addItem,
+  updateItem,
+  deleteItem,
+  deleteTrip,
+  updateStopDates,
+  updateTripLabel,
+  updateTripColor,
+} from "@/actions/trips";
+import {
+  createTask,
+  toggleTask,
+  updateTask,
+  deleteTask,
+} from "@/actions/tasks";
+import {
+  switchTeam,
+  updateTeamName,
+  updateTeamCurrency,
+  createInvite,
+  dismissSignedInToast,
+} from "@/actions/team";
 
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import LeftPanel from "@/components/planner/LeftPanel";
 import LeftRail from "@/components/planner/LeftRail";
 import RightPanel from "@/components/planner/RightPanel";
@@ -27,7 +69,11 @@ export type Editing = { key: ItemSectionKey; itemId: string | null } | null;
 export type FormState = { t: string; url: string; cost: string };
 export type Overlay = "links" | "tasks" | null;
 export type MobileTab = "links" | "calendar" | "tasks";
-export type TaskFormState = { title: string; tag: string; assigneeId: string | null };
+export type TaskFormState = {
+  title: string;
+  tag: string;
+  assigneeId: string | null;
+};
 
 function parseCost(raw: string): number | null {
   const trimmed = raw.trim();
@@ -36,7 +82,8 @@ function parseCost(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-const CARD = "bg-white rounded-card border border-line box-border overflow-hidden flex flex-col";
+const CARD =
+  "bg-white rounded-card border border-line shadow-panel box-border overflow-hidden flex flex-col min-h-0";
 
 function startOfTodayUTC(): number {
   const now = new Date();
@@ -82,15 +129,33 @@ export default function Planner({
   });
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [openTripId, setOpenTripId] = useState<string | null>(null);
-  const [pendingOpenTripId, setPendingOpenTripId] = useState<string | null>(null);
+  const [pendingOpenTripId, setPendingOpenTripId] = useState<string | null>(
+    null,
+  );
   const [editing, setEditing] = useState<Editing>(null);
   const [form, setForm] = useState<FormState>({ t: "", url: "", cost: "" });
   const [formError, setFormError] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("calendar");
   const [draft, setDraft] = useState("");
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [taskForm, setTaskForm] = useState<TaskFormState>({ title: "", tag: "", assigneeId: null });
+  const [taskForm, setTaskForm] = useState<TaskFormState>({
+    title: "",
+    tag: "",
+    assigneeId: null,
+  });
   const [taskFormError, setTaskFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const [taskPending, setTaskPending] = useState(false);
+  const taskPendingRef = useRef(false);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    label: string;
+  } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const deletingRef = useRef(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dragging, setDragging] = useState<DragState>(null);
   const [addingTrip, setAddingTrip] = useState(false);
@@ -172,7 +237,12 @@ export default function Planner({
   }, [trips, dragging]);
 
   const weeks = useMemo(
-    () => buildWeeks(cursor, events, { startWeekOn: "Sunday", mainWidth: width, todayMs }),
+    () =>
+      buildWeeks(cursor, events, {
+        startWeekOn: "Sunday",
+        mainWidth: width,
+        todayMs,
+      }),
     [cursor, events, width, todayMs],
   );
 
@@ -193,17 +263,34 @@ export default function Planner({
       setPendingOpenTripId(id);
       setOverlay(null);
       refresh();
+    } catch {
+      setNotification("The stop could not be added. Please try again.");
     } finally {
       addingTripRef.current = false;
       setAddingTrip(false);
     }
   }
 
-  async function handleDeleteTrip(tripId: string, label: string) {
-    if (!window.confirm(`Delete "${label}"? This removes its stay, transport and activity entries too.`)) return;
-    if (openTripId === tripId) closeDrawer();
-    await deleteTrip(tripId);
-    refresh();
+  function handleDeleteTrip(tripId: string, label: string) {
+    setDeleteError(null);
+    setDeleteTarget({ id: tripId, label });
+  }
+
+  async function confirmDeleteTrip() {
+    if (!deleteTarget || deletingRef.current) return;
+    deletingRef.current = true;
+    setDeleting(true);
+    try {
+      await deleteTrip(deleteTarget.id);
+      if (openTripId === deleteTarget.id) closeDrawer();
+      setDeleteTarget(null);
+      refresh();
+    } catch {
+      setDeleteError("This stop could not be deleted. Please try again.");
+    } finally {
+      deletingRef.current = false;
+      setDeleting(false);
+    }
   }
 
   function closeDrawer() {
@@ -243,7 +330,7 @@ export default function Planner({
   }
 
   async function saveForm() {
-    if (!editing || !trip) return;
+    if (!editing || !trip || savingRef.current) return;
     if (!form.t.trim()) {
       setFormError("Name is required.");
       return;
@@ -252,40 +339,76 @@ export default function Planner({
       setFormError("Link must start with http:// or https://");
       return;
     }
+    savingRef.current = true;
+    setSaving(true);
     setFormError(null);
-    const payload = { title: form.t.trim(), url: form.url.trim(), costAmount: parseCost(form.cost) };
-    const section = editing.key.toUpperCase() as "STAY" | "TRANSPORT" | "ACTIVITIES";
-    if (editing.itemId === null) {
-      await addItem(trip.id, section, payload);
-    } else {
-      await updateItem(editing.itemId, payload);
+    try {
+      const payload = {
+        title: form.t.trim(),
+        url: form.url.trim(),
+        costAmount: parseCost(form.cost),
+      };
+      const section = editing.key.toUpperCase() as
+        "STAY" | "TRANSPORT" | "ACTIVITIES";
+      if (editing.itemId === null) await addItem(trip.id, section, payload);
+      else await updateItem(editing.itemId, payload);
+      setEditing(null);
+      setForm({ t: "", url: "", cost: "" });
+      refresh();
+    } catch {
+      setFormError("The booking could not be saved. Please try again.");
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
-    setEditing(null);
-    setForm({ t: "", url: "", cost: "" });
-    refresh();
   }
 
   async function removeItem(itemId: string) {
-    await deleteItem(itemId);
-    refresh();
+    try {
+      await deleteItem(itemId);
+      refresh();
+    } catch {
+      setNotification("The booking could not be removed. Please try again.");
+    }
+  }
+
+  async function runTask(action: () => Promise<void>) {
+    if (taskPendingRef.current) return;
+    taskPendingRef.current = true;
+    setTaskPending(true);
+    try {
+      await action();
+      refresh();
+    } catch {
+      setNotification("The task could not be saved. Please try again.");
+    } finally {
+      taskPendingRef.current = false;
+      setTaskPending(false);
+    }
   }
 
   async function onToggleTask(id: string) {
-    await toggleTask(id);
-    refresh();
+    await runTask(async () => {
+      await toggleTask(id);
+    });
   }
 
   async function submitDraftTask() {
     const value = draft.trim();
     if (!value) return;
-    setDraft("");
-    await createTask(teamId, value);
-    refresh();
+    await runTask(async () => {
+      await createTask(teamId, value);
+      setDraft("");
+    });
   }
 
   function startEditTask(task: TaskData) {
     setEditingTaskId(task.id);
-    setTaskForm({ title: task.title, tag: task.tag, assigneeId: task.assigneeId });
+    setTaskForm({
+      title: task.title,
+      tag: task.tag,
+      assigneeId: task.assigneeId,
+    });
     setTaskFormError(null);
   }
 
@@ -293,7 +416,6 @@ export default function Planner({
     setTaskForm(f);
     setTaskFormError(null);
   }
-
   function cancelTaskEdit() {
     setEditingTaskId(null);
     setTaskFormError(null);
@@ -305,19 +427,21 @@ export default function Planner({
       setTaskFormError("Title is required.");
       return;
     }
-    await updateTask(editingTaskId, {
-      title: taskForm.title.trim(),
-      tag: taskForm.tag.trim(),
-      assigneeId: taskForm.assigneeId,
+    await runTask(async () => {
+      await updateTask(editingTaskId, {
+        title: taskForm.title.trim(),
+        tag: taskForm.tag.trim(),
+        assigneeId: taskForm.assigneeId,
+      });
+      setEditingTaskId(null);
     });
-    setEditingTaskId(null);
-    refresh();
   }
 
   async function removeTask(taskId: string) {
-    if (editingTaskId === taskId) setEditingTaskId(null);
-    await deleteTask(taskId);
-    refresh();
+    await runTask(async () => {
+      await deleteTask(taskId);
+      if (editingTaskId === taskId) setEditingTaskId(null);
+    });
   }
 
   async function onSwitchTeam(id: string) {
@@ -356,7 +480,11 @@ export default function Planner({
     refresh();
   }
 
-  function onResizeStart(tripId: string, edge: "left" | "right", startClientX: number) {
+  function onResizeStart(
+    tripId: string,
+    edge: "left" | "right",
+    startClientX: number,
+  ) {
     const t = trips.find((x) => x.id === tripId);
     if (!t) return;
     const origStart = t.start;
@@ -444,8 +572,8 @@ export default function Planner({
   const openCount = tasks.filter((t) => !t.done).length;
 
   const shellClass = isMobile
-    ? "flex flex-col gap-2.5 p-2.5 h-screen box-border relative bg-canvas text-ink"
-    : "grid gap-3 p-3 h-screen box-border relative bg-canvas text-ink";
+    ? "flex flex-col gap-2.5 p-2.5 h-dvh box-border relative bg-canvas text-ink"
+    : "grid gap-3 p-3 h-dvh box-border relative bg-canvas text-ink";
   const shellStyle = isMobile
     ? undefined
     : {
@@ -454,16 +582,28 @@ export default function Planner({
           : `${LEFT_W}px minmax(${MIN_MAIN}px,1fr) ${RIGHT_W}px`,
       };
 
-  const showBackdrop = !!activeOverlay || !!trip || settingsOpen;
+  const showBackdrop = !!activeOverlay;
   const showLeftRail = isCompact;
   const showRightRail = isCompact;
-  const showLeftPanel = isMobile ? mobileTab === "links" : mode === "full" || activeOverlay === "links";
-  const showRightPanel = isMobile ? mobileTab === "tasks" : mode === "full" || activeOverlay === "tasks";
+  const showLeftPanel = isMobile
+    ? mobileTab === "links"
+    : mode === "full" || activeOverlay === "links";
+  const showRightPanel = isMobile
+    ? mobileTab === "tasks"
+    : mode === "full" || activeOverlay === "tasks";
   const showCalendar = isMobile ? mobileTab === "calendar" : true;
 
   const now = new Date();
   const todayLabel =
-    ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][now.getDay()] +
+    [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ][now.getDay()] +
     " " +
     now.getDate() +
     " " +
@@ -471,7 +611,44 @@ export default function Planner({
 
   return (
     <div className={shellClass} style={shellStyle}>
-      {showSignedInToast && <Toast message={`Signed in as ${userName}`} />}
+      {showSignedInToast && !notification && (
+        <Toast message={`Signed in as ${userName}`} />
+      )}
+      {notification && (
+        <Toast message={notification} onDismiss={() => setNotification(null)} />
+      )}
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogTitle className="text-lg font-semibold tracking-tight">
+            Delete {deleteTarget?.label}?
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-sm leading-relaxed text-muted">
+            This removes the stop and all its stay, transport and activity
+            bookings. This cannot be undone.
+          </AlertDialogDescription>
+          {deleteError && (
+            <p role="alert" className="field-error">
+              {deleteError}
+            </p>
+          )}
+          <div className="flex justify-end gap-2 pt-3">
+            <AlertDialogCancel disabled={deleting}>Keep stop</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={deleting}
+              onClick={confirmDeleteTrip}
+            >
+              {deleting && <Loader2 className="animate-spin" />}
+              {deleting ? "Deleting…" : "Delete stop"}
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {showBackdrop && (
         <div
@@ -490,7 +667,11 @@ export default function Planner({
       )}
 
       {showLeftRail && (
-        <LeftRail trips={trips} onOpenLinks={() => setOverlay("links")} onOpenTrip={(t) => jumpToTrip(t)} />
+        <LeftRail
+          trips={trips}
+          onOpenLinks={() => setOverlay("links")}
+          onOpenTrip={(t) => jumpToTrip(t)}
+        />
       )}
 
       {showLeftPanel && (
@@ -499,6 +680,7 @@ export default function Planner({
           overlay={activeOverlay === "links"}
           isMobile={isMobile}
           trips={trips}
+          selectedTripId={openTripId}
           teams={teams}
           teamId={teamId}
           teamName={teamName}
@@ -516,33 +698,58 @@ export default function Planner({
       )}
 
       {showCalendar && (
-        <main className={CARD + (isMobile ? " p-4 pt-4 pb-1.5 flex-1 min-h-0" : " p-5 pt-5 pb-1.5 min-w-0")}>
-          <header className="flex items-center justify-between gap-3 mb-4">
-            <h1 className="m-0 text-[24px] font-normal tracking-[-0.02em] text-muted whitespace-nowrap">
-              <strong className="font-bold text-ink">{MONTHS_LONG[cursor.m]}</strong> {cursor.y}
+        <main
+          className={
+            CARD +
+            (isMobile
+              ? " p-4 pt-4 pb-1.5 flex-1 min-h-0"
+              : " p-5 pt-5 pb-1.5 min-w-0")
+          }
+        >
+          <header className="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <h1 className="m-0 text-2xl font-normal tracking-tight text-muted whitespace-nowrap">
+              <TransitionText value={`${cursor.y}-${cursor.m}`}>
+                <strong className="font-semibold text-ink">
+                  {MONTHS_LONG[cursor.m]}
+                </strong>{" "}
+                {cursor.y}
+              </TransitionText>
             </h1>
             <div className="flex items-center gap-1.5 flex-none">
-              <button
-                onClick={() => setCursor((c) => (c.m === 0 ? { y: c.y - 1, m: 11 } : { y: c.y, m: c.m - 1 }))}
-                className="w-[34px] h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft flex items-center justify-center hover:bg-hover"
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Previous month"
+                onClick={() =>
+                  setCursor((c) =>
+                    c.m === 0 ? { y: c.y - 1, m: 11 } : { y: c.y, m: c.m - 1 },
+                  )
+                }
               >
                 <ChevronLeft size={16} />
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   const d = new Date();
                   setCursor({ y: d.getUTCFullYear(), m: d.getUTCMonth() });
                 }}
-                className="h-8 px-3.5 rounded-[9px] border border-line bg-hover cursor-pointer text-[13.5px] text-ink-soft hover:bg-hover-2"
               >
                 Today
-              </button>
-              <button
-                onClick={() => setCursor((c) => (c.m === 11 ? { y: c.y + 1, m: 0 } : { y: c.y, m: c.m + 1 }))}
-                className="w-[34px] h-8 rounded-[9px] border border-line bg-white cursor-pointer text-ink-soft flex items-center justify-center hover:bg-hover"
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Next month"
+                onClick={() =>
+                  setCursor((c) =>
+                    c.m === 11 ? { y: c.y + 1, m: 0 } : { y: c.y, m: c.m + 1 },
+                  )
+                }
               >
                 <ChevronRight size={16} />
-              </button>
+              </Button>
             </div>
           </header>
 
@@ -550,6 +757,7 @@ export default function Planner({
             weeks={weeks}
             width={width}
             onBarPointerDown={onBarPointerDown}
+            onOpenTrip={setOpenTripId}
             onResizeStart={onResizeStart}
           />
         </main>
@@ -570,6 +778,7 @@ export default function Planner({
           editingTaskId={editingTaskId}
           taskForm={taskForm}
           taskFormError={taskFormError}
+          pending={taskPending}
           onStartEditTask={startEditTask}
           onTaskFormChange={onTaskFormChange}
           onCancelTaskEdit={cancelTaskEdit}
@@ -580,44 +789,54 @@ export default function Planner({
         />
       )}
 
-      {showRightRail && <RightRail openCount={openCount} onOpenTasks={() => setOverlay("tasks")} />}
-
-      {trip && (
-        <TripDrawer
-          trip={trip}
-          currency={teamCurrency}
-          isMobile={isMobile}
-          editing={editing}
-          form={form}
-          formError={formError}
-          onFormChange={onFormChange}
-          onClose={closeDrawer}
-          onStartAdd={startAdd}
-          onStartEdit={startEdit}
-          onCancelForm={() => {
-            setEditing(null);
-            setFormError(null);
-          }}
-          onSaveForm={saveForm}
-          onDeleteItem={removeItem}
-          onUpdateDates={onUpdateStopDates}
-          onRename={onRenameTrip}
-          onChangeColor={onChangeTripColor}
-          onDeleteTrip={handleDeleteTrip}
+      {showRightRail && (
+        <RightRail
+          openCount={openCount}
+          onOpenTasks={() => setOverlay("tasks")}
         />
       )}
 
-      {settingsOpen && (
-        <TripSettingsModal
-          teamName={teamName}
-          currency={teamCurrency}
-          invites={invites}
-          onClose={() => setSettingsOpen(false)}
-          onRename={onRenameTeam}
-          onChangeCurrency={onChangeTeamCurrency}
-          onCreateInvite={handleCreateInvite}
-        />
-      )}
+      <AnimatePresence initial={false}>
+        {trip && (
+          <TripDrawer
+            key={trip.id}
+            trip={trip}
+            currency={teamCurrency}
+            isMobile={isMobile}
+            editing={editing}
+            form={form}
+            formError={formError}
+            saving={saving}
+            onFormChange={onFormChange}
+            onClose={closeDrawer}
+            onStartAdd={startAdd}
+            onStartEdit={startEdit}
+            onCancelForm={() => {
+              setEditing(null);
+              setFormError(null);
+            }}
+            onSaveForm={saveForm}
+            onDeleteItem={removeItem}
+            onUpdateDates={onUpdateStopDates}
+            onRename={onRenameTrip}
+            onChangeColor={onChangeTripColor}
+            onDeleteTrip={handleDeleteTrip}
+          />
+        )}
+
+        {settingsOpen && (
+          <TripSettingsModal
+            key="settings"
+            teamName={teamName}
+            currency={teamCurrency}
+            invites={invites}
+            onClose={() => setSettingsOpen(false)}
+            onRename={onRenameTeam}
+            onChangeCurrency={onChangeTeamCurrency}
+            onCreateInvite={handleCreateInvite}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

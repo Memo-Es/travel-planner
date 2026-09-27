@@ -2,38 +2,133 @@
 @tailwind components;
 @tailwind utilities;
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-  /* Belt-and-suspenders: nothing in this layout is meant to scroll
-     horizontally, so don't let a transient sizing glitch produce a
-     scrollable page on mobile. */
-  overflow-x: hidden;
+@layer base {
+  :root {
+    --background: 40 10% 94%;
+    --foreground: 40 6% 10%;
+    --primary: 255 57% 51%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 12% 95%;
+    --secondary-foreground: 40 6% 19%;
+    --destructive: 0 65% 43%;
+    --border: 40 11% 88%;
+    --input: 40 10% 83%;
+    --ring: 255 57% 51%;
+    --radius: 0.625rem;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+  :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 3px;
+  }
+  ::selection {
+    background: oklch(0.93 0.045 288);
+    color: #1c1b19;
+  }
+  ::placeholder {
+    color: #77716a;
+  }
+  a {
+    @apply text-accent-ink;
+  }
+  a:hover {
+    @apply text-accent-hover;
+  }
+  @media (max-width: 640px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
-body {
-  background: #f2f1ef;
-  color: #1c1b19;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
+@layer components {
+  .field-label {
+    @apply block text-xs font-medium text-ink-soft;
+  }
+  .field-error {
+    @apply text-xs leading-relaxed text-destructive;
+  }
+  .section-label {
+    @apply text-xs font-medium uppercase tracking-wider text-muted;
+  }
+  .panel-heading {
+    @apply text-xl font-semibold tracking-tight text-ink;
+  }
 }
 
-a {
-  color: oklch(0.62 0.19 285);
-  text-decoration: none;
-}
-a:hover {
-  color: oklch(0.55 0.19 285);
-}
-
-input,
-button {
-  font-family: inherit;
-}
-input:focus {
-  outline: none;
-}
-::placeholder {
-  color: #a8a5a0;
+@layer components {
+  .trip-header {
+    position: relative;
+    isolation: isolate;
+  }
+  .trip-header::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    inset: -24px -24px 0;
+    background: radial-gradient(
+      ellipse at top left,
+      oklch(0.93 0.045 288 / 0.7),
+      transparent 70%
+    );
+  }
+  .booking-card {
+    transition:
+      transform 180ms ease-out,
+      box-shadow 180ms ease-out,
+      border-color 150ms;
+  }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .booking-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px -10px rgb(28 27 25 / 0.18);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ui-button {
+      transition:
+        color 150ms,
+        background-color 150ms,
+        box-shadow 150ms,
+        transform 120ms ease-out;
+    }
+    .ui-button:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+  }
 }

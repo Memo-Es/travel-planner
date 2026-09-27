@@ -1,25 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Check, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-export default function Toast({ message }: { message: string }) {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => setVisible(true));
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
+export default function Toast({
+  message,
+  onDismiss,
+}: {
+  message: string;
+  onDismiss?: () => void;
+}) {
   return (
     <div
-      className="fixed left-1/2 z-[60] bg-[#1c1b19] text-white text-[13.5px] px-4 py-2.5 rounded-full shadow-[0_10px_30px_rgba(28,27,25,0.28)] transition-all duration-300 ease-out"
-      style={{
-        top: 16,
-        transform: `translate(-50%, ${visible ? "0" : "-10px"})`,
-        opacity: visible ? 1 : 0,
-      }}
+      role="status"
+      aria-live="polite"
+      className="fixed left-1/2 top-4 z-[100] flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-3 rounded-xl border border-line bg-white px-4 py-3 text-sm text-ink shadow-overlay animate-in fade-in-0 slide-in-from-top-2 duration-200"
     >
-      {message}
+      {!onDismiss && <Check className="size-4 shrink-0 text-task-green-ink" />}
+      <span>{message}</span>
+      {onDismiss && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onDismiss}
+          aria-label="Dismiss notification"
+        >
+          <X />
+        </Button>
+      )}
     </div>
   );
 }
