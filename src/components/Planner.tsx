@@ -62,7 +62,6 @@ import RightRail from "@/components/planner/RightRail";
 import CalendarView from "@/components/planner/CalendarView";
 import TripDrawer from "@/components/planner/TripDrawer";
 import TripSettingsModal from "@/components/planner/TripSettingsModal";
-import BalanceModal from "@/components/planner/BalanceModal";
 import MobileTabs from "@/components/planner/MobileTabs";
 import Toast from "@/components/planner/Toast";
 
@@ -76,7 +75,8 @@ export type FormState = {
   shareIds: string[];
 };
 export type Overlay = "links" | "tasks" | null;
-export type MobileTab = "links" | "calendar" | "tasks";
+export type MobileTab = "links" | "calendar" | "tasks" | "balance";
+export type RightView = "tasks" | "balance";
 export type TaskFormState = {
   title: string;
   tag: string;
@@ -175,7 +175,7 @@ export default function Planner({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [balanceOpen, setBalanceOpen] = useState(false);
+  const [rightView, setRightView] = useState<RightView>("tasks");
   const [dragging, setDragging] = useState<DragState>(null);
   const [addingTrip, setAddingTrip] = useState(false);
   // React state updates aren't synchronous, so a state-only guard can miss
@@ -335,15 +335,15 @@ export default function Planner({
     setOpenTripId(null);
     setEditing(null);
     setSettingsOpen(false);
-    setBalanceOpen(false);
     setEditingTaskId(null);
   }
 
-  function openBalance() {
-    setOpenTripId(null);
-    setEditing(null);
-    setOverlay(null);
-    setBalanceOpen(true);
+  /** Shows the Balance view wherever the right column lives at this width:
+   * its own tab on mobile, the tasks overlay when compact, or in place. */
+  function openRightView(view: RightView) {
+    setRightView(view);
+    if (isMobile) setMobileTab(view);
+    else if (isCompact) setOverlay("tasks");
   }
 
   function openSettings() {
@@ -640,7 +640,7 @@ export default function Planner({
     ? mobileTab === "links"
     : mode === "full" || activeOverlay === "links";
   const showRightPanel = isMobile
-    ? mobileTab === "tasks"
+    ? mobileTab === "tasks" || mobileTab === "balance"
     : mode === "full" || activeOverlay === "tasks";
   const showCalendar = isMobile ? mobileTab === "calendar" : true;
 
@@ -740,7 +740,7 @@ export default function Planner({
           currency={teamCurrency}
           onSwitchTeam={onSwitchTeam}
           onOpenSettings={openSettings}
-          onOpenBalance={openBalance}
+          onOpenBalance={() => openRightView("balance")}
           onSelectTrip={(t) => jumpToTrip(t)}
           onAddTrip={handleAddTrip}
           addingTrip={addingTrip}
@@ -822,6 +822,11 @@ export default function Planner({
           card={CARD}
           overlay={activeOverlay === "tasks"}
           isMobile={isMobile}
+          view={isMobile && mobileTab === "balance" ? "balance" : isMobile ? "tasks" : rightView}
+          onViewChange={setRightView}
+          trips={trips}
+          currentUserId={currentUserId}
+          currency={teamCurrency}
           tasks={tasks}
           members={members}
           openCount={openCount}
@@ -846,7 +851,8 @@ export default function Planner({
       {showRightRail && (
         <RightRail
           openCount={openCount}
-          onOpenTasks={() => setOverlay("tasks")}
+          onOpenTasks={() => openRightView("tasks")}
+          onOpenBalance={() => openRightView("balance")}
         />
       )}
 
@@ -877,17 +883,6 @@ export default function Planner({
             onRename={onRenameTrip}
             onChangeColor={onChangeTripColor}
             onDeleteTrip={handleDeleteTrip}
-          />
-        )}
-
-        {balanceOpen && (
-          <BalanceModal
-            key="balance"
-            trips={trips}
-            members={members}
-            currentUserId={currentUserId}
-            currency={teamCurrency}
-            onClose={() => setBalanceOpen(false)}
           />
         )}
 

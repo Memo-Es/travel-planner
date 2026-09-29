@@ -222,17 +222,16 @@ export default function LeftPanel({
         <Button
           variant="ghost"
           onClick={onOpenBalance}
-          className="-ml-2 mb-4 w-[calc(100%+1rem)] justify-between px-2"
+          title="Balance — your share"
+          className="-ml-2 mb-4 w-[calc(100%+1rem)] justify-between gap-3 px-2"
         >
           <span className="flex items-center gap-2 text-ink-soft">
             <Wallet />
             Balance
           </span>
-          <span className="text-xs tabular-nums text-muted">
-            Your share{" "}
-            <span className="font-semibold text-accent-ink">
-              {formatTotal(myShare, currency)}
-            </span>
+          <span className="min-w-0 truncate text-xs font-semibold tabular-nums text-accent-ink">
+            <span className="sr-only">Your share </span>
+            {formatTotal(myShare, currency)}
           </span>
         </Button>
         <div className="mb-4 text-xs leading-relaxed text-muted">

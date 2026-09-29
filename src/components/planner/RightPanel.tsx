@@ -1,7 +1,11 @@
 "use client";
 
-import { AnimatedNumber, Disclosure } from "@/components/motion/primitives";
-import type { KeyboardEvent } from "react";
+import {
+  AnimatedBackground,
+  AnimatedNumber,
+  Disclosure,
+} from "@/components/motion/primitives";
+import { useId, type KeyboardEvent } from "react";
 import {
   ArrowUp,
   Plus,
@@ -21,13 +25,19 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import type { TaskData, MemberOption } from "@/lib/types";
-import type { TaskFormState } from "@/components/Planner";
+import type { TaskData, MemberOption, TripData } from "@/lib/types";
+import type { RightView, TaskFormState } from "@/components/Planner";
+import BalanceView from "@/components/planner/BalanceView";
 
 export default function RightPanel({
   card,
   overlay,
   isMobile,
+  view,
+  onViewChange,
+  trips,
+  currentUserId,
+  currency,
   tasks,
   members,
   openCount,
@@ -50,6 +60,11 @@ export default function RightPanel({
   card: string;
   overlay: boolean;
   isMobile: boolean;
+  view: RightView;
+  onViewChange: (view: RightView) => void;
+  trips: TripData[];
+  currentUserId: string;
+  currency: string;
   tasks: TaskData[];
   members: MemberOption[];
   openCount: number;
@@ -72,6 +87,7 @@ export default function RightPanel({
   const overlayBox =
     "absolute top-3 bottom-3 z-20 w-[272px] shadow-[0_18px_44px_rgba(28,27,25,0.18)] right-[74px]";
   const positionClass = overlay ? overlayBox : isMobile ? "flex-1 min-h-0" : "";
+  const highlightId = useId();
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") onSaveTaskEdit();
@@ -79,26 +95,88 @@ export default function RightPanel({
   }
 
   return (
-    <aside aria-label="Tasks" className={card + " p-5 " + positionClass}>
+    <aside
+      aria-label={view === "tasks" ? "Tasks" : "Balance"}
+      className={card + " p-5 " + positionClass}
+    >
       <div className="mb-5 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5">
-          <span className="size-2 rounded-full bg-task-green-ink" />
-          <h2 className="panel-heading">Tasks</h2>
-          <Badge>
-            <AnimatedNumber value={openCount} />
-          </Badge>
-        </div>
+        {isMobile ? (
+          // The mobile tab bar already switches between Tasks and Balance.
+          <div className="flex items-center gap-2.5">
+            <span
+              className={
+                "size-2 rounded-full " +
+                (view === "tasks" ? "bg-task-green-ink" : "bg-accent")
+              }
+            />
+            <h2 className="panel-heading">
+              {view === "tasks" ? "Tasks" : "Balance"}
+            </h2>
+            {view === "tasks" && (
+              <Badge>
+                <AnimatedNumber value={openCount} />
+              </Badge>
+            )}
+          </div>
+        ) : (
+          <div
+            role="tablist"
+            aria-label="Right panel"
+            className="grid flex-1 grid-cols-2 gap-1 rounded-xl bg-secondary p-1"
+          >
+            {(["tasks", "balance"] as const).map((key) => {
+              const active = view === key;
+              return (
+                <button
+                  key={key}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => onViewChange(key)}
+                  className={
+                    "relative isolate flex h-8 items-center justify-center gap-1.5 rounded-lg text-sm transition-colors duration-150 " +
+                    (active ? "font-semibold text-ink" : "text-muted hover:text-ink")
+                  }
+                >
+                  {active && (
+                    <AnimatedBackground
+                      layoutId={highlightId}
+                      className="bg-white shadow-sm"
+                    />
+                  )}
+                  {key === "tasks" ? "Tasks" : "Balance"}
+                  {key === "tasks" && (
+                    <AnimatedNumber
+                      value={openCount}
+                      className="text-xs font-normal text-muted"
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
         {showClose && (
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            aria-label="Close tasks"
+            aria-label={view === "tasks" ? "Close tasks" : "Close balance"}
           >
             <X />
           </Button>
         )}
       </div>
+      {view === "balance" ? (
+        <div className="-mx-1 min-h-0 overflow-y-auto overscroll-contain px-1 pb-1">
+          <BalanceView
+            trips={trips}
+            members={members}
+            currentUserId={currentUserId}
+            currency={currency}
+          />
+        </div>
+      ) : (
+      <>
       <div className="min-h-0 space-y-1 overflow-y-auto overscroll-contain px-1 -mx-1">
         {tasks.length === 0 && (
           <div className="rounded-xl border border-dashed border-line px-4 py-8 text-center">
@@ -260,6 +338,8 @@ export default function RightPanel({
           </Button>
         </div>
       </form>
+      </>
+      )}
     </aside>
   );
 }
