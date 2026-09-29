@@ -2,7 +2,10 @@ export type ItemData = {
   id: string;
   t: string;
   url: string;
+  address: string;
   costAmount: number | null;
+  /** User ids splitting this booking's cost equally. */
+  shareIds: string[];
 };
 
 export type TripData = {

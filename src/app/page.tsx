@@ -12,7 +12,7 @@ export default async function HomePage() {
     prisma.trip.findMany({
       where: { teamId: team.id },
       orderBy: { order: "asc" },
-      include: { items: { orderBy: { order: "asc" } } },
+      include: { items: { orderBy: { order: "asc" }, include: { shares: true } } },
     }),
     prisma.task.findMany({
       where: { teamId: team.id },
@@ -92,6 +92,20 @@ export default async function HomePage() {
   );
 }
 
-function toItem(i: { id: string; title: string; url: string; costAmount: number | null }): ItemData {
-  return { id: i.id, t: i.title, url: i.url, costAmount: i.costAmount };
+function toItem(i: {
+  id: string;
+  title: string;
+  url: string;
+  address: string;
+  costAmount: number | null;
+  shares: { userId: string }[];
+}): ItemData {
+  return {
+    id: i.id,
+    t: i.title,
+    url: i.url,
+    address: i.address,
+    costAmount: i.costAmount,
+    shareIds: i.shares.map((s) => s.userId),
+  };
 }

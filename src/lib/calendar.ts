@@ -11,6 +11,8 @@ export type CalendarEvent = {
   hasStay: boolean;
   hasTransport: boolean;
   color: string | null;
+  /** Extra detail shown on hover, e.g. the stay's address. */
+  hint: string | null;
 };
 
 export type DayCell = {
@@ -27,6 +29,7 @@ export type BarPill = {
   showDot: boolean;
   hasStay: boolean;
   hasTransport: boolean;
+  hint: string | null;
   style: CSSProperties;
   dotStyle: CSSProperties;
   canDragLeft: boolean;
@@ -119,6 +122,7 @@ export function buildWeeks(
         showDot: !e.isNote && !contL && span > 1,
         hasStay: !e.isNote && e.hasStay,
         hasTransport: !e.isNote && e.hasTransport,
+        hint: e.isNote ? null : e.hint,
         // Dragging only makes sense on a segment showing the stop's real edge,
         // and not on the fixed-width "wide" pills used for very short stops.
         canDragLeft: !e.isNote && !wide && !contL,

@@ -27,6 +27,7 @@ import { fmtRange } from "@/lib/dates";
 import { isScheduled } from "@/lib/tripSections";
 import { logout } from "@/actions/team";
 import { stopColor } from "@/lib/theme";
+import { formatTotal } from "@/lib/currency";
 
 export default function LeftPanel({
   card,
@@ -38,6 +39,8 @@ export default function LeftPanel({
   teamId,
   teamName,
   userName,
+  myShare,
+  currency,
   onSwitchTeam,
   onOpenSettings,
   onSelectTrip,
@@ -57,6 +60,8 @@ export default function LeftPanel({
   teamId: string;
   teamName: string;
   userName: string;
+  myShare: number;
+  currency: string;
   onSwitchTeam: (id: string) => void;
   onOpenSettings: () => void;
   onSelectTrip: (t: TripData) => void;
@@ -222,8 +227,16 @@ export default function LeftPanel({
             <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-ink">
               {initials(userName)}
             </span>
-            <span className="truncate text-xs font-medium text-ink-soft">
-              {userName}
+            <span className="min-w-0">
+              <span className="block truncate text-xs font-medium text-ink-soft">
+                {userName}
+              </span>
+              <span className="block text-xs tabular-nums text-muted">
+                Your share{" "}
+                <span className="font-semibold text-accent-ink">
+                  {formatTotal(myShare, currency)}
+                </span>
+              </span>
             </span>
           </div>
           <form action={logout}>
