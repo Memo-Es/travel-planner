@@ -5,11 +5,44 @@ export const SECTION_DEFS: {
   name: string;
   placeholder: string;
   sharersLabel: string;
+  addressLabel: string;
+  timeLabel: string | null;
 }[] = [
-  { key: "stay", name: "Stay", placeholder: "Lodging / hotel name", sharersLabel: "Who's staying here?" },
-  { key: "transport", name: "Transport", placeholder: "Flight, train or transfer", sharersLabel: "Who's traveling?" },
-  { key: "activities", name: "Activities", placeholder: "Activity or reservation", sharersLabel: "Who's going?" },
+  {
+    key: "stay",
+    name: "Stay",
+    placeholder: "Lodging / hotel name",
+    sharersLabel: "Who's staying here?",
+    addressLabel: "Address",
+    timeLabel: null,
+  },
+  {
+    key: "transport",
+    name: "Transport",
+    placeholder: "Flight, train or transfer",
+    sharersLabel: "Who's traveling?",
+    addressLabel: "Departs from",
+    timeLabel: "Departure",
+  },
+  {
+    key: "activities",
+    name: "Activities",
+    placeholder: "Restaurant, museum, tour…",
+    sharersLabel: "Who's going?",
+    addressLabel: "Place",
+    timeLabel: "Date & time",
+  },
 ];
+
+/** Timed bookings first, in chronological order; the rest keep their order. */
+export function byTime(items: ItemData[]): ItemData[] {
+  return [...items].sort((a, b) => {
+    if (a.startsAt && b.startsAt) return a.startsAt.localeCompare(b.startsAt);
+    if (a.startsAt) return -1;
+    if (b.startsAt) return 1;
+    return 0;
+  });
+}
 
 export function isScheduled(item: ItemData): boolean {
   return !!(item.t.trim() && item.url.trim() && item.costAmount !== null);

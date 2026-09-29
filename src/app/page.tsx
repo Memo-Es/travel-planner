@@ -97,6 +97,7 @@ function toItem(i: {
   title: string;
   url: string;
   address: string;
+  startsAt: Date | null;
   costAmount: number | null;
   shares: { userId: string }[];
 }): ItemData {
@@ -105,6 +106,7 @@ function toItem(i: {
     t: i.title,
     url: i.url,
     address: i.address,
+    startsAt: i.startsAt ? i.startsAt.toISOString().slice(0, 16) : null,
     costAmount: i.costAmount,
     shareIds: i.shares.map((s) => s.userId),
   };

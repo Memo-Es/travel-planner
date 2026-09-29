@@ -15,6 +15,7 @@ import {
   MapPin,
   Check,
   Users,
+  Clock,
 } from "lucide-react";
 import type {
   TripData,
@@ -22,13 +23,14 @@ import type {
   ItemData,
   MemberOption,
 } from "@/lib/types";
-import { fmtRange, nightsBetween } from "@/lib/dates";
+import { fmtRange, nightsBetween, fmtDateTime } from "@/lib/dates";
 import {
   SECTION_DEFS,
   isScheduled,
   sectionTotal,
   hostFromUrl,
   mapsUrl,
+  byTime,
   perPersonCost,
   shareTotals,
 } from "@/lib/tripSections";
@@ -137,6 +139,7 @@ export default function TripDrawer({
       url: item.url,
       cost: item.costAmount === null ? "" : String(item.costAmount),
       address: item.address,
+      startsAt: item.startsAt ?? "",
       // Bookings saved before cost splitting existed default to everyone.
       shareIds: item.shareIds.length
         ? item.shareIds
@@ -350,7 +353,7 @@ export default function TripDrawer({
           </fieldset>
 
           {SECTION_DEFS.map((sec) => {
-            const items: ItemData[] = trip[sec.key];
+            const items: ItemData[] = byTime(trip[sec.key]);
             const total = sectionTotal(items);
             const showForm = editing?.key === sec.key;
             const Icon =
@@ -453,6 +456,12 @@ export default function TripDrawer({
                           {formatCost(item.costAmount, currency)}
                         </span>
                       </div>
+                      {item.startsAt && (
+                        <p className="mt-2 flex items-center gap-1.5 text-xs font-medium tabular-nums text-ink-soft">
+                          <Clock className="size-3 shrink-0 text-muted" />
+                          {fmtDateTime(item.startsAt)}
+                        </p>
+                      )}
                       {item.address && (
                         <a
                           href={mapsUrl(item.address)}
@@ -545,20 +554,32 @@ export default function TripDrawer({
                         }
                       />
                     </label>
-                    {sec.key === "stay" && (
+                    {sec.timeLabel && (
                       <label className="block space-y-2">
-                        <span className="field-label">Address</span>
+                        <span className="field-label">{sec.timeLabel}</span>
                         <Input
-                          value={form.address}
+                          type="datetime-local"
+                          value={form.startsAt}
+                          min={`${trip.start}T00:00`}
                           onChange={(e) =>
-                            onFormChange({ ...form, address: e.target.value })
+                            onFormChange({ ...form, startsAt: e.target.value })
                           }
                           onKeyDown={handleKeyDown}
-                          placeholder="Street, number, city"
-                          autoComplete="off"
                         />
                       </label>
                     )}
+                    <label className="block space-y-2">
+                      <span className="field-label">{sec.addressLabel}</span>
+                      <Input
+                        value={form.address}
+                        onChange={(e) =>
+                          onFormChange({ ...form, address: e.target.value })
+                        }
+                        onKeyDown={handleKeyDown}
+                        placeholder="Street, number, city"
+                        autoComplete="off"
+                      />
+                    </label>
                     <label className="block space-y-2">
                       <span className="field-label">Booking link</span>
                       <Input

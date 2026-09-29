@@ -19,9 +19,9 @@ import {
   mainWidth,
   type CalendarEvent,
 } from "@/lib/calendar";
-import { MONTHS_LONG, DAY, ms, toDateInput } from "@/lib/dates";
+import { MONTHS_LONG, DAY, ms, toDateInput, fmtDateTime } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
-import { isScheduled, shareTotals } from "@/lib/tripSections";
+import { byTime, isScheduled, shareTotals } from "@/lib/tripSections";
 import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
 import {
   createTrip,
@@ -71,6 +71,7 @@ export type FormState = {
   url: string;
   cost: string;
   address: string;
+  startsAt: string;
   shareIds: string[];
 };
 export type Overlay = "links" | "tasks" | null;
@@ -146,6 +147,7 @@ export default function Planner({
     url: "",
     cost: "",
     address: "",
+    startsAt: "",
     shareIds: members.map((m) => m.id),
   });
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -248,9 +250,16 @@ export default function Planner({
         hasTransport: t.transport.some(isScheduled),
         color: t.color,
         hint:
-          t.stay
-            .filter((s) => s.address.trim())
-            .map((s) => `${s.t}\n${s.address}`)
+          [
+            ...t.stay
+              .filter((s) => s.address.trim())
+              .map((s) => `${s.t}\n${s.address}`),
+            byTime([...t.transport, ...t.activities])
+              .filter((i) => i.startsAt)
+              .map((i) => `${fmtDateTime(i.startsAt!)} — ${i.t}`)
+              .join("\n"),
+          ]
+            .filter(Boolean)
             .join("\n\n") || null,
       };
     });
@@ -372,6 +381,7 @@ export default function Planner({
         title: form.t.trim(),
         url: form.url.trim(),
         address: form.address.trim(),
+        startsAt: form.startsAt || null,
         costAmount: parseCost(form.cost),
         shareIds: form.shareIds,
       };

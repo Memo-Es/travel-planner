@@ -3,6 +3,8 @@ export type ItemData = {
   t: string;
   url: string;
   address: string;
+  /** Local reservation time at the destination, "YYYY-MM-DDTHH:mm". */
+  startsAt: string | null;
   costAmount: number | null;
   /** User ids splitting this booking's cost equally. */
   shareIds: string[];

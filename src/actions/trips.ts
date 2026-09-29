@@ -95,6 +95,10 @@ const itemSchema = z.object({
     .max(10_000_000)
     .nullable(),
   address: z.string().trim().max(300),
+  startsAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Invalid date and time")
+    .nullable(),
   shareIds: z.array(z.string()).max(100),
 });
 
@@ -102,9 +106,14 @@ type ItemInput = {
   title: string;
   url: string;
   address: string;
+  startsAt: string | null;
   costAmount: number | null;
   shareIds: string[];
 };
+
+function toDbFields({ startsAt, ...rest }: Omit<ItemInput, "shareIds">) {
+  return { ...rest, startsAt: startsAt ? new Date(startsAt + ":00Z") : null };
+}
 
 /** Keeps only ids of people who actually belong to the team, so a booking
  * can't be split with outsiders. */
@@ -131,7 +140,7 @@ export async function addItem(
       tripId,
       section,
       order: count,
-      ...parsed,
+      ...toDbFields(parsed),
       shares: { create: userIds.map((userId) => ({ userId })) },
     },
   });
@@ -152,7 +161,7 @@ export async function updateItem(itemId: string, input: ItemInput) {
   await prisma.tripItem.update({
     where: { id: itemId },
     data: {
-      ...parsed,
+      ...toDbFields(parsed),
       shares: { deleteMany: {}, create: userIds.map((userId) => ({ userId })) },
     },
   });

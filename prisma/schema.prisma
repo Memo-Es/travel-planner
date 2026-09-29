@@ -92,6 +92,9 @@ model TripItem {
   title      String
   url        String      @default("")
   address    String      @default("")
+  // Reservation time as the local wall-clock time at the destination,
+  // stored as if it were UTC (like trip dates), so it never shifts.
+  startsAt   DateTime?
   costAmount Float?
   order      Int         @default(0)
   shares     ItemShare[]
