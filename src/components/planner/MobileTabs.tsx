@@ -19,6 +19,7 @@ const TABS: {
   { id: "links", label: () => "Trips", dot: ACCENT },
   { id: "calendar", label: () => "Calendar", dot: ACCENT },
   { id: "tasks", label: (n) => `Tasks [${n}]`, dot: TASK_GREEN },
+  { id: "balance", label: () => "Balance", dot: ACCENT },
 ];
 
 export default function MobileTabs({
@@ -34,7 +35,7 @@ export default function MobileTabs({
   return (
     <nav
       aria-label="Planner views"
-      className="grid grid-cols-3 gap-1.5 bg-white border border-line rounded-2xl p-1.5 flex-none"
+      className="grid grid-cols-4 gap-1 bg-white border border-line rounded-2xl p-1.5 flex-none"
     >
       {TABS.map((tab) => {
         const isActive = active === tab.id;
@@ -44,7 +45,7 @@ export default function MobileTabs({
             key={tab.id}
             aria-current={isActive ? "page" : undefined}
             onClick={() => onChange(tab.id)}
-            className="relative isolate flex items-center justify-center gap-1.5 min-h-11 border-0 rounded-[10px] cursor-pointer text-sm hover:bg-transparent"
+            className="relative isolate flex items-center justify-center gap-1.5 min-h-11 border-0 rounded-[10px] cursor-pointer px-1 text-[13px] hover:bg-transparent"
             style={{
               background: "transparent",
               color: isActive ? "#1c1b19" : "#6f6b65",

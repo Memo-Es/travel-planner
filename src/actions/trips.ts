@@ -94,23 +94,60 @@ const itemSchema = z.object({
     .finite()
     .max(10_000_000)
     .nullable(),
+  address: z.string().trim().max(300),
+  startsAt: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Invalid date and time")
+    .nullable(),
+  shareIds: z.array(z.string()).max(100),
 });
+
+type ItemInput = {
+  title: string;
+  url: string;
+  address: string;
+  startsAt: string | null;
+  costAmount: number | null;
+  shareIds: string[];
+};
+
+function toDbFields({ startsAt, ...rest }: Omit<ItemInput, "shareIds">) {
+  return { ...rest, startsAt: startsAt ? new Date(startsAt + ":00Z") : null };
+}
+
+/** Keeps only ids of people who actually belong to the team, so a booking
+ * can't be split with outsiders. */
+async function teamMemberIds(teamId: string, ids: string[]) {
+  if (ids.length === 0) return [];
+  const memberships = await prisma.membership.findMany({
+    where: { teamId, userId: { in: ids } },
+    select: { userId: true },
+  });
+  return memberships.map((m) => m.userId);
+}
 
 export async function addItem(
   tripId: string,
-  section: "STAY" | "TRANSPORT" | "ACTIVITIES",
-  input: { title: string; url: string; costAmount: number | null },
+  section: "STAY" | "TRANSPORT" | "FOOD" | "ACTIVITIES",
+  input: ItemInput,
 ) {
-  await requireTripAccess(tripId);
-  const parsed = itemSchema.parse(input);
+  const trip = await requireTripAccess(tripId);
+  const { shareIds, ...parsed } = itemSchema.parse(input);
+  const userIds = await teamMemberIds(trip.teamId, shareIds);
   const count = await prisma.tripItem.count({ where: { tripId, section } });
   await prisma.tripItem.create({
-    data: { tripId, section, order: count, ...parsed },
+    data: {
+      tripId,
+      section,
+      order: count,
+      ...toDbFields(parsed),
+      shares: { create: userIds.map((userId) => ({ userId })) },
+    },
   });
   revalidatePath("/");
 }
 
-export async function updateItem(itemId: string, input: { title: string; url: string; costAmount: number | null }) {
+export async function updateItem(itemId: string, input: ItemInput) {
   const user = await requireUser();
   const item = await prisma.tripItem.findUnique({ where: { id: itemId }, include: { trip: true } });
   if (!item) throw new Error("Item not found");
@@ -119,8 +156,15 @@ export async function updateItem(itemId: string, input: { title: string; url: st
   });
   if (!membership) throw new Error("Not a member of this team");
 
-  const parsed = itemSchema.parse(input);
-  await prisma.tripItem.update({ where: { id: itemId }, data: parsed });
+  const { shareIds, ...parsed } = itemSchema.parse(input);
+  const userIds = await teamMemberIds(item.trip.teamId, shareIds);
+  await prisma.tripItem.update({
+    where: { id: itemId },
+    data: {
+      ...toDbFields(parsed),
+      shares: { deleteMany: {}, create: userIds.map((userId) => ({ userId })) },
+    },
+  });
   revalidatePath("/");
 }
 

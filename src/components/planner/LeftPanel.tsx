@@ -13,6 +13,7 @@ import {
   Settings2,
   MapPin,
   Loader2,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/input";
@@ -27,6 +28,7 @@ import { fmtRange } from "@/lib/dates";
 import { isScheduled } from "@/lib/tripSections";
 import { logout } from "@/actions/team";
 import { stopColor } from "@/lib/theme";
+import { formatTotal } from "@/lib/currency";
 
 export default function LeftPanel({
   card,
@@ -38,8 +40,11 @@ export default function LeftPanel({
   teamId,
   teamName,
   userName,
+  myShare,
+  currency,
   onSwitchTeam,
   onOpenSettings,
+  onOpenBalance,
   onSelectTrip,
   onAddTrip,
   addingTrip,
@@ -57,8 +62,11 @@ export default function LeftPanel({
   teamId: string;
   teamName: string;
   userName: string;
+  myShare: number;
+  currency: string;
   onSwitchTeam: (id: string) => void;
   onOpenSettings: () => void;
+  onOpenBalance: () => void;
   onSelectTrip: (t: TripData) => void;
   onAddTrip: () => void;
   addingTrip: boolean;
@@ -211,6 +219,21 @@ export default function LeftPanel({
         {addingTrip ? "Adding stop…" : "Add stop"}
       </Button>
       <footer className="mt-auto shrink-0 pt-6">
+        <Button
+          variant="ghost"
+          onClick={onOpenBalance}
+          title="Balance — your share"
+          className="-ml-2 mb-4 w-[calc(100%+1rem)] justify-between gap-3 px-2"
+        >
+          <span className="flex items-center gap-2 text-ink-soft">
+            <Wallet />
+            Balance
+          </span>
+          <span className="min-w-0 truncate text-xs font-semibold tabular-nums text-accent-ink">
+            <span className="sr-only">Your share </span>
+            {formatTotal(myShare, currency)}
+          </span>
+        </Button>
         <div className="mb-4 text-xs leading-relaxed text-muted">
           <p>{todayLabel}</p>
           <p>

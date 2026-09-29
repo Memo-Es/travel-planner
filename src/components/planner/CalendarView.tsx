@@ -73,6 +73,7 @@ export default function CalendarView({
                 role={bar.tripId ? "button" : undefined}
                 tabIndex={bar.tripId ? 0 : undefined}
                 aria-label={bar.tripId ? `Open ${bar.label}` : undefined}
+                title={bar.hint ? `${bar.label}\n\n${bar.hint}` : undefined}
                 className={
                   bar.tripId
                     ? "transition-[filter] duration-150 hover:brightness-95 focus-visible:z-10"

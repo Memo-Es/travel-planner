@@ -10,21 +10,32 @@ import {
   MoreHorizontal,
   ArrowUpRight,
   CalendarDays,
-  Hotel,
-  Plane,
   MapPin,
   Check,
+  Users,
+  Clock,
 } from "lucide-react";
-import type { TripData, ItemSectionKey, ItemData } from "@/lib/types";
-import { fmtRange, nightsBetween } from "@/lib/dates";
+import type {
+  TripData,
+  ItemSectionKey,
+  ItemData,
+  MemberOption,
+} from "@/lib/types";
+import { fmtRange, nightsBetween, fmtDateTime } from "@/lib/dates";
 import {
   SECTION_DEFS,
   isScheduled,
   sectionTotal,
   hostFromUrl,
+  mapsUrl,
+  byTime,
+  allItems,
+  perPersonCost,
+  shareTotals,
 } from "@/lib/tripSections";
 import { currencySymbol, formatCost, formatTotal } from "@/lib/currency";
 import { STOP_COLORS } from "@/lib/theme";
+import { SECTION_ICONS } from "@/components/planner/sectionIcons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +56,8 @@ import type { Editing, FormState } from "@/components/Planner";
 export default function TripDrawer({
   trip,
   currency,
+  members,
+  currentUserId,
   isMobile,
   editing,
   form,
@@ -64,6 +77,8 @@ export default function TripDrawer({
 }: {
   trip: TripData;
   currency: string;
+  members: MemberOption[];
+  currentUserId: string;
   isMobile: boolean;
   editing: Editing;
   form: FormState;
@@ -85,10 +100,18 @@ export default function TripDrawer({
   onChangeColor: (tripId: string, color: string) => void;
   onDeleteTrip: (tripId: string, label: string) => void;
 }) {
-  const tripTotal =
-    sectionTotal(trip.stay) +
-    sectionTotal(trip.transport) +
-    sectionTotal(trip.activities);
+  const tripTotal = sectionTotal(allItems(trip));
+  const { byMember, unassigned } = shareTotals([trip], members);
+  const myShare = byMember.get(currentUserId) ?? 0;
+  const memberName = (id: string) =>
+    id === currentUserId
+      ? "You"
+      : (members.find((m) => m.id === id)?.name ?? "Former teammate");
+  const formCost = form.cost.trim() ? Number(form.cost) : NaN;
+  const formEach =
+    Number.isFinite(formCost) && form.shareIds.length > 0
+      ? formCost / form.shareIds.length
+      : null;
   const [editingDates, setEditingDates] = useState(false);
   const [startDraft, setStartDraft] = useState(trip.start);
   const [endDraft, setEndDraft] = useState(trip.end);
@@ -105,6 +128,29 @@ export default function TripDrawer({
       e.stopPropagation();
       onCancelForm();
     }
+  }
+
+  function toForm(item: ItemData): FormState {
+    return {
+      t: item.t,
+      url: item.url,
+      cost: item.costAmount === null ? "" : String(item.costAmount),
+      address: item.address,
+      startsAt: item.startsAt ?? "",
+      // Bookings saved before cost splitting existed default to everyone.
+      shareIds: item.shareIds.length
+        ? item.shareIds
+        : members.map((m) => m.id),
+    };
+  }
+
+  function toggleSharer(id: string) {
+    onFormChange({
+      ...form,
+      shareIds: form.shareIds.includes(id)
+        ? form.shareIds.filter((x) => x !== id)
+        : [...form.shareIds, id],
+    });
   }
 
   function saveLabel() {
@@ -304,15 +350,10 @@ export default function TripDrawer({
           </fieldset>
 
           {SECTION_DEFS.map((sec) => {
-            const items: ItemData[] = trip[sec.key];
+            const items: ItemData[] = byTime(trip[sec.key]);
             const total = sectionTotal(items);
             const showForm = editing?.key === sec.key;
-            const Icon =
-              sec.key === "stay"
-                ? Hotel
-                : sec.key === "transport"
-                  ? Plane
-                  : MapPin;
+            const Icon = SECTION_ICONS[sec.key];
             return (
               <section
                 key={sec.key}
@@ -346,14 +387,7 @@ export default function TripDrawer({
                         <button
                           className="min-w-0 flex-1 rounded text-left text-sm font-medium leading-6 text-ink"
                           onClick={() =>
-                            onStartEdit(sec.key, item.id, {
-                              t: item.t,
-                              url: item.url,
-                              cost:
-                                item.costAmount === null
-                                  ? ""
-                                  : String(item.costAmount),
-                            })
+                            onStartEdit(sec.key, item.id, toForm(item))
                           }
                         >
                           {item.t}
@@ -372,14 +406,7 @@ export default function TripDrawer({
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
                               onSelect={() =>
-                                onStartEdit(sec.key, item.id, {
-                                  t: item.t,
-                                  url: item.url,
-                                  cost:
-                                    item.costAmount === null
-                                      ? ""
-                                      : String(item.costAmount),
-                                })
+                                onStartEdit(sec.key, item.id, toForm(item))
                               }
                             >
                               <Pencil />
@@ -421,6 +448,47 @@ export default function TripDrawer({
                           {formatCost(item.costAmount, currency)}
                         </span>
                       </div>
+                      {item.startsAt && (
+                        <p className="mt-2 flex items-center gap-1.5 text-xs font-medium tabular-nums text-ink-soft">
+                          <Clock className="size-3 shrink-0 text-muted" />
+                          {fmtDateTime(item.startsAt)}
+                        </p>
+                      )}
+                      {item.address && (
+                        <a
+                          href={mapsUrl(item.address)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 flex items-start gap-1.5 rounded text-xs leading-relaxed text-ink-soft hover:underline"
+                        >
+                          <MapPin className="mt-0.5 size-3 shrink-0 text-muted" />
+                          <span className="min-w-0 break-words">
+                            {item.address}
+                          </span>
+                          <span className="sr-only">
+                            {" "}
+                            (opens in Google Maps)
+                          </span>
+                        </a>
+                      )}
+                      <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-muted">
+                        <Users className="mt-0.5 size-3 shrink-0" />
+                        {item.shareIds.length === 0 ? (
+                          <span>Not split yet — edit to choose who pays</span>
+                        ) : (
+                          <span>
+                            {item.shareIds.map(memberName).join(", ")}
+                            {perPersonCost(item) !== null && (
+                              <span className="tabular-nums">
+                                {" · "}
+                                {item.shareIds.length > 1
+                                  ? `${formatTotal(perPersonCost(item)!, currency)} each`
+                                  : "pays in full"}
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </p>
                       <div className="mt-3">
                         <Badge
                           variant={isScheduled(item) ? "success" : "secondary"}
@@ -439,6 +507,29 @@ export default function TripDrawer({
                 </div>
                 <Disclosure open={showForm}>
                   <div className="space-y-3 rounded-xl border border-line bg-secondary/50 p-4">
+                    <fieldset className="min-w-0 space-y-2">
+                      <legend className="field-label mb-2">
+                        {sec.sharersLabel}
+                      </legend>
+                      <div className="flex flex-wrap gap-2">
+                        {members.map((m) => {
+                          const on = form.shareIds.includes(m.id);
+                          return (
+                            <Button
+                              key={m.id}
+                              type="button"
+                              size="sm"
+                              variant={on ? "default" : "outline"}
+                              aria-pressed={on}
+                              onClick={() => toggleSharer(m.id)}
+                            >
+                              {on && <Check />}
+                              {m.id === currentUserId ? "You" : m.name}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </fieldset>
                     <label className="block space-y-2">
                       <span className="field-label">Name</span>
                       <Input
@@ -453,6 +544,32 @@ export default function TripDrawer({
                         aria-describedby={
                           formError ? "booking-error" : undefined
                         }
+                      />
+                    </label>
+                    {sec.timeLabel && (
+                      <label className="block space-y-2">
+                        <span className="field-label">{sec.timeLabel}</span>
+                        <Input
+                          type="datetime-local"
+                          value={form.startsAt}
+                          min={`${trip.start}T00:00`}
+                          onChange={(e) =>
+                            onFormChange({ ...form, startsAt: e.target.value })
+                          }
+                          onKeyDown={handleKeyDown}
+                        />
+                      </label>
+                    )}
+                    <label className="block space-y-2">
+                      <span className="field-label">{sec.addressLabel}</span>
+                      <Input
+                        value={form.address}
+                        onChange={(e) =>
+                          onFormChange({ ...form, address: e.target.value })
+                        }
+                        onKeyDown={handleKeyDown}
+                        placeholder="Street, number, city"
+                        autoComplete="off"
                       />
                     </label>
                     <label className="block space-y-2">
@@ -501,6 +618,9 @@ export default function TripDrawer({
                         id="booking-hint"
                         className="text-xs leading-relaxed text-muted"
                       >
+                        {formEach !== null && form.shareIds.length > 1
+                          ? `Split ${form.shareIds.length} ways: ${formatTotal(formEach, currency)} each. `
+                          : ""}
                         Add a name, link and cost to mark this booking as
                         scheduled.
                       </p>
@@ -538,15 +658,67 @@ export default function TripDrawer({
               </section>
             );
           })}
+
+          {tripTotal > 0 && (
+            <section
+              className="space-y-3"
+              aria-labelledby="split-heading"
+            >
+              <h3
+                id="split-heading"
+                className="flex items-center gap-2 text-sm font-semibold"
+              >
+                <Users className="size-4 text-muted" />
+                Who pays what
+              </h3>
+              <ul className="divide-y divide-line-soft rounded-xl border border-line bg-white px-3">
+                {members.map((m) => (
+                  <li
+                    key={m.id}
+                    className="flex items-center justify-between gap-3 py-2.5 text-sm"
+                  >
+                    <span className="min-w-0 truncate">
+                      {m.name}
+                      {m.id === currentUserId && (
+                        <span className="text-muted"> (you)</span>
+                      )}
+                    </span>
+                    <span className="shrink-0 font-medium tabular-nums">
+                      {formatTotal(byMember.get(m.id) ?? 0, currency)}
+                    </span>
+                  </li>
+                ))}
+                {unassigned > 0 && (
+                  <li className="flex items-center justify-between gap-3 py-2.5 text-sm text-muted">
+                    <span>Not split yet</span>
+                    <span className="shrink-0 tabular-nums">
+                      {formatTotal(unassigned, currency)}
+                    </span>
+                  </li>
+                )}
+              </ul>
+            </section>
+          )}
         </div>
-        <footer className="flex shrink-0 items-center justify-between border-t border-line-soft pt-4">
-          <span className="text-sm text-muted">Total planned</span>
-          <span className="text-lg font-semibold tracking-tight tabular-nums">
-            <AnimatedNumber
-              value={tripTotal}
-              format={(value) => formatTotal(value, currency)}
-            />
-          </span>
+        <footer className="shrink-0 space-y-1 border-t border-line-soft pt-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted">Total planned</span>
+            <span className="text-lg font-semibold tracking-tight tabular-nums">
+              <AnimatedNumber
+                value={tripTotal}
+                format={(value) => formatTotal(value, currency)}
+              />
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted">Your share</span>
+            <span className="text-sm font-semibold tabular-nums text-accent-ink">
+              <AnimatedNumber
+                value={myShare}
+                format={(value) => formatTotal(value, currency)}
+              />
+            </span>
+          </div>
         </footer>
       </DialogContent>
     </Dialog>

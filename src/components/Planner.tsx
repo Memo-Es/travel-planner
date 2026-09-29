@@ -19,9 +19,9 @@ import {
   mainWidth,
   type CalendarEvent,
 } from "@/lib/calendar";
-import { MONTHS_LONG, DAY, ms, toDateInput } from "@/lib/dates";
+import { MONTHS_LONG, DAY, ms, toDateInput, fmtDateTime } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
-import { isScheduled } from "@/lib/tripSections";
+import { byTime, isScheduled, shareTotals } from "@/lib/tripSections";
 import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
 import {
   createTrip,
@@ -66,9 +66,17 @@ import MobileTabs from "@/components/planner/MobileTabs";
 import Toast from "@/components/planner/Toast";
 
 export type Editing = { key: ItemSectionKey; itemId: string | null } | null;
-export type FormState = { t: string; url: string; cost: string };
+export type FormState = {
+  t: string;
+  url: string;
+  cost: string;
+  address: string;
+  startsAt: string;
+  shareIds: string[];
+};
 export type Overlay = "links" | "tasks" | null;
-export type MobileTab = "links" | "calendar" | "tasks";
+export type MobileTab = "links" | "calendar" | "tasks" | "balance";
+export type RightView = "tasks" | "balance";
 export type TaskFormState = {
   title: string;
   tag: string;
@@ -135,7 +143,15 @@ export default function Planner({
     null,
   );
   const [editing, setEditing] = useState<Editing>(null);
-  const [form, setForm] = useState<FormState>({ t: "", url: "", cost: "" });
+  const emptyForm = (): FormState => ({
+    t: "",
+    url: "",
+    cost: "",
+    address: "",
+    startsAt: "",
+    shareIds: members.map((m) => m.id),
+  });
+  const [form, setForm] = useState<FormState>(emptyForm);
   const [formError, setFormError] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("calendar");
   const [draft, setDraft] = useState("");
@@ -159,6 +175,7 @@ export default function Planner({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [rightView, setRightView] = useState<RightView>("tasks");
   const [dragging, setDragging] = useState<DragState>(null);
   const [addingTrip, setAddingTrip] = useState(false);
   // React state updates aren't synchronous, so a state-only guard can miss
@@ -221,6 +238,7 @@ export default function Planner({
       hasStay: false,
       hasTransport: false,
       color: null,
+      hint: null,
     }));
     const tripEvents: CalendarEvent[] = trips.map((t) => {
       const override = dragging && dragging.tripId === t.id;
@@ -233,6 +251,18 @@ export default function Planner({
         hasStay: t.stay.some(isScheduled),
         hasTransport: t.transport.some(isScheduled),
         color: t.color,
+        hint:
+          [
+            ...t.stay
+              .filter((s) => s.address.trim())
+              .map((s) => `${s.t}\n${s.address}`),
+            byTime([...t.transport, ...t.food, ...t.activities])
+              .filter((i) => i.startsAt)
+              .map((i) => `${fmtDateTime(i.startsAt!)} — ${i.t}`)
+              .join("\n"),
+          ]
+            .filter(Boolean)
+            .join("\n\n") || null,
       };
     });
     return noteEvents.concat(tripEvents);
@@ -308,6 +338,14 @@ export default function Planner({
     setEditingTaskId(null);
   }
 
+  /** Shows the Balance view wherever the right column lives at this width:
+   * its own tab on mobile, the tasks overlay when compact, or in place. */
+  function openRightView(view: RightView) {
+    setRightView(view);
+    if (isMobile) setMobileTab(view);
+    else if (isCompact) setOverlay("tasks");
+  }
+
   function openSettings() {
     setOpenTripId(null);
     setEditing(null);
@@ -316,7 +354,7 @@ export default function Planner({
 
   function startAdd(key: ItemSectionKey) {
     setEditing({ key, itemId: null });
-    setForm({ t: "", url: "", cost: "" });
+    setForm(emptyForm());
     setFormError(null);
   }
 
@@ -341,6 +379,10 @@ export default function Planner({
       setFormError("Link must start with http:// or https://");
       return;
     }
+    if (form.shareIds.length === 0) {
+      setFormError("Choose at least one person to split the cost with.");
+      return;
+    }
     savingRef.current = true;
     setSaving(true);
     setFormError(null);
@@ -348,14 +390,17 @@ export default function Planner({
       const payload = {
         title: form.t.trim(),
         url: form.url.trim(),
+        address: form.address.trim(),
+        startsAt: form.startsAt || null,
         costAmount: parseCost(form.cost),
+        shareIds: form.shareIds,
       };
       const section = editing.key.toUpperCase() as
-        "STAY" | "TRANSPORT" | "ACTIVITIES";
+        "STAY" | "TRANSPORT" | "FOOD" | "ACTIVITIES";
       if (editing.itemId === null) await addItem(trip.id, section, payload);
       else await updateItem(editing.itemId, payload);
       setEditing(null);
-      setForm({ t: "", url: "", cost: "" });
+      setForm(emptyForm());
       refresh();
     } catch {
       setFormError("The booking could not be saved. Please try again.");
@@ -572,6 +617,10 @@ export default function Planner({
   }
 
   const openCount = tasks.filter((t) => !t.done).length;
+  const memberTotals = useMemo(
+    () => shareTotals(trips, members),
+    [trips, members],
+  );
 
   const shellClass = isMobile
     ? "flex flex-col gap-2.5 p-2.5 h-dvh box-border relative bg-canvas text-ink"
@@ -591,7 +640,7 @@ export default function Planner({
     ? mobileTab === "links"
     : mode === "full" || activeOverlay === "links";
   const showRightPanel = isMobile
-    ? mobileTab === "tasks"
+    ? mobileTab === "tasks" || mobileTab === "balance"
     : mode === "full" || activeOverlay === "tasks";
   const showCalendar = isMobile ? mobileTab === "calendar" : true;
 
@@ -630,7 +679,7 @@ export default function Planner({
             Delete {deleteTarget?.label}?
           </AlertDialogTitle>
           <AlertDialogDescription className="text-sm leading-relaxed text-muted">
-            This removes the stop and all its stay, transport and activity
+            This removes the stop and all its stay, transport, food and activity
             bookings. This cannot be undone.
           </AlertDialogDescription>
           {deleteError && (
@@ -687,8 +736,11 @@ export default function Planner({
           teamId={teamId}
           teamName={teamName}
           userName={userName}
+          myShare={memberTotals.byMember.get(currentUserId) ?? 0}
+          currency={teamCurrency}
           onSwitchTeam={onSwitchTeam}
           onOpenSettings={openSettings}
+          onOpenBalance={() => openRightView("balance")}
           onSelectTrip={(t) => jumpToTrip(t)}
           onAddTrip={handleAddTrip}
           addingTrip={addingTrip}
@@ -770,6 +822,11 @@ export default function Planner({
           card={CARD}
           overlay={activeOverlay === "tasks"}
           isMobile={isMobile}
+          view={isMobile && mobileTab === "balance" ? "balance" : isMobile ? "tasks" : rightView}
+          onViewChange={setRightView}
+          trips={trips}
+          currentUserId={currentUserId}
+          currency={teamCurrency}
           tasks={tasks}
           members={members}
           openCount={openCount}
@@ -794,7 +851,8 @@ export default function Planner({
       {showRightRail && (
         <RightRail
           openCount={openCount}
-          onOpenTasks={() => setOverlay("tasks")}
+          onOpenTasks={() => openRightView("tasks")}
+          onOpenBalance={() => openRightView("balance")}
         />
       )}
 
@@ -804,6 +862,8 @@ export default function Planner({
             key={trip.id}
             trip={trip}
             currency={teamCurrency}
+            members={members}
+            currentUserId={currentUserId}
             isMobile={isMobile}
             editing={editing}
             form={form}
@@ -833,6 +893,7 @@ export default function Planner({
             currency={teamCurrency}
             members={members}
             currentUserId={currentUserId}
+            memberTotals={memberTotals}
             invites={invites}
             onClose={() => setSettingsOpen(false)}
             onRename={onRenameTeam}

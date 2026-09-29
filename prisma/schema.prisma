@@ -18,6 +18,7 @@ enum Role {
 enum ItemSection {
   STAY
   TRANSPORT
+  FOOD
   ACTIVITIES
 }
 
@@ -30,6 +31,7 @@ model User {
   memberships    Membership[]
   invitesSent    Invite[]     @relation("InviteCreatedBy")
   assignedTasks  Task[]       @relation("TaskAssignee")
+  itemShares     ItemShare[]
 }
 
 model Team {
@@ -90,10 +92,28 @@ model TripItem {
   section    ItemSection
   title      String
   url        String      @default("")
+  address    String      @default("")
+  // Reservation time as the local wall-clock time at the destination,
+  // stored as if it were UTC (like trip dates), so it never shifts.
+  startsAt   DateTime?
   costAmount Float?
   order      Int         @default(0)
+  shares     ItemShare[]
 
   @@index([tripId])
+}
+
+// Who is splitting a booking's cost. The cost is divided equally between
+// every user listed for the item.
+model ItemShare {
+  id     String   @id @default(cuid())
+  item   TripItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@unique([itemId, userId])
+  @@index([userId])
 }
 
 model Task {

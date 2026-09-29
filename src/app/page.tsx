@@ -12,7 +12,7 @@ export default async function HomePage() {
     prisma.trip.findMany({
       where: { teamId: team.id },
       orderBy: { order: "asc" },
-      include: { items: { orderBy: { order: "asc" } } },
+      include: { items: { orderBy: { order: "asc" }, include: { shares: true } } },
     }),
     prisma.task.findMany({
       where: { teamId: team.id },
@@ -40,6 +40,7 @@ export default async function HomePage() {
     end: t.end.toISOString().slice(0, 10),
     stay: t.items.filter((i) => i.section === "STAY").map(toItem),
     transport: t.items.filter((i) => i.section === "TRANSPORT").map(toItem),
+    food: t.items.filter((i) => i.section === "FOOD").map(toItem),
     activities: t.items.filter((i) => i.section === "ACTIVITIES").map(toItem),
   }));
 
@@ -92,6 +93,22 @@ export default async function HomePage() {
   );
 }
 
-function toItem(i: { id: string; title: string; url: string; costAmount: number | null }): ItemData {
-  return { id: i.id, t: i.title, url: i.url, costAmount: i.costAmount };
+function toItem(i: {
+  id: string;
+  title: string;
+  url: string;
+  address: string;
+  startsAt: Date | null;
+  costAmount: number | null;
+  shares: { userId: string }[];
+}): ItemData {
+  return {
+    id: i.id,
+    t: i.title,
+    url: i.url,
+    address: i.address,
+    startsAt: i.startsAt ? i.startsAt.toISOString().slice(0, 16) : null,
+    costAmount: i.costAmount,
+    shareIds: i.shares.map((s) => s.userId),
+  };
 }

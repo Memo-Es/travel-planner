@@ -12,13 +12,14 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import type { InviteData, MemberOption } from "@/lib/types";
-import { CURRENCIES } from "@/lib/currency";
+import { CURRENCIES, formatTotal } from "@/lib/currency";
 
 export default function TripSettingsModal({
   teamName,
   currency,
   members,
   currentUserId,
+  memberTotals,
   invites,
   onClose,
   onRename,
@@ -29,6 +30,7 @@ export default function TripSettingsModal({
   currency: string;
   members: MemberOption[];
   currentUserId: string;
+  memberTotals: { byMember: Map<string, number>; unassigned: number };
   invites: InviteData[];
   onClose: () => void;
   onRename: (name: string) => Promise<void>;
@@ -183,7 +185,12 @@ export default function TripSettingsModal({
                 return (
                   <li key={member.id} className="flex items-center gap-3 py-3">
                     <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-ink">{initials}</span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{member.name}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-ink">{member.name}</span>
+                      <span className="block text-xs tabular-nums text-muted">
+                        Pays {formatTotal(memberTotals.byMember.get(member.id) ?? 0, currency)}
+                      </span>
+                    </span>
                     {isCurrentUser ? <Badge>You</Badge> : member.role === "OWNER" ? <Badge><Crown className="size-3" />Owner</Badge> : <Badge variant="secondary">Member</Badge>}
                   </li>
                 );
