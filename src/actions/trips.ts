@@ -128,7 +128,7 @@ async function teamMemberIds(teamId: string, ids: string[]) {
 
 export async function addItem(
   tripId: string,
-  section: "STAY" | "TRANSPORT" | "ACTIVITIES",
+  section: "STAY" | "TRANSPORT" | "FOOD" | "ACTIVITIES",
   input: ItemInput,
 ) {
   const trip = await requireTripAccess(tripId);

@@ -19,10 +19,11 @@ export type TripData = {
   end: string;
   stay: ItemData[];
   transport: ItemData[];
+  food: ItemData[];
   activities: ItemData[];
 };
 
-export type ItemSectionKey = "stay" | "transport" | "activities";
+export type ItemSectionKey = "stay" | "transport" | "food" | "activities";
 
 export type TaskData = {
   id: string;

@@ -62,6 +62,7 @@ import RightRail from "@/components/planner/RightRail";
 import CalendarView from "@/components/planner/CalendarView";
 import TripDrawer from "@/components/planner/TripDrawer";
 import TripSettingsModal from "@/components/planner/TripSettingsModal";
+import BalanceModal from "@/components/planner/BalanceModal";
 import MobileTabs from "@/components/planner/MobileTabs";
 import Toast from "@/components/planner/Toast";
 
@@ -174,6 +175,7 @@ export default function Planner({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [balanceOpen, setBalanceOpen] = useState(false);
   const [dragging, setDragging] = useState<DragState>(null);
   const [addingTrip, setAddingTrip] = useState(false);
   // React state updates aren't synchronous, so a state-only guard can miss
@@ -254,7 +256,7 @@ export default function Planner({
             ...t.stay
               .filter((s) => s.address.trim())
               .map((s) => `${s.t}\n${s.address}`),
-            byTime([...t.transport, ...t.activities])
+            byTime([...t.transport, ...t.food, ...t.activities])
               .filter((i) => i.startsAt)
               .map((i) => `${fmtDateTime(i.startsAt!)} — ${i.t}`)
               .join("\n"),
@@ -333,7 +335,15 @@ export default function Planner({
     setOpenTripId(null);
     setEditing(null);
     setSettingsOpen(false);
+    setBalanceOpen(false);
     setEditingTaskId(null);
+  }
+
+  function openBalance() {
+    setOpenTripId(null);
+    setEditing(null);
+    setOverlay(null);
+    setBalanceOpen(true);
   }
 
   function openSettings() {
@@ -386,7 +396,7 @@ export default function Planner({
         shareIds: form.shareIds,
       };
       const section = editing.key.toUpperCase() as
-        "STAY" | "TRANSPORT" | "ACTIVITIES";
+        "STAY" | "TRANSPORT" | "FOOD" | "ACTIVITIES";
       if (editing.itemId === null) await addItem(trip.id, section, payload);
       else await updateItem(editing.itemId, payload);
       setEditing(null);
@@ -669,7 +679,7 @@ export default function Planner({
             Delete {deleteTarget?.label}?
           </AlertDialogTitle>
           <AlertDialogDescription className="text-sm leading-relaxed text-muted">
-            This removes the stop and all its stay, transport and activity
+            This removes the stop and all its stay, transport, food and activity
             bookings. This cannot be undone.
           </AlertDialogDescription>
           {deleteError && (
@@ -730,6 +740,7 @@ export default function Planner({
           currency={teamCurrency}
           onSwitchTeam={onSwitchTeam}
           onOpenSettings={openSettings}
+          onOpenBalance={openBalance}
           onSelectTrip={(t) => jumpToTrip(t)}
           onAddTrip={handleAddTrip}
           addingTrip={addingTrip}
@@ -866,6 +877,17 @@ export default function Planner({
             onRename={onRenameTrip}
             onChangeColor={onChangeTripColor}
             onDeleteTrip={handleDeleteTrip}
+          />
+        )}
+
+        {balanceOpen && (
+          <BalanceModal
+            key="balance"
+            trips={trips}
+            members={members}
+            currentUserId={currentUserId}
+            currency={teamCurrency}
+            onClose={() => setBalanceOpen(false)}
           />
         )}
 

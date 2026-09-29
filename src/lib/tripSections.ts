@@ -25,9 +25,17 @@ export const SECTION_DEFS: {
     timeLabel: "Departure",
   },
   {
+    key: "food",
+    name: "Food",
+    placeholder: "Restaurant, café, market…",
+    sharersLabel: "Who's eating?",
+    addressLabel: "Place",
+    timeLabel: "Date & time",
+  },
+  {
     key: "activities",
     name: "Activities",
-    placeholder: "Restaurant, museum, tour…",
+    placeholder: "Museum, tour, show…",
     sharersLabel: "Who's going?",
     addressLabel: "Place",
     timeLabel: "Date & time",
@@ -70,8 +78,8 @@ export function perPersonCost(item: ItemData): number | null {
   return item.costAmount / item.shareIds.length;
 }
 
-function allItems(trip: TripData): ItemData[] {
-  return [...trip.stay, ...trip.transport, ...trip.activities];
+export function allItems(trip: TripData): ItemData[] {
+  return SECTION_DEFS.flatMap((sec) => trip[sec.key]);
 }
 
 /** What each member owes across the given trips. Items nobody was assigned

@@ -10,8 +10,6 @@ import {
   MoreHorizontal,
   ArrowUpRight,
   CalendarDays,
-  Hotel,
-  Plane,
   MapPin,
   Check,
   Users,
@@ -31,11 +29,13 @@ import {
   hostFromUrl,
   mapsUrl,
   byTime,
+  allItems,
   perPersonCost,
   shareTotals,
 } from "@/lib/tripSections";
 import { currencySymbol, formatCost, formatTotal } from "@/lib/currency";
 import { STOP_COLORS } from "@/lib/theme";
+import { SECTION_ICONS } from "@/components/planner/sectionIcons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -100,10 +100,7 @@ export default function TripDrawer({
   onChangeColor: (tripId: string, color: string) => void;
   onDeleteTrip: (tripId: string, label: string) => void;
 }) {
-  const tripTotal =
-    sectionTotal(trip.stay) +
-    sectionTotal(trip.transport) +
-    sectionTotal(trip.activities);
+  const tripTotal = sectionTotal(allItems(trip));
   const { byMember, unassigned } = shareTotals([trip], members);
   const myShare = byMember.get(currentUserId) ?? 0;
   const memberName = (id: string) =>
@@ -356,12 +353,7 @@ export default function TripDrawer({
             const items: ItemData[] = byTime(trip[sec.key]);
             const total = sectionTotal(items);
             const showForm = editing?.key === sec.key;
-            const Icon =
-              sec.key === "stay"
-                ? Hotel
-                : sec.key === "transport"
-                  ? Plane
-                  : MapPin;
+            const Icon = SECTION_ICONS[sec.key];
             return (
               <section
                 key={sec.key}

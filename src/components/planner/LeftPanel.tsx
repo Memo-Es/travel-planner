@@ -13,6 +13,7 @@ import {
   Settings2,
   MapPin,
   Loader2,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/input";
@@ -43,6 +44,7 @@ export default function LeftPanel({
   currency,
   onSwitchTeam,
   onOpenSettings,
+  onOpenBalance,
   onSelectTrip,
   onAddTrip,
   addingTrip,
@@ -64,6 +66,7 @@ export default function LeftPanel({
   currency: string;
   onSwitchTeam: (id: string) => void;
   onOpenSettings: () => void;
+  onOpenBalance: () => void;
   onSelectTrip: (t: TripData) => void;
   onAddTrip: () => void;
   addingTrip: boolean;
@@ -216,6 +219,22 @@ export default function LeftPanel({
         {addingTrip ? "Adding stop…" : "Add stop"}
       </Button>
       <footer className="mt-auto shrink-0 pt-6">
+        <Button
+          variant="ghost"
+          onClick={onOpenBalance}
+          className="-ml-2 mb-4 w-[calc(100%+1rem)] justify-between px-2"
+        >
+          <span className="flex items-center gap-2 text-ink-soft">
+            <Wallet />
+            Balance
+          </span>
+          <span className="text-xs tabular-nums text-muted">
+            Your share{" "}
+            <span className="font-semibold text-accent-ink">
+              {formatTotal(myShare, currency)}
+            </span>
+          </span>
+        </Button>
         <div className="mb-4 text-xs leading-relaxed text-muted">
           <p>{todayLabel}</p>
           <p>
@@ -227,16 +246,8 @@ export default function LeftPanel({
             <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-ink">
               {initials(userName)}
             </span>
-            <span className="min-w-0">
-              <span className="block truncate text-xs font-medium text-ink-soft">
-                {userName}
-              </span>
-              <span className="block text-xs tabular-nums text-muted">
-                Your share{" "}
-                <span className="font-semibold text-accent-ink">
-                  {formatTotal(myShare, currency)}
-                </span>
-              </span>
+            <span className="truncate text-xs font-medium text-ink-soft">
+              {userName}
             </span>
           </div>
           <form action={logout}>

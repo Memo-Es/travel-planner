@@ -40,6 +40,7 @@ export default async function HomePage() {
     end: t.end.toISOString().slice(0, 10),
     stay: t.items.filter((i) => i.section === "STAY").map(toItem),
     transport: t.items.filter((i) => i.section === "TRANSPORT").map(toItem),
+    food: t.items.filter((i) => i.section === "FOOD").map(toItem),
     activities: t.items.filter((i) => i.section === "ACTIVITIES").map(toItem),
   }));
 
