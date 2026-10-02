@@ -1,23 +1,28 @@
 import { prisma } from "@/lib/prisma";
 import { requireUser, requireActiveTeam, hasSignedInFlash } from "@/lib/team";
 import Planner from "@/components/Planner";
-import type { TripData, TaskData, TeamOption, ItemData, InviteData, MemberOption } from "@/lib/types";
+import type { TripData, TeamOption, ItemData, InviteData, MemberOption, AttachmentData } from "@/lib/types";
 
 export default async function HomePage() {
   const user = await requireUser();
   const { team, memberships } = await requireActiveTeam(user.id);
   const justSignedIn = await hasSignedInFlash();
 
-  const [trips, tasks, invites, teamMembers] = await Promise.all([
+  const [trips, invites, teamMembers] = await Promise.all([
     prisma.trip.findMany({
       where: { teamId: team.id },
       orderBy: { order: "asc" },
-      include: { items: { orderBy: { order: "asc" } } },
-    }),
-    prisma.task.findMany({
-      where: { teamId: team.id },
-      orderBy: { order: "asc" },
-      include: { assignee: true },
+      include: {
+        items: {
+          orderBy: { order: "asc" },
+          include: {
+            attachments: {
+              orderBy: { createdAt: "asc" },
+              select: { id: true, name: true, size: true },
+            },
+          },
+        },
+      },
     }),
     prisma.invite.findMany({
       where: { teamId: team.id },
@@ -41,15 +46,6 @@ export default async function HomePage() {
     stay: t.items.filter((i) => i.section === "STAY").map(toItem),
     transport: t.items.filter((i) => i.section === "TRANSPORT").map(toItem),
     activities: t.items.filter((i) => i.section === "ACTIVITIES").map(toItem),
-  }));
-
-  const taskData: TaskData[] = tasks.map((t) => ({
-    id: t.id,
-    title: t.title,
-    tag: t.tag,
-    done: t.done,
-    assigneeId: t.assigneeId,
-    assigneeName: t.assignee?.name ?? null,
   }));
 
   const teamOptions: TeamOption[] = memberships.map((m) => ({
@@ -87,11 +83,16 @@ export default async function HomePage() {
       userName={currentMember?.user.name ?? "You"}
       justSignedIn={justSignedIn}
       initialTrips={tripData}
-      initialTasks={taskData}
     />
   );
 }
 
-function toItem(i: { id: string; title: string; url: string; costAmount: number | null }): ItemData {
-  return { id: i.id, t: i.title, url: i.url, costAmount: i.costAmount };
+function toItem(i: {
+  id: string;
+  title: string;
+  url: string;
+  costAmount: number | null;
+  attachments: AttachmentData[];
+}): ItemData {
+  return { id: i.id, t: i.title, url: i.url, costAmount: i.costAmount, attachments: i.attachments };
 }

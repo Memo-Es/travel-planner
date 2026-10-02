@@ -1,28 +1,30 @@
 "use client";
 
+import { Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatTotal } from "@/lib/currency";
 
 export default function RightRail({
-  openCount,
-  onOpenTasks,
+  total,
+  currency,
+  onOpenFinances,
 }: {
-  openCount: number;
-  onOpenTasks: () => void;
+  total: number;
+  currency: string;
+  onOpenFinances: () => void;
 }) {
+  const label = `Open finances, ${formatTotal(total, currency)} planned`;
   return (
     <div className="box-border flex flex-col items-center gap-2 overflow-hidden rounded-card border border-line bg-white py-3.5">
       <Button
         variant="secondary"
         size="icon"
-        onClick={onOpenTasks}
-        aria-label={`Open tasks, ${openCount} open`}
-        title="Tasks"
+        onClick={onOpenFinances}
+        aria-label={label}
+        title={label}
       >
-        <span aria-hidden="true" className="block size-2.5 rounded-full bg-task-green" />
+        <Wallet className="text-task-green-ink" />
       </Button>
-      <span aria-hidden="true" className="text-xs tabular-nums text-muted">
-        {openCount}
-      </span>
     </div>
   );
 }

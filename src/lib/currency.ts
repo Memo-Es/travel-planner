@@ -13,15 +13,19 @@ export function currencySymbol(code: string): string {
   return CURRENCIES.find((c) => c.code === code)?.symbol ?? code;
 }
 
+function formatAmount(amount: number): string {
+  const cents = Math.round(amount * 100) % 100 !== 0;
+  return amount.toLocaleString("en-US", {
+    minimumFractionDigits: cents ? 2 : 0,
+    maximumFractionDigits: 2,
+  });
+}
+
 export function formatCost(amount: number | null, currency: string): string {
   if (amount === null) return "no cost yet";
-  const symbol = currencySymbol(currency);
-  const formatted = Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
-  return `${symbol}${formatted}`;
+  return `${currencySymbol(currency)}${formatAmount(amount)}`;
 }
 
 export function formatTotal(amount: number, currency: string): string {
-  const symbol = currencySymbol(currency);
-  const formatted = Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
-  return `${symbol}${formatted}`;
+  return `${currencySymbol(currency)}${formatAmount(amount)}`;
 }

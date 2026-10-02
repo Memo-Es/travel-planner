@@ -6,7 +6,7 @@ import { CredentialsSignin } from "next-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { signIn } from "@/lib/auth";
-import { demoTasks, demoTrips, DEMO_ITEMS_BY_TRIP_LABEL } from "@/lib/demoData";
+import { demoTrips, DEMO_ITEMS_BY_TRIP_LABEL } from "@/lib/demoData";
 import { setActiveTeamCookie, setLastEmailCookie, setSignedInFlash } from "@/lib/team";
 
 const signupSchema = z.object({
@@ -60,7 +60,6 @@ export async function signup(_prev: ActionState, formData: FormData): Promise<Ac
       })),
     );
     if (items.length) await tx.tripItem.createMany({ data: items });
-    await tx.task.createMany({ data: demoTasks(team.id) });
 
     return team;
   });

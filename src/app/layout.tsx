@@ -4,7 +4,7 @@ import MotionProvider from "@/components/motion/provider";
 
 export const metadata: Metadata = {
   title: { default: "Travel Planner", template: "%s · Travel Planner" },
-  description: "Plan stops, bookings and shared tasks for your trip in one calendar.",
+  description: "Plan stops, bookings and costs for your trip in one calendar.",
 };
 
 export const viewport: Viewport = {

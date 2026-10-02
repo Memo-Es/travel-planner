@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import type {
   TripData,
-  TaskData,
   TeamOption,
   InviteData,
   MemberOption,
@@ -21,7 +20,7 @@ import {
 } from "@/lib/calendar";
 import { MONTHS_LONG, DAY, ms, toDateInput } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
-import { isScheduled } from "@/lib/tripSections";
+import { isScheduled, sectionTotal } from "@/lib/tripSections";
 import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
 import {
   createTrip,
@@ -32,13 +31,9 @@ import {
   updateStopDates,
   updateTripLabel,
   updateTripColor,
+  deleteAttachment,
 } from "@/actions/trips";
-import {
-  createTask,
-  toggleTask,
-  updateTask,
-  deleteTask,
-} from "@/actions/tasks";
+import { uploadPdf } from "@/lib/uploads";
 import {
   switchTeam,
   updateTeamName,
@@ -57,7 +52,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import LeftPanel from "@/components/planner/LeftPanel";
 import LeftRail from "@/components/planner/LeftRail";
-import RightPanel from "@/components/planner/RightPanel";
+import FinancePanel from "@/components/planner/FinancePanel";
+import ExpenseDialog, {
+  type ExpenseFormState,
+} from "@/components/planner/ExpenseDialog";
+import {
+  EMPTY_BOOKING_FORM,
+  type BookingFormState,
+} from "@/components/planner/BookingForm";
 import RightRail from "@/components/planner/RightRail";
 import CalendarView from "@/components/planner/CalendarView";
 import TripDrawer from "@/components/planner/TripDrawer";
@@ -66,19 +68,31 @@ import MobileTabs from "@/components/planner/MobileTabs";
 import Toast from "@/components/planner/Toast";
 
 export type Editing = { key: ItemSectionKey; itemId: string | null } | null;
-export type FormState = { t: string; url: string; cost: string };
-export type Overlay = "links" | "tasks" | null;
-export type MobileTab = "links" | "calendar" | "tasks";
-export type TaskFormState = {
-  title: string;
-  tag: string;
-  assigneeId: string | null;
-};
+export type FormState = BookingFormState;
+export type Overlay = "links" | "finances" | null;
+export type MobileTab = "links" | "calendar" | "finances";
+
+const SECTION_ENUM = {
+  stay: "STAY",
+  transport: "TRANSPORT",
+  activities: "ACTIVITIES",
+} as const;
+
+function validateBooking(f: BookingFormState): string | null {
+  if (!f.t.trim()) return "Name is required.";
+  if (f.url.trim() && !/^https?:\/\//i.test(f.url.trim()))
+    return "Link must start with http:// or https://";
+  const cost = parseCost(f.cost);
+  if (f.cost.trim() && cost === null)
+    return "Cost must be a number, like 120 or 89.50.";
+  if (cost !== null && cost < 0) return "Cost can't be negative.";
+  return null;
+}
 
 function parseCost(raw: string): number | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
-  const n = Number(trimmed);
+  const n = Number(trimmed.replace(",", "."));
   return Number.isFinite(n) ? n : null;
 }
 
@@ -103,7 +117,6 @@ export default function Planner({
   userName,
   justSignedIn,
   initialTrips,
-  initialTasks,
 }: {
   teamId: string;
   teamName: string;
@@ -115,13 +128,11 @@ export default function Planner({
   userName: string;
   justSignedIn: boolean;
   initialTrips: TripData[];
-  initialTasks: TaskData[];
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
 
   const trips = initialTrips;
-  const tasks = initialTasks;
 
   const todayMs = useMemo(() => startOfTodayUTC(), []);
   const [vw, setVw] = useState(1440);
@@ -135,21 +146,11 @@ export default function Planner({
     null,
   );
   const [editing, setEditing] = useState<Editing>(null);
-  const [form, setForm] = useState<FormState>({ t: "", url: "", cost: "" });
+  const [form, setForm] = useState<FormState>(EMPTY_BOOKING_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("calendar");
-  const [draft, setDraft] = useState("");
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [taskForm, setTaskForm] = useState<TaskFormState>({
-    title: "",
-    tag: "",
-    assigneeId: null,
-  });
-  const [taskFormError, setTaskFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
-  const [taskPending, setTaskPending] = useState(false);
-  const taskPendingRef = useRef(false);
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
     label: string;
@@ -159,6 +160,9 @@ export default function Planner({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [expenseOpen, setExpenseOpen] = useState(false);
+  const [expenseError, setExpenseError] = useState<string | null>(null);
+  const [expenseSaving, setExpenseSaving] = useState(false);
   const [dragging, setDragging] = useState<DragState>(null);
   const [addingTrip, setAddingTrip] = useState(false);
   // React state updates aren't synchronous, so a state-only guard can miss
@@ -305,7 +309,6 @@ export default function Planner({
     setOpenTripId(null);
     setEditing(null);
     setSettingsOpen(false);
-    setEditingTaskId(null);
   }
 
   function openSettings() {
@@ -316,7 +319,7 @@ export default function Planner({
 
   function startAdd(key: ItemSectionKey) {
     setEditing({ key, itemId: null });
-    setForm({ t: "", url: "", cost: "" });
+    setForm(EMPTY_BOOKING_FORM);
     setFormError(null);
   }
 
@@ -326,6 +329,97 @@ export default function Planner({
     setFormError(null);
   }
 
+  /** Saves a booking, applies staged attachment removals, then uploads new
+   * PDFs. Throws on validation or save failure; upload failures are returned
+   * so the caller can keep the failed files in the form for a retry. */
+  async function persistBooking(
+    target: { tripId: string; key: ItemSectionKey; itemId: string | null },
+    f: BookingFormState,
+  ): Promise<{ itemId: string; failed: File[]; uploadError: string | null }> {
+    const payload = {
+      title: f.t.trim(),
+      url: f.url.trim(),
+      costAmount: parseCost(f.cost),
+    };
+    let itemId = target.itemId;
+    if (itemId === null)
+      itemId = await addItem(target.tripId, SECTION_ENUM[target.key], payload);
+    else await updateItem(itemId, payload);
+    await Promise.all(f.removeIds.map((id) => deleteAttachment(id)));
+    const failed: File[] = [];
+    let uploadError: string | null = null;
+    for (const file of f.files) {
+      try {
+        await uploadPdf(itemId, file);
+      } catch (e) {
+        failed.push(file);
+        uploadError ??= e instanceof Error ? e.message : String(e);
+      }
+    }
+    refresh();
+    return { itemId, failed, uploadError };
+  }
+
+  function keepFailedUploads(
+    key: ItemSectionKey,
+    itemId: string,
+    f: BookingFormState,
+    failed: File[],
+    message: string | null,
+  ) {
+    setEditing({ key, itemId });
+    setForm({ ...f, files: failed, removeIds: [] });
+    setFormError(
+      `Booking saved, but ${failed.length === 1 ? "a PDF" : `${failed.length} PDFs`} could not be uploaded. ${message ?? ""}`.trim(),
+    );
+  }
+
+  async function saveExpense(f: ExpenseFormState) {
+    if (savingRef.current) return;
+    const problem = validateBooking(f);
+    if (problem) {
+      setExpenseError(problem);
+      return;
+    }
+    if (!trips.some((t) => t.id === f.tripId)) {
+      setExpenseError("Choose a stop for this expense.");
+      return;
+    }
+    savingRef.current = true;
+    setExpenseSaving(true);
+    setExpenseError(null);
+    try {
+      const { itemId, failed, uploadError } = await persistBooking(
+        { tripId: f.tripId, key: f.key, itemId: null },
+        f,
+      );
+      setExpenseOpen(false);
+      if (failed.length) {
+        const t = trips.find((x) => x.id === f.tripId);
+        if (t) jumpToTrip(t);
+        keepFailedUploads(f.key, itemId, f, failed, uploadError);
+      }
+    } catch {
+      setExpenseError("The expense could not be saved. Please try again.");
+    } finally {
+      savingRef.current = false;
+      setExpenseSaving(false);
+    }
+  }
+
+  function openExpenseFromPanel(t: TripData, key: ItemSectionKey, itemId: string) {
+    const item = t[key].find((i) => i.id === itemId);
+    if (!item) return;
+    jumpToTrip(t);
+    startEdit(key, itemId, {
+      t: item.t,
+      url: item.url,
+      cost: item.costAmount === null ? "" : String(item.costAmount),
+      files: [],
+      removeIds: [],
+    });
+  }
+
   function onFormChange(f: FormState) {
     setForm(f);
     setFormError(null);
@@ -333,30 +427,25 @@ export default function Planner({
 
   async function saveForm() {
     if (!editing || !trip || savingRef.current) return;
-    if (!form.t.trim()) {
-      setFormError("Name is required.");
-      return;
-    }
-    if (form.url.trim() && !/^https?:\/\//i.test(form.url.trim())) {
-      setFormError("Link must start with http:// or https://");
+    const problem = validateBooking(form);
+    if (problem) {
+      setFormError(problem);
       return;
     }
     savingRef.current = true;
     setSaving(true);
     setFormError(null);
     try {
-      const payload = {
-        title: form.t.trim(),
-        url: form.url.trim(),
-        costAmount: parseCost(form.cost),
-      };
-      const section = editing.key.toUpperCase() as
-        "STAY" | "TRANSPORT" | "ACTIVITIES";
-      if (editing.itemId === null) await addItem(trip.id, section, payload);
-      else await updateItem(editing.itemId, payload);
-      setEditing(null);
-      setForm({ t: "", url: "", cost: "" });
-      refresh();
+      const { itemId, failed, uploadError } = await persistBooking(
+        { tripId: trip.id, key: editing.key, itemId: editing.itemId },
+        form,
+      );
+      if (failed.length)
+        keepFailedUploads(editing.key, itemId, form, failed, uploadError);
+      else {
+        setEditing(null);
+        setForm(EMPTY_BOOKING_FORM);
+      }
     } catch {
       setFormError("The booking could not be saved. Please try again.");
     } finally {
@@ -372,78 +461,6 @@ export default function Planner({
     } catch {
       setNotification("The booking could not be removed. Please try again.");
     }
-  }
-
-  async function runTask(action: () => Promise<void>) {
-    if (taskPendingRef.current) return;
-    taskPendingRef.current = true;
-    setTaskPending(true);
-    try {
-      await action();
-      refresh();
-    } catch {
-      setNotification("The task could not be saved. Please try again.");
-    } finally {
-      taskPendingRef.current = false;
-      setTaskPending(false);
-    }
-  }
-
-  async function onToggleTask(id: string) {
-    await runTask(async () => {
-      await toggleTask(id);
-    });
-  }
-
-  async function submitDraftTask() {
-    const value = draft.trim();
-    if (!value) return;
-    await runTask(async () => {
-      await createTask(teamId, value);
-      setDraft("");
-    });
-  }
-
-  function startEditTask(task: TaskData) {
-    setEditingTaskId(task.id);
-    setTaskForm({
-      title: task.title,
-      tag: task.tag,
-      assigneeId: task.assigneeId,
-    });
-    setTaskFormError(null);
-  }
-
-  function onTaskFormChange(f: TaskFormState) {
-    setTaskForm(f);
-    setTaskFormError(null);
-  }
-  function cancelTaskEdit() {
-    setEditingTaskId(null);
-    setTaskFormError(null);
-  }
-
-  async function saveTaskEdit() {
-    if (!editingTaskId) return;
-    if (!taskForm.title.trim()) {
-      setTaskFormError("Title is required.");
-      return;
-    }
-    await runTask(async () => {
-      await updateTask(editingTaskId, {
-        title: taskForm.title.trim(),
-        tag: taskForm.tag.trim(),
-        assigneeId: taskForm.assigneeId,
-      });
-      setEditingTaskId(null);
-    });
-  }
-
-  async function removeTask(taskId: string) {
-    await runTask(async () => {
-      await deleteTask(taskId);
-      if (editingTaskId === taskId) setEditingTaskId(null);
-    });
   }
 
   async function onSwitchTeam(id: string) {
@@ -571,7 +588,14 @@ export default function Planner({
     window.addEventListener("pointerup", onUp);
   }
 
-  const openCount = tasks.filter((t) => !t.done).length;
+  const tripTotal = trips.reduce(
+    (sum, t) =>
+      sum +
+      sectionTotal(t.stay) +
+      sectionTotal(t.transport) +
+      sectionTotal(t.activities),
+    0,
+  );
 
   const shellClass = isMobile
     ? "flex flex-col gap-2.5 p-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] pb-[max(0.625rem,env(safe-area-inset-bottom))] h-dvh box-border relative bg-canvas text-ink"
@@ -591,8 +615,8 @@ export default function Planner({
     ? mobileTab === "links"
     : mode === "full" || activeOverlay === "links";
   const showRightPanel = isMobile
-    ? mobileTab === "tasks"
-    : mode === "full" || activeOverlay === "tasks";
+    ? mobileTab === "finances"
+    : mode === "full" || activeOverlay === "finances";
   const showCalendar = isMobile ? mobileTab === "calendar" : true;
 
   const now = new Date();
@@ -663,7 +687,6 @@ export default function Planner({
       {isMobile && (
         <MobileTabs
           active={mobileTab}
-          openCount={openCount}
           onChange={setMobileTab}
         />
       )}
@@ -766,26 +789,19 @@ export default function Planner({
       )}
 
       {showRightPanel && (
-        <RightPanel
+        <FinancePanel
           card={CARD}
-          overlay={activeOverlay === "tasks"}
+          overlay={activeOverlay === "finances"}
           isMobile={isMobile}
-          tasks={tasks}
-          members={members}
-          openCount={openCount}
-          draft={draft}
-          onDraftChange={setDraft}
-          onDraftSubmit={submitDraftTask}
-          onToggleTask={onToggleTask}
-          editingTaskId={editingTaskId}
-          taskForm={taskForm}
-          taskFormError={taskFormError}
-          pending={taskPending}
-          onStartEditTask={startEditTask}
-          onTaskFormChange={onTaskFormChange}
-          onCancelTaskEdit={cancelTaskEdit}
-          onSaveTaskEdit={saveTaskEdit}
-          onDeleteTask={removeTask}
+          trips={trips}
+          currency={teamCurrency}
+          total={tripTotal}
+          onOpenItem={openExpenseFromPanel}
+          onAddExpense={() => {
+            setExpenseError(null);
+            setExpenseOpen(true);
+          }}
+          canAddExpense={trips.length > 0}
           onClose={closeOverlay}
           showClose={!!activeOverlay}
         />
@@ -793,8 +809,9 @@ export default function Planner({
 
       {showRightRail && (
         <RightRail
-          openCount={openCount}
-          onOpenTasks={() => setOverlay("tasks")}
+          total={tripTotal}
+          currency={teamCurrency}
+          onOpenFinances={() => setOverlay("finances")}
         />
       )}
 
@@ -810,6 +827,7 @@ export default function Planner({
             formError={formError}
             saving={saving}
             onFormChange={onFormChange}
+            onFormError={setFormError}
             onClose={closeDrawer}
             onStartAdd={startAdd}
             onStartEdit={startEdit}
@@ -823,6 +841,23 @@ export default function Planner({
             onRename={onRenameTrip}
             onChangeColor={onChangeTripColor}
             onDeleteTrip={handleDeleteTrip}
+          />
+        )}
+
+        {expenseOpen && (
+          <ExpenseDialog
+            key="expense"
+            trips={trips}
+            defaultTripId={openTripId ?? trips[0]?.id ?? ""}
+            currency={teamCurrency}
+            isMobile={isMobile}
+            error={expenseError}
+            onError={setExpenseError}
+            saving={expenseSaving}
+            onSave={saveExpense}
+            onClose={() => {
+              if (!expenseSaving) setExpenseOpen(false);
+            }}
           />
         )}
 

@@ -1,8 +1,15 @@
+export type AttachmentData = {
+  id: string;
+  name: string;
+  size: number;
+};
+
 export type ItemData = {
   id: string;
   t: string;
   url: string;
   costAmount: number | null;
+  attachments: AttachmentData[];
 };
 
 export type TripData = {
@@ -18,15 +25,6 @@ export type TripData = {
 };
 
 export type ItemSectionKey = "stay" | "transport" | "activities";
-
-export type TaskData = {
-  id: string;
-  title: string;
-  tag: string;
-  done: boolean;
-  assigneeId: string | null;
-  assigneeName: string | null;
-};
 
 export type MemberOption = {
   id: string;
