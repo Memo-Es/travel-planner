@@ -4,17 +4,17 @@
 
 @layer base {
   :root {
-    /* Chatelle 700 primary, Mine Shaft neutrals, muted brick for danger. */
-    --background: 30 27% 94%;
-    --foreground: 30 6% 14%;
-    --primary: 268 15% 50%;
+    /* Tailwind stone neutrals and buttons (900 primary), muted brick for danger. */
+    --background: 60 5% 96%; /* stone-100 */
+    --foreground: 24 10% 10%; /* stone-900 */
+    --primary: 24 10% 10%; /* stone-900 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 0 5% 96%;
-    --secondary-foreground: 20 4% 27%;
+    --secondary: 60 5% 96%; /* stone-100 */
+    --secondary-foreground: 30 6% 25%; /* stone-700 */
     --destructive: 6 48% 43%;
-    --border: 20 6% 90%;
-    --input: 26 8% 82%;
-    --ring: 268 15% 50%;
+    --border: 20 6% 90%; /* stone-200 */
+    --input: 24 6% 83%; /* stone-300 */
+    --ring: 25 5% 45%; /* stone-500 */
     --radius: 0.625rem;
   }
 
@@ -45,11 +45,11 @@
     outline-offset: 3px;
   }
   ::selection {
-    background: #E8E6EE;
-    color: #262422;
+    background: theme("colors.accent-soft");
+    color: theme("colors.ink");
   }
   ::placeholder {
-    color: #746B66;
+    color: theme("colors.muted-2");
   }
   a {
     @apply text-accent-ink;
@@ -101,7 +101,7 @@
   @media (hover: hover) and (prefers-reduced-motion: no-preference) {
     .booking-card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px -10px rgb(38 36 34 / 0.16);
+      box-shadow: 0 8px 20px -10px rgb(28 25 23 / 0.16);
     }
   }
   @media (prefers-reduced-motion: no-preference) {

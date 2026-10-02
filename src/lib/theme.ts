@@ -1,5 +1,5 @@
-// Palette: Chatelle (accent), Pale Leaf (success), Foggy Gray, Pampas and
-// Mine Shaft (warm neutrals). Values are the families' 50–950 scale steps.
+// Palette: Chatelle (accent), Pale Leaf (success), Foggy Gray and Pampas for
+// stop colors; neutrals and buttons use Tailwind stone.
 export const ACCENT = "#A599B9"; // Chatelle 500
 export const ACCENT_HOVER = "#6B5C7B"; // Chatelle 800
 export const ACCENT_SOFT = "#E8E6EE"; // Chatelle 200
@@ -22,7 +22,7 @@ export const STOP_COLORS: StopColor[] = [
   { id: "sage", label: "Sage", base: TASK_GREEN, soft: "#D4E0D2", ink: TASK_GREEN_INK },
   { id: "clay", label: "Clay", base: "#B59582", soft: "#DFD3C9", ink: "#684A44" },
   { id: "khaki", label: "Khaki", base: "#AEA689", soft: "#EEEDE6", ink: "#635849" },
-  { id: "stone", label: "Stone", base: "#8F8681", soft: "#E8E6E5", ink: "#484442" },
+  { id: "stone", label: "Stone", base: "#a8a29e", soft: "#e7e5e4", ink: "#44403c" },
 ];
 
 export function stopColor(id: string | null | undefined): StopColor {

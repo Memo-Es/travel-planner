@@ -22,9 +22,10 @@ is configured for the existing Tailwind 3 project. Add only components we use.
   arbitrary `text-[…]` values.
 - Stacking uses the named `z-*` scale in `tailwind.config.ts` (bar → toast).
   Never add an arbitrary `z-[…]`.
-- Palette: Chatelle (lavender) marks primary actions and selection; Pale Leaf
-  (sage) marks scheduled/completed status; Mine Shaft and Pampas provide the warm
-  neutrals; a muted brick red is reserved for errors and destructive actions.
+- Palette: neutrals and buttons use Tailwind `stone` (primary buttons are
+  stone-900, hover stone-800). Chatelle (lavender) is the one accent: selection,
+  links and today. Pale Leaf (sage) marks scheduled/completed status; a muted
+  brick red is reserved for errors and destructive actions.
   Stops pick from Lavender, Sage, Clay, Khaki and Stone. Keep text on these at
   WCAG AA (4.5:1) — use the 700/800 steps for text, 100/200 for fills. Pair color
   with text.

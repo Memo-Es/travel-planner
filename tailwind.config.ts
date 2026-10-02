@@ -1,5 +1,8 @@
 import type { Config } from "tailwindcss";
 import animate from "tailwindcss-animate";
+import colors from "tailwindcss/colors";
+
+const stone = colors.stone;
 
 const config: Config = {
   content: [
@@ -23,21 +26,21 @@ const config: Config = {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        popover: { DEFAULT: "#fff", foreground: "#262422" },
-        "muted-foreground": "#635C57",
+        popover: { DEFAULT: "#fff", foreground: stone[900] },
+        "muted-foreground": stone[600],
         "accent-foreground": "#fff",
         foreground: "hsl(var(--foreground))",
-        // Neutrals: Mine Shaft, with a Pampas-warm canvas.
-        canvas: "#F4F0EC",
+        // Neutrals and buttons: Tailwind stone.
+        canvas: stone[100],
         card: "#ffffff",
-        line: "#E8E6E5",
-        "line-soft": "#F1EFEE",
-        ink: "#262422",
-        "ink-soft": "#484442",
-        muted: "#635C57",
-        "muted-2": "#746B66",
-        hover: "#F6F5F5",
-        "hover-2": "#E8E6E5",
+        line: stone[200],
+        "line-soft": stone[100],
+        ink: stone[900],
+        "ink-soft": stone[700],
+        muted: stone[600],
+        "muted-2": stone[500],
+        hover: stone[50],
+        "hover-2": stone[200],
         // Accent: Chatelle.
         accent: "#A599B9",
         "accent-hover": "#6B5C7B",
@@ -74,9 +77,9 @@ const config: Config = {
         toast: "90",
       },
       boxShadow: {
-        panel: "0 2px 8px -4px rgb(38 36 34 / 0.08)",
+        panel: "0 2px 8px -4px rgb(28 25 23 / 0.08)",
         overlay:
-          "0 24px 64px -16px rgb(38 36 34 / 0.2), 0 4px 16px -4px rgb(38 36 34 / 0.06)",
+          "0 24px 64px -16px rgb(28 25 23 / 0.2), 0 4px 16px -4px rgb(28 25 23 / 0.06)",
       },
     },
   },
