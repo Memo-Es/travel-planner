@@ -100,7 +100,7 @@ export default function TripSettingsModal({
           document.getElementById("close-settings")?.focus();
         }}
       >
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line-soft pb-5">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line-soft pb-4">
           <div>
             <DialogTitle>Trip settings</DialogTitle>
             <DialogDescription className="mt-1">
@@ -111,6 +111,7 @@ export default function TripSettingsModal({
             id="close-settings"
             variant="ghost"
             size="icon"
+            className="-mr-2 -mt-2"
             onClick={onClose}
             aria-label="Close settings"
           >
@@ -118,7 +119,7 @@ export default function TripSettingsModal({
           </Button>
         </header>
         <div className="-mx-1 min-h-0 space-y-6 overflow-y-auto px-1 pt-5">
-          <label className="block space-y-2">
+          <label className="block space-y-1.5">
             <span className="field-label">Trip name</span>
             <Input
               value={name}
@@ -133,7 +134,7 @@ export default function TripSettingsModal({
               }}
             />
           </label>
-          <label className="block space-y-2">
+          <label className="block space-y-1.5">
             <span className="field-label">Currency</span>
             <NativeSelect
               value={currency}
@@ -174,15 +175,15 @@ export default function TripSettingsModal({
                 <Users className="size-4 text-muted" />
                 Teammates
               </h3>
-              <Badge>{members.length} {members.length === 1 ? "person" : "people"}</Badge>
+              <span className="text-xs tabular-nums text-muted">{members.length} {members.length === 1 ? "person" : "people"}</span>
             </div>
-            <ul aria-labelledby="teammates-heading" className="divide-y divide-line-soft rounded-xl border border-line px-3">
+            <ul aria-labelledby="teammates-heading" className="divide-y divide-line-soft rounded-xl border border-line px-4">
               {members.map((member) => {
                 const isCurrentUser = member.id === currentUserId;
                 const initials = member.name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
                 return (
-                  <li key={member.id} className="flex items-center gap-3 py-3">
-                    <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-ink">{initials}</span>
+                  <li key={member.id} className="flex items-center gap-3 py-2.5">
+                    <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-ink">{initials}</span>
                     <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{member.name}</span>
                     {isCurrentUser ? <Badge>You</Badge> : member.role === "OWNER" ? <Badge><Crown className="size-3" />Owner</Badge> : <Badge variant="secondary">Member</Badge>}
                   </li>
@@ -193,7 +194,7 @@ export default function TripSettingsModal({
             {invites.map((inv) => (
               <div
                 key={inv.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-line p-3"
+                className="flex items-center justify-between gap-3 rounded-xl border border-line py-2.5 pl-4 pr-2"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">
@@ -237,7 +238,7 @@ export default function TripSettingsModal({
                   : "Create invite link"}
             </Button>
             {newToken && (
-              <label className="block space-y-2">
+              <label className="block space-y-1.5">
                 <span className="field-label">Invite link</span>
                 <Input
                   readOnly

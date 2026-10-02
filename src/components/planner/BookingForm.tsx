@@ -44,6 +44,7 @@ export default function BookingForm({
   submitLabel,
   existing = [],
   autoFocus = true,
+  framed = true,
   before,
 }: {
   form: BookingFormState;
@@ -58,6 +59,8 @@ export default function BookingForm({
   submitLabel: string;
   existing?: AttachmentData[];
   autoFocus?: boolean;
+  /** Draw the tinted box; dialogs already provide their own surface. */
+  framed?: boolean;
   /** Extra fields rendered above the name (e.g. category and stop). */
   before?: ReactNode;
 }) {
@@ -103,11 +106,14 @@ export default function BookingForm({
 
   return (
     <div
-      className="space-y-3 rounded-xl border border-line bg-secondary/50 p-4"
+      className={
+        "space-y-4 " +
+        (framed ? "rounded-xl border border-line bg-secondary/60 p-4" : "")
+      }
       aria-busy={saving}
     >
       {before}
-      <label className="block space-y-2">
+      <label className="block space-y-1.5">
         <span className="field-label">Name</span>
         <Input
           value={form.t}
@@ -120,7 +126,7 @@ export default function BookingForm({
         />
       </label>
       <div className="grid grid-cols-[minmax(0,1fr)_8rem] gap-3">
-        <label className="block min-w-0 space-y-2">
+        <label className="block min-w-0 space-y-1.5">
           <span className="field-label">Booking link</span>
           <Input
             value={form.url}
@@ -132,7 +138,7 @@ export default function BookingForm({
             aria-describedby={error ? errorId : undefined}
           />
         </label>
-        <label className="block space-y-2">
+        <label className="block space-y-1.5">
           <span className="field-label">Cost ({currencySymbol(currency)})</span>
           <Input
             value={form.cost}
@@ -147,7 +153,7 @@ export default function BookingForm({
         </label>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <span className="field-label" id={`${id}-files`}>
           Documents
         </span>
@@ -255,7 +261,7 @@ export default function BookingForm({
           to {MAX_PDF_MB} MB.
         </p>
       )}
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 pt-1">
         <Button variant="outline" size="sm" disabled={saving} onClick={onCancel}>
           Cancel
         </Button>

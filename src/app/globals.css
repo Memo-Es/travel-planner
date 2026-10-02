@@ -77,6 +77,19 @@
 }
 
 @layer components {
+  /* Full-width list row (trip stops, finance lines). Its focus ring is drawn
+     inside so scroll containers never clip it. */
+  .list-row {
+    @apply rounded-lg transition-colors duration-150 hover:bg-hover;
+  }
+  .list-row:focus-visible,
+  .list-row:has(> .row-main:focus-visible) {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: -2px;
+  }
+  .list-row .row-main:focus-visible {
+    outline: none;
+  }
   .field-label {
     @apply block text-xs font-medium text-ink-soft;
   }

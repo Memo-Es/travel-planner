@@ -620,20 +620,7 @@ export default function Planner({
   const showCalendar = isMobile ? mobileTab === "calendar" : true;
 
   const now = new Date();
-  const todayLabel =
-    [
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-    ][now.getDay()] +
-    " " +
-    now.getDate() +
-    " " +
-    MONTHS_LONG[now.getMonth()].slice(0, 3);
+  const todayLabel = `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][now.getDay()]} ${now.getDate()} ${MONTHS_LONG[now.getMonth()].slice(0, 3)}`;
 
   return (
     <div className={shellClass} style={shellStyle}>
