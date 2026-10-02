@@ -15,6 +15,13 @@ is configured for the existing Tailwind 3 project. Add only components we use.
 - Use 8px corners for controls, 12px for booking rows and 16px for panels/dialogs.
 - Use quiet borders and light shadows for surfaces. Stronger shadows belong to
   floating menus and dialogs. Use the shared theme tokens rather than new colors.
+- No gradients, glows or backdrop blur. Surfaces are flat; overlays dim with a
+  plain `bg-ink/20` scrim.
+- Headings use `text-balance`, body copy `text-pretty`. Do not change letter
+  spacing (`tracking-*`); labels are sentence case. Use Tailwind type sizes, not
+  arbitrary `text-[…]` values.
+- Stacking uses the named `z-*` scale in `tailwind.config.ts` (bar → toast).
+  Never add an arbitrary `z-[…]`.
 - Violet marks primary actions and selection; green marks scheduled/completed
   status; red is reserved for errors and destructive actions. Pair color with text.
 
@@ -32,9 +39,17 @@ is configured for the existing Tailwind 3 project. Add only components we use.
 - Dialogs trap focus, close on Escape and return focus to the opening control.
   The trip details surface is a right sheet on desktop and a bottom sheet on mobile.
 - Control feedback uses 150ms transitions; overlays use 200ms. Honor reduced motion.
+  Animate only `transform` and `opacity`, with the standard `easeOut` curve.
 - Keep frequent actions immediate. Do not add decorative or looping animations.
 - Support short screens with scrolling content and persistent drawer totals.
   Use dynamic viewport heights and safe-area padding on mobile.
+
+## Baseline
+
+These rules follow the [UI Skills](https://www.ui-skills.com/) baseline
+(`baseline-ui`, `fixing-accessibility`, `fixing-motion-performance`,
+`fixing-metadata`). Sign-in, sign-up and invite pages use the same `Input`,
+`Button` and field classes as the planner, inside `AuthShell`.
 
 ## Verification
 
@@ -56,15 +71,15 @@ The motion components in `src/components/motion` draw on Motion Primitives'
 They use Motion for React alongside the existing Radix accessibility behavior.
 
 - Sliding selection highlights use a short, damped spring, scoped to each list.
-- Inline forms animate their height. Exiting fields become inert so keyboard users
-  cannot tab into content that is disappearing.
-- Drawers/dialogs enter in 240ms and exit in 160ms; focus returns after dismissal.
+- Inline forms fade and nudge in (opacity/transform only; never height). Exiting
+  fields become inert so keyboard users cannot tab into content that is disappearing.
+- Drawers/dialogs enter in 200ms and exit in 150ms; focus returns after dismissal.
   Keep conditional dialogs inside AnimatePresence so exit motion can complete.
 - Month labels crossfade with a small vertical shift; do not animate the calendar
   grid or drag coordinates, which must stay aligned with pointer movement.
 - Counts and totals settle toward the latest value. Screen readers receive the
   exact current value; currency totals retain cents and respond to currency changes.
-- Cards lift 2px on hover-capable devices. Button presses compress by 3%. The
-  drawer header has a static violet wash; there are no continuous decorative loops.
+- Cards lift 2px on hover-capable devices. Button presses compress by 3%. There
+  are no continuous decorative loops.
 - MotionConfig respects the user's motion preference. Individual components also
   disable height, number, blur and opacity animation when reduced motion is enabled.

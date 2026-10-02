@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
+import { CredentialsSignin } from "next-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { signIn } from "@/lib/auth";
@@ -89,11 +90,21 @@ export async function login(_prev: ActionState, formData: FormData): Promise<Act
     return { error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
-  const result = await signIn("credentials", {
-    email: parsed.data.email,
-    password: parsed.data.password,
-    redirect: false,
-  });
+  let result: unknown;
+  try {
+    result = await signIn("credentials", {
+      email: parsed.data.email,
+      password: parsed.data.password,
+      redirect: false,
+    });
+  } catch (error) {
+    // Auth.js v5 throws CredentialsSignin for bad credentials instead of
+    // returning an error URL; surface it inline next to the form.
+    if (error instanceof CredentialsSignin) {
+      return { error: "Invalid email or password" };
+    }
+    throw error;
+  }
   if (typeof result === "string" && result.includes("error=")) {
     return { error: "Invalid email or password" };
   }

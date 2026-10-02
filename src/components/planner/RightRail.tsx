@@ -2,8 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 
-const TASK_GREEN = "oklch(0.7 0.15 155)";
-
 export default function RightRail({
   openCount,
   onOpenTasks,
@@ -12,23 +10,19 @@ export default function RightRail({
   onOpenTasks: () => void;
 }) {
   return (
-    <div className="bg-white rounded-card border border-line py-3.5 flex flex-col items-center gap-2 box-border overflow-hidden">
+    <div className="box-border flex flex-col items-center gap-2 overflow-hidden rounded-card border border-line bg-white py-3.5">
       <Button
-        variant="ghost"
+        variant="secondary"
         size="icon"
         onClick={onOpenTasks}
-        aria-label="Tasks"
+        aria-label={`Open tasks, ${openCount} open`}
         title="Tasks"
-        className="size-9 rounded-[9px] border-0 bg-hover cursor-pointer flex items-center justify-center hover:bg-hover-2"
       >
-        <span
-          className="w-[11px] h-[11px] rounded-full block"
-          style={{ background: TASK_GREEN }}
-        />
+        <span aria-hidden="true" className="block size-2.5 rounded-full bg-task-green" />
       </Button>
-      <div className="text-[12px] text-muted-2 [font-variant-numeric:tabular-nums]">
+      <span aria-hidden="true" className="text-xs tabular-nums text-muted">
         {openCount}
-      </div>
+      </span>
     </div>
   );
 }

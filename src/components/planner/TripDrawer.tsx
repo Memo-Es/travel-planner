@@ -127,7 +127,7 @@ export default function TripDrawer({
           document.getElementById("close-trip")?.focus();
         }}
       >
-        <header className="trip-header flex shrink-0 items-start justify-between gap-3 border-b border-line-soft pb-5">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line-soft pb-5">
           <div className="min-w-0 flex-1">
             <p className="section-label mb-2">Trip details</p>
             <DialogTitle className={editingLabel ? "sr-only" : "text-2xl"}>
@@ -152,7 +152,8 @@ export default function TripDrawer({
               <Button
                 variant="ghost"
                 size="sm"
-                className="-ml-3 mt-1 h-8 text-xs"
+                className="-ml-3 mt-1 h-8 text-xs tabular-nums"
+                aria-expanded={editingDates}
                 onClick={() => {
                   setStartDraft(trip.start);
                   setEndDraft(trip.end);
@@ -161,7 +162,8 @@ export default function TripDrawer({
               >
                 <CalendarDays />
                 {fmtRange(trip.start, trip.end)} ·{" "}
-                {nightsBetween(trip.start, trip.end)} nights
+                {nightsBetween(trip.start, trip.end)}{" "}
+                {nightsBetween(trip.start, trip.end) === 1 ? "night" : "nights"}
               </Button>
             )}
             <DialogDescription className="sr-only">
@@ -326,7 +328,7 @@ export default function TripDrawer({
                   >
                     <Icon className="size-4 text-muted" />
                     {sec.name}
-                    <span className="font-normal text-muted">
+                    <span className="font-normal tabular-nums text-muted">
                       {items.length}
                     </span>
                   </h3>
@@ -344,7 +346,7 @@ export default function TripDrawer({
                     >
                       <div className="flex items-start gap-2">
                         <button
-                          className="min-w-0 flex-1 rounded text-left text-sm font-medium leading-6 text-ink"
+                          className="min-w-0 flex-1 text-pretty rounded text-left text-sm font-medium leading-6 text-ink"
                           onClick={() =>
                             onStartEdit(sec.key, item.id, {
                               t: item.t,
@@ -432,7 +434,7 @@ export default function TripDrawer({
                     </div>
                   ))}
                   {items.length === 0 && !showForm && (
-                    <p className="rounded-xl border border-dashed border-line px-3 py-4 text-xs leading-relaxed text-muted">
+                    <p className="text-pretty rounded-xl border border-dashed border-line px-3 py-4 text-xs leading-relaxed text-muted">
                       No {sec.name.toLowerCase()} added yet.
                     </p>
                   )}
@@ -499,7 +501,7 @@ export default function TripDrawer({
                     ) : (
                       <p
                         id="booking-hint"
-                        className="text-xs leading-relaxed text-muted"
+                        className="text-pretty text-xs leading-relaxed text-muted"
                       >
                         Add a name, link and cost to mark this booking as
                         scheduled.
@@ -541,7 +543,7 @@ export default function TripDrawer({
         </div>
         <footer className="flex shrink-0 items-center justify-between border-t border-line-soft pt-4">
           <span className="text-sm text-muted">Total planned</span>
-          <span className="text-lg font-semibold tracking-tight tabular-nums">
+          <span className="text-lg font-semibold tabular-nums">
             <AnimatedNumber
               value={tripTotal}
               format={(value) => formatTotal(value, currency)}

@@ -1,7 +1,9 @@
 "use client";
 
+import type * as React from "react";
 import { Hotel, Plane } from "lucide-react";
 import type { CalendarWeek } from "@/lib/calendar";
+import { cn } from "@/lib/utils";
 
 const WEEKDAYS_FULL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAYS_SHORT = ["S", "M", "T", "W", "T", "F", "S"];
@@ -14,6 +16,19 @@ const handleStyle = {
   cursor: "ew-resize",
   touchAction: "none" as const,
 };
+
+// Trip bars are native buttons so they get keyboard focus and semantics for
+// free; holiday notes are passive labels.
+function Bar({
+  interactive,
+  ...props
+}: { interactive: boolean } & React.HTMLAttributes<HTMLElement>) {
+  return interactive ? (
+    <button type="button" {...props} />
+  ) : (
+    <div {...props} />
+  );
+}
 
 export default function CalendarView({
   weeks,
@@ -37,13 +52,13 @@ export default function CalendarView({
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden">
       <div
-        className="sticky top-0 z-[4] bg-white grid border-b border-line-soft pb-[7px]"
+        className="sticky top-0 z-sticky grid border-b border-line-soft bg-white pb-2"
         style={{ gridTemplateColumns: "repeat(7,minmax(0,1fr))" }}
       >
         {weekdays.map((wd, i) => (
           <div
             key={i}
-            className="text-right pr-1.5 text-[12px] text-muted-3 tracking-[0.01em] overflow-hidden"
+            className="overflow-hidden pr-1.5 text-right text-xs text-muted"
           >
             {wd}
           </div>
@@ -55,11 +70,11 @@ export default function CalendarView({
           {week.days.map((day, di) => (
             <div
               key={di}
-              className="border-r border-b border-line-soft pt-[5px] px-1.5 box-border min-w-0"
+              className="box-border min-w-0 border-b border-r border-line-soft px-1.5 pt-1"
               style={{ background: day.bg }}
             >
               <div
-                className="text-right whitespace-nowrap text-[13px] [font-variant-numeric:tabular-nums]"
+                className="whitespace-nowrap text-right text-xs tabular-nums"
                 style={{ color: day.color, fontWeight: day.weight }}
               >
                 {day.label}
@@ -68,16 +83,15 @@ export default function CalendarView({
           ))}
           <div className="absolute inset-0 pointer-events-none">
             {week.bars.map((bar) => (
-              <div
+              <Bar
                 key={bar.key}
-                role={bar.tripId ? "button" : undefined}
-                tabIndex={bar.tripId ? 0 : undefined}
+                interactive={!!bar.tripId}
                 aria-label={bar.tripId ? `Open ${bar.label}` : undefined}
-                className={
-                  bar.tripId
-                    ? "transition-[filter] duration-150 hover:brightness-95 focus-visible:z-10"
-                    : undefined
-                }
+                className={cn(
+                  bar.wide ? "z-bar-wide" : "z-bar",
+                  bar.tripId &&
+                    "text-left transition-[filter] duration-150 hover:brightness-95 focus-visible:z-bar-focus",
+                )}
                 onKeyDown={
                   bar.tripId
                     ? (e) => {
@@ -131,7 +145,7 @@ export default function CalendarView({
                     onClick={(e) => e.stopPropagation()}
                   />
                 )}
-              </div>
+              </Bar>
             ))}
           </div>
         </div>

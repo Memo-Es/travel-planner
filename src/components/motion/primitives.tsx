@@ -23,7 +23,7 @@ export const settle = {
   damping: 36,
   mass: 0.8,
 };
-export const fade = { duration: 0.18, ease: [0.22, 1, 0.36, 1] as const };
+export const fade = { duration: 0.18, ease: "easeOut" as const };
 
 export function AnimatedBackground({
   layoutId,
@@ -90,11 +90,12 @@ function DisclosureBody({
         if (node) node.inert = !present;
       }}
       aria-hidden={!present || undefined}
-      initial={{ height: 0, opacity: 0 }}
-      animate={{ height: "auto", opacity: 1 }}
-      exit={{ height: 0, opacity: 0 }}
-      transition={reduce ? { duration: 0 } : { height: settle, opacity: fade }}
-      className="-mx-1 overflow-hidden"
+      // Compositor-only: fade and nudge rather than animating height.
+      initial={{ opacity: 0, y: reduce ? 0 : -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, transition: { duration: reduce ? 0 : 0.12 } }}
+      transition={reduce ? { duration: 0 } : fade}
+      className="-mx-1"
     >
       <div className="p-1">{children}</div>
     </motion.div>

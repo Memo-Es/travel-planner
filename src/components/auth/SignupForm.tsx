@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import { signup } from "@/actions/auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function SignupForm({ next }: { next?: string }) {
   const [error, setError] = useState<string | undefined>();
@@ -16,68 +19,80 @@ export default function SignupForm({ next }: { next?: string }) {
     });
   }
 
+  const errorId = error ? "signup-error" : undefined;
+
   return (
-    <form action={handleSubmit} className="flex flex-col gap-3">
+    <form action={handleSubmit} className="flex flex-col gap-4" aria-busy={pending}>
       <input type="hidden" name="next" value={next ?? "/"} />
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[13px] text-muted">Your name</span>
-        <input
+      <label className="block space-y-2">
+        <span className="field-label">Your name</span>
+        <Input
           name="name"
           type="text"
+          autoComplete="name"
           required
           autoFocus
-          className="h-11 rounded-[9px] border border-line bg-hover px-3.5 text-[14px] text-ink box-border"
+          aria-describedby={errorId}
+          className="h-11"
         />
       </label>
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[13px] text-muted">Email</span>
-        <input
+      <label className="block space-y-2">
+        <span className="field-label">Email</span>
+        <Input
           name="email"
           type="email"
+          autoComplete="email"
           required
-          className="h-11 rounded-[9px] border border-line bg-hover px-3.5 text-[14px] text-ink box-border"
+          aria-describedby={errorId}
+          className="h-11"
         />
       </label>
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[13px] text-muted">Password</span>
-        <input
+      <label className="block space-y-2">
+        <span className="field-label">Password</span>
+        <Input
           name="password"
           type="password"
+          autoComplete="new-password"
           required
           minLength={8}
-          className="h-11 rounded-[9px] border border-line bg-hover px-3.5 text-[14px] text-ink box-border"
+          aria-describedby={["password-hint", errorId].filter(Boolean).join(" ")}
+          className="h-11"
         />
-        <span className="text-[12px] text-muted-3">At least 8 characters</span>
+        <span id="password-hint" className="block text-xs text-muted">
+          At least 8 characters
+        </span>
       </label>
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[13px] text-muted">Trip name (optional)</span>
-        <input
+      <label className="block space-y-2">
+        <span className="field-label">Trip name (optional)</span>
+        <Input
           name="teamName"
           type="text"
           placeholder="e.g. Fall Europe trip"
-          className="h-11 rounded-[9px] border border-line bg-hover px-3.5 text-[14px] text-ink box-border"
+          aria-describedby="team-hint"
+          className="h-11"
         />
-        <span className="text-[12px] text-muted-3">
+        <span id="team-hint" className="block text-pretty text-xs leading-relaxed text-muted">
           This becomes a shared planner you can invite teammates to. Defaults to “Your name&apos;s Trips”.
         </span>
       </label>
 
-      {error ? <div className="text-[13px] text-red-600">{error}</div> : null}
+      {error && (
+        <p id="signup-error" role="alert" className="field-error">
+          {error}
+        </p>
+      )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-2 h-11 rounded-[9px] border-0 bg-accent text-white text-[14px] cursor-pointer disabled:opacity-60 hover:bg-accent-hover"
-      >
+      <Button type="submit" disabled={pending} className="mt-1 h-11 w-full">
+        {pending && <Loader2 className="animate-spin" />}
         {pending ? "Creating account…" : "Create account"}
-      </button>
+      </Button>
 
-      <div className="text-[13px] text-muted-2 text-center mt-1">
+      <p className="text-center text-sm text-muted">
         Already have an account?{" "}
-        <Link href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="text-accent">
+        <Link href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="font-medium">
           Sign in
         </Link>
-      </div>
+      </p>
     </form>
   );
 }

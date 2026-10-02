@@ -70,7 +70,7 @@ export default function RightPanel({
   showClose: boolean;
 }) {
   const overlayBox =
-    "absolute top-3 bottom-3 z-20 w-[272px] shadow-[0_18px_44px_rgba(28,27,25,0.18)] right-[74px]";
+    "absolute bottom-3 right-[74px] top-3 z-panel w-[272px] shadow-overlay";
   const positionClass = overlay ? overlayBox : isMobile ? "flex-1 min-h-0" : "";
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -82,7 +82,7 @@ export default function RightPanel({
     <aside aria-label="Tasks" className={card + " p-5 " + positionClass}>
       <div className="mb-5 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
-          <span className="size-2 rounded-full bg-task-green-ink" />
+          <span aria-hidden="true" className="size-2 rounded-full bg-task-green-ink" />
           <h2 className="panel-heading">Tasks</h2>
           <Badge>
             <AnimatedNumber value={openCount} />
@@ -104,7 +104,7 @@ export default function RightPanel({
           <div className="rounded-xl border border-dashed border-line px-4 py-8 text-center">
             <ListChecks className="mx-auto mb-3 size-6 text-muted" />
             <p className="text-sm font-medium">A little less to remember</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted">
+            <p className="mt-1 text-pretty text-xs leading-relaxed text-muted">
               Add your first task below.
             </p>
           </div>
@@ -125,14 +125,14 @@ export default function RightPanel({
               >
                 <span
                   className={
-                    "block text-sm leading-relaxed " +
+                    "block text-pretty text-sm leading-relaxed " +
                     (task.done ? "text-muted line-through" : "text-ink-soft")
                   }
                 >
                   {task.title}
                 </span>
                 {(task.tag || task.assigneeName) && (
-                  <span className="mt-1 block text-xs leading-relaxed text-muted">
+                  <span className="mt-1 block truncate text-xs leading-relaxed tabular-nums text-muted">
                     {[task.tag, task.assigneeName].filter(Boolean).join(" · ")}
                   </span>
                 )}

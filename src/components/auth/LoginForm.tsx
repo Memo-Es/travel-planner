@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import { login } from "@/actions/auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export default function LoginForm({ next, defaultEmail }: { next?: string; defaultEmail?: string }) {
   const [error, setError] = useState<string | undefined>();
@@ -16,47 +19,56 @@ export default function LoginForm({ next, defaultEmail }: { next?: string; defau
     });
   }
 
+  const describedBy = error ? "login-error" : undefined;
+
   return (
-    <form action={handleSubmit} className="flex flex-col gap-3">
+    <form action={handleSubmit} className="flex flex-col gap-4" aria-busy={pending}>
       <input type="hidden" name="next" value={next ?? "/"} />
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[13px] text-muted">Email</span>
-        <input
+      <label className="block space-y-2">
+        <span className="field-label">Email</span>
+        <Input
           name="email"
           type="email"
+          autoComplete="email"
           required
           defaultValue={defaultEmail}
           autoFocus={!defaultEmail}
-          className="h-11 rounded-[9px] border border-line bg-hover px-3.5 text-[14px] text-ink box-border"
+          aria-invalid={!!error || undefined}
+          aria-describedby={describedBy}
+          className="h-11"
         />
       </label>
-      <label className="flex flex-col gap-1.5">
-        <span className="text-[13px] text-muted">Password</span>
-        <input
+      <label className="block space-y-2">
+        <span className="field-label">Password</span>
+        <Input
           name="password"
           type="password"
+          autoComplete="current-password"
           required
           autoFocus={!!defaultEmail}
-          className="h-11 rounded-[9px] border border-line bg-hover px-3.5 text-[14px] text-ink box-border"
+          aria-invalid={!!error || undefined}
+          aria-describedby={describedBy}
+          className="h-11"
         />
       </label>
 
-      {error ? <div className="text-[13px] text-red-600">{error}</div> : null}
+      {error && (
+        <p id="login-error" role="alert" className="field-error">
+          {error}
+        </p>
+      )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-2 h-11 rounded-[9px] border-0 bg-accent text-white text-[14px] cursor-pointer disabled:opacity-60 hover:bg-accent-hover"
-      >
+      <Button type="submit" disabled={pending} className="mt-1 h-11 w-full">
+        {pending && <Loader2 className="animate-spin" />}
         {pending ? "Signing in…" : "Sign in"}
-      </button>
+      </Button>
 
-      <div className="text-[13px] text-muted-2 text-center mt-1">
+      <p className="text-center text-sm text-muted">
         No account?{" "}
-        <Link href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"} className="text-accent">
+        <Link href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"} className="font-medium">
           Create one
         </Link>
-      </div>
+      </p>
     </form>
   );
 }
