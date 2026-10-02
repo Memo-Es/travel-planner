@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
+import AuthShell from "@/components/auth/AuthShell";
 import SignupForm from "@/components/auth/SignupForm";
+
+export const metadata: Metadata = { title: "Create account" };
 
 export default async function SignupPage({
   searchParams,
@@ -12,14 +16,8 @@ export default async function SignupPage({
   if (session?.user) redirect(next && next.startsWith("/") ? next : "/");
 
   return (
-    <div className="min-h-screen bg-canvas flex items-center justify-center p-5">
-      <div className="w-full max-w-[380px] bg-card border border-line rounded-card p-7 box-border">
-        <div className="flex items-center gap-2.5 mb-6">
-          <span className="w-[11px] h-[11px] rounded-full bg-accent block" />
-          <h1 className="m-0 text-[21px] font-semibold tracking-[-0.01em] text-ink">Travel Planner</h1>
-        </div>
-        <SignupForm next={next} />
-      </div>
-    </div>
+    <AuthShell>
+      <SignupForm next={next} />
+    </AuthShell>
   );
 }

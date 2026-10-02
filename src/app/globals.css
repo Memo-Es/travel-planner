@@ -83,30 +83,14 @@
     @apply text-xs leading-relaxed text-destructive;
   }
   .section-label {
-    @apply text-xs font-medium uppercase tracking-wider text-muted;
+    @apply text-xs font-medium text-muted;
   }
   .panel-heading {
-    @apply text-xl font-semibold tracking-tight text-ink;
+    @apply text-balance text-xl font-semibold text-ink;
   }
 }
 
 @layer components {
-  .trip-header {
-    position: relative;
-    isolation: isolate;
-  }
-  .trip-header::before {
-    content: "";
-    position: absolute;
-    z-index: -1;
-    pointer-events: none;
-    inset: -24px -24px 0;
-    background: radial-gradient(
-      ellipse at top left,
-      oklch(0.93 0.045 288 / 0.7),
-      transparent 70%
-    );
-  }
   .booking-card {
     transition:
       transform 180ms ease-out,

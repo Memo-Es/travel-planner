@@ -69,7 +69,7 @@ export default function LeftPanel({
 }) {
   const highlightId = useId();
   const overlayBox =
-    "absolute top-3 bottom-3 z-20 w-[272px] shadow-[0_18px_44px_rgba(28,27,25,0.18)] left-[74px]";
+    "absolute bottom-3 left-[74px] top-3 z-panel w-[272px] shadow-overlay";
   const positionClass = overlay ? overlayBox : isMobile ? "flex-1 min-h-0" : "";
 
   return (
@@ -161,10 +161,10 @@ export default function LeftPanel({
                 <span className="mt-1 flex items-center gap-2 text-xs tabular-nums text-muted">
                   {fmtRange(t.start, t.end)}
                   {t.stay.some(isScheduled) && (
-                    <Hotel size={12} aria-label="Stay scheduled" />
+                    <Hotel size={12} role="img" aria-label="Stay scheduled" />
                   )}
                   {t.transport.some(isScheduled) && (
-                    <Plane size={12} aria-label="Transport scheduled" />
+                    <Plane size={12} role="img" aria-label="Transport scheduled" />
                   )}
                 </span>
               </span>
@@ -196,7 +196,7 @@ export default function LeftPanel({
           </div>
         ))}
         {trips.length === 0 && (
-          <p className="px-2 py-4 text-sm leading-relaxed text-muted">
+          <p className="text-pretty px-2 py-4 text-sm leading-relaxed text-muted">
             Your next adventure starts with a stop.
           </p>
         )}
@@ -211,7 +211,7 @@ export default function LeftPanel({
         {addingTrip ? "Adding stop…" : "Add stop"}
       </Button>
       <footer className="mt-auto shrink-0 pt-6">
-        <div className="mb-4 text-xs leading-relaxed text-muted">
+        <div className="mb-4 text-xs leading-relaxed tabular-nums text-muted">
           <p>{todayLabel}</p>
           <p>
             {trips.length} {trips.length === 1 ? "stop" : "stops"} planned
@@ -219,7 +219,10 @@ export default function LeftPanel({
         </div>
         <div className="flex items-center justify-between gap-2 border-t border-line-soft pt-4">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-ink">
+            <span
+              aria-hidden="true"
+              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-ink"
+            >
               {initials(userName)}
             </span>
             <span className="truncate text-xs font-medium text-ink-soft">

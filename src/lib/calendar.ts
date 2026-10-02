@@ -31,6 +31,8 @@ export type BarPill = {
   dotStyle: CSSProperties;
   canDragLeft: boolean;
   canDragRight: boolean;
+  /** Fixed-width pill for a short stop; stacks above full-span bars. */
+  wide: boolean;
 };
 
 export type CalendarWeek = {
@@ -123,6 +125,7 @@ export function buildWeeks(
         // and not on the fixed-width "wide" pills used for very short stops.
         canDragLeft: !e.isNote && !wide && !contL,
         canDragRight: !e.isNote && !wide && !contR,
+        wide,
         dotStyle: {
           width: 8,
           height: 8,
@@ -138,7 +141,6 @@ export function buildWeeks(
           ...(anchorRight ? { right: 3 } : { left: `calc(${(col / 7) * 100}% + 3px)` }),
           width: `calc(${(span / 7) * 100}% - 6px)`,
           minWidth: wide ? pillMin : 0,
-          zIndex: wide ? 2 : 1,
           height: pillH,
           display: "flex",
           alignItems: "center",

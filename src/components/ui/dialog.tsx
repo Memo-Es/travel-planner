@@ -25,7 +25,7 @@ export const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("text-xl font-semibold tracking-tight text-ink", className)}
+    className={cn("text-balance text-xl font-semibold text-ink", className)}
     {...props}
   />
 ));
@@ -36,7 +36,7 @@ export const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm leading-relaxed text-muted", className)}
+    className={cn("text-pretty text-sm leading-relaxed text-muted", className)}
     {...props}
   />
 ));
@@ -77,7 +77,7 @@ export const DialogContent = React.forwardRef<
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={reduce ? { duration: 0 } : fade}
-            className="fixed inset-0 z-40 bg-ink/20 backdrop-blur-[2px]"
+            className="fixed inset-0 z-overlay bg-ink/20"
           />
         </DialogPrimitive.Overlay>
         <DialogPrimitive.Content
@@ -95,13 +95,13 @@ export const DialogContent = React.forwardRef<
             }
           }}
           className={cn(
-            "fixed z-50 flex flex-col overflow-hidden border border-line bg-white p-6 shadow-overlay outline-none",
+            "fixed z-modal flex flex-col overflow-hidden border border-line bg-white p-6 shadow-overlay outline-none",
             placement === "center" &&
-              "left-1/2 top-1/2 max-h-[90dvh] w-[calc(100%-2rem)] max-w-md rounded-2xl",
+              "left-1/2 top-1/2 max-h-[90dvh] w-[calc(100%-2rem)] max-w-md rounded-card",
             placement === "right" &&
-              "bottom-3 right-3 top-3 w-[min(480px,calc(100%-2rem))] rounded-2xl",
+              "bottom-3 right-3 top-3 w-[min(480px,calc(100%-2rem))] rounded-card",
             placement === "bottom" &&
-              "inset-x-0 bottom-0 max-h-[92dvh] rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]",
+              "inset-x-0 bottom-0 max-h-[92dvh] rounded-t-card p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]",
             className,
           )}
           {...props}
@@ -116,7 +116,7 @@ export const DialogContent = React.forwardRef<
             transition={
               reduce
                 ? { duration: 0 }
-                : { ...fade, duration: present ? 0.24 : 0.16 }
+                : { ...fade, duration: present ? 0.2 : 0.15 }
             }
             style={
               placement === "center" ? { translate: "-50% -50%" } : undefined

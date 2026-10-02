@@ -5,20 +5,13 @@ import {
   AnimatedBackground,
   AnimatedNumber,
 } from "@/components/motion/primitives";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { MobileTab } from "@/components/Planner";
 
-const ACCENT = "oklch(0.62 0.19 285)";
-const TASK_GREEN = "oklch(0.7 0.15 155)";
-
-const TABS: {
-  id: MobileTab;
-  label: (openCount: number) => string;
-  dot: string;
-}[] = [
-  { id: "links", label: () => "Trips", dot: ACCENT },
-  { id: "calendar", label: () => "Calendar", dot: ACCENT },
-  { id: "tasks", label: (n) => `Tasks [${n}]`, dot: TASK_GREEN },
+const TABS: { id: MobileTab; label: string; dot: string }[] = [
+  { id: "links", label: "Trips", dot: "bg-accent" },
+  { id: "calendar", label: "Calendar", dot: "bg-accent" },
+  { id: "tasks", label: "Tasks", dot: "bg-task-green" },
 ];
 
 export default function MobileTabs({
@@ -34,46 +27,39 @@ export default function MobileTabs({
   return (
     <nav
       aria-label="Planner views"
-      className="grid grid-cols-3 gap-1.5 bg-white border border-line rounded-2xl p-1.5 flex-none"
+      className="grid flex-none grid-cols-3 gap-1.5 rounded-card border border-line bg-white p-1.5"
     >
       {TABS.map((tab) => {
         const isActive = active === tab.id;
         return (
-          <Button
-            variant="ghost"
+          <button
+            type="button"
             key={tab.id}
             aria-current={isActive ? "page" : undefined}
             onClick={() => onChange(tab.id)}
-            className="relative isolate flex items-center justify-center gap-1.5 min-h-11 border-0 rounded-[10px] cursor-pointer text-sm hover:bg-transparent"
-            style={{
-              background: "transparent",
-              color: isActive ? "#1c1b19" : "#6f6b65",
-            }}
+            className={cn(
+              "ui-button relative isolate flex min-h-11 items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition-colors duration-150",
+              isActive ? "text-ink" : "text-muted hover:text-ink",
+            )}
           >
             {isActive && (
               <AnimatedBackground
                 layoutId={highlightId}
-                className="border border-white bg-secondary shadow-sm"
+                className="bg-secondary shadow-sm"
               />
             )}
             <span
-              className="w-2 h-2 rounded-full block flex-none"
-              style={{ background: isActive ? tab.dot : "#cdc9c3" }}
-            />
-            <span>
-              {tab.id === "tasks" ? (
-                <>
-                  Tasks{" "}
-                  <AnimatedNumber
-                    value={openCount}
-                    className="ml-1 text-muted"
-                  />
-                </>
-              ) : (
-                tab.label(openCount)
+              aria-hidden="true"
+              className={cn(
+                "block size-2 flex-none rounded-full",
+                isActive ? tab.dot : "bg-input",
               )}
-            </span>
-          </Button>
+            />
+            <span>{tab.label}</span>
+            {tab.id === "tasks" && (
+              <AnimatedNumber value={openCount} className="text-muted" />
+            )}
+          </button>
         );
       })}
     </nav>

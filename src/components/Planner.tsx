@@ -574,7 +574,7 @@ export default function Planner({
   const openCount = tasks.filter((t) => !t.done).length;
 
   const shellClass = isMobile
-    ? "flex flex-col gap-2.5 p-2.5 h-dvh box-border relative bg-canvas text-ink"
+    ? "flex flex-col gap-2.5 p-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] pb-[max(0.625rem,env(safe-area-inset-bottom))] h-dvh box-border relative bg-canvas text-ink"
     : "grid gap-3 p-3 h-dvh box-border relative bg-canvas text-ink";
   const shellStyle = isMobile
     ? undefined
@@ -626,10 +626,10 @@ export default function Planner({
         }}
       >
         <AlertDialogContent>
-          <AlertDialogTitle className="text-lg font-semibold tracking-tight">
+          <AlertDialogTitle className="text-balance text-lg font-semibold">
             Delete {deleteTarget?.label}?
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-sm leading-relaxed text-muted">
+          <AlertDialogDescription className="text-pretty text-sm leading-relaxed text-muted">
             This removes the stop and all its stay, transport and activity
             bookings. This cannot be undone.
           </AlertDialogDescription>
@@ -654,9 +654,9 @@ export default function Planner({
 
       {showBackdrop && (
         <div
+          aria-hidden="true"
           onClick={closeOverlay}
-          className="absolute inset-0 z-[15]"
-          style={{ background: "rgba(28,27,25,0.16)" }}
+          className="absolute inset-0 z-backdrop bg-ink/15"
         />
       )}
 
@@ -709,7 +709,7 @@ export default function Planner({
           }
         >
           <header className="flex flex-wrap items-center justify-between gap-3 mb-5">
-            <h1 className="m-0 text-2xl font-normal tracking-tight text-muted whitespace-nowrap">
+            <h1 className="m-0 whitespace-nowrap text-2xl font-normal tabular-nums text-muted">
               <TransitionText value={`${cursor.y}-${cursor.m}`}>
                 <strong className="font-semibold text-ink">
                   {MONTHS_LONG[cursor.m]}

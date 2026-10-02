@@ -5,8 +5,6 @@ import { Button } from "@/components/ui/button";
 import type { TripData } from "@/lib/types";
 import { fmtRange } from "@/lib/dates";
 
-const ACCENT = "oklch(0.62 0.19 285)";
-
 export default function LeftRail({
   trips,
   onOpenLinks,
@@ -17,19 +15,18 @@ export default function LeftRail({
   onOpenTrip: (t: TripData) => void;
 }) {
   return (
-    <div className="bg-white rounded-card border border-line py-3.5 flex flex-col items-center gap-2.5 box-border overflow-hidden">
+    <nav
+      aria-label="Trip shortcuts"
+      className="box-border flex flex-col items-center gap-2.5 overflow-hidden rounded-card border border-line bg-white py-3.5"
+    >
       <Button
-        variant="ghost"
+        variant="secondary"
         size="icon"
         onClick={onOpenLinks}
-        aria-label="Trips"
+        aria-label="Open trips"
         title="Trips"
-        className="size-9 rounded-[9px] border-0 bg-hover cursor-pointer flex items-center justify-center hover:bg-hover-2"
       >
-        <span
-          className="w-[11px] h-[11px] rounded-full block"
-          style={{ background: ACCENT }}
-        />
+        <span aria-hidden="true" className="block size-2.5 rounded-full bg-accent" />
       </Button>
       {trips.slice(0, 8).map((t) => (
         <Button
@@ -37,12 +34,13 @@ export default function LeftRail({
           size="icon"
           key={t.id}
           onClick={() => onOpenTrip(t)}
+          aria-label={`${t.label}, ${fmtRange(t.start, t.end)}`}
           title={`${t.label} · ${fmtRange(t.start, t.end)}`}
-          className="size-9 rounded-lg border-0 bg-transparent cursor-pointer flex items-center justify-center text-[11px] tracking-[0.03em] text-muted hover:bg-hover"
+          className="text-xs font-medium"
         >
-          {t.label.slice(0, 3).toUpperCase()}
+          <span aria-hidden="true">{t.label.slice(0, 3).toUpperCase()}</span>
         </Button>
       ))}
-    </div>
+    </nav>
   );
 }

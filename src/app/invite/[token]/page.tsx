@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import AuthShell from "@/components/auth/AuthShell";
+import { buttonVariants } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { acceptInvite, goToTeam, logout } from "@/actions/team";
+
+export const metadata: Metadata = {
+  title: "Join a trip",
+  robots: { index: false, follow: false },
+};
 
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -11,8 +19,8 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   if (!invite) {
     return (
       <Shell>
-        <p className="text-[14.5px] text-ink-soft">This invite link is invalid or has expired.</p>
-        <Link href="/" className="text-[13.5px] text-accent mt-3 inline-block">
+        <p className="text-pretty text-sm leading-relaxed text-ink-soft">This invite link is invalid or has expired.</p>
+        <Link href="/" className={buttonVariants({ variant: "outline", className: "mt-4" })}>
           Go to Travel Planner
         </Link>
       </Shell>
@@ -23,21 +31,22 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     const next = `/invite/${token}`;
     return (
       <Shell>
-        <p className="text-[14.5px] text-ink-soft mb-4">
-          <strong>{invite.createdBy.name}</strong> invited you to plan <strong>{invite.team.name}</strong> together.
+        <p className="mb-5 text-pretty text-sm leading-relaxed text-ink-soft">
+          <strong className="font-semibold text-ink">{invite.createdBy.name}</strong> invited you to plan{" "}
+          <strong className="font-semibold text-ink">{invite.team.name}</strong> together.
         </p>
         <div className="flex gap-2">
           <Link
-            href={`/login?next=${encodeURIComponent(next)}`}
-            className="h-10 px-4 rounded-[9px] border border-line bg-white text-[13.5px] text-ink-soft flex items-center"
-          >
-            Sign in
-          </Link>
-          <Link
             href={`/signup?next=${encodeURIComponent(next)}`}
-            className="h-10 px-4 rounded-[9px] border-0 bg-accent text-white text-[13.5px] flex items-center"
+            className={buttonVariants({ className: "text-white hover:text-white" })}
           >
             Create account
+          </Link>
+          <Link
+            href={`/login?next=${encodeURIComponent(next)}`}
+            className={buttonVariants({ variant: "outline", className: "hover:text-ink-soft" })}
+          >
+            Sign in
           </Link>
         </div>
       </Shell>
@@ -65,29 +74,23 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     <Shell signedInAs={currentUser?.email}>
       {existingMembership ? (
         <>
-          <p className="text-[14.5px] text-ink-soft mb-4">
-            You&apos;re already part of <strong>{invite.team.name}</strong>.
+          <p className="mb-5 text-pretty text-sm leading-relaxed text-ink-soft">
+            You&apos;re already part of <strong className="font-semibold text-ink">{invite.team.name}</strong>.
           </p>
           <form action={goToExistingTeam}>
-            <button
-              type="submit"
-              className="h-10 px-4 rounded-[9px] border-0 bg-accent text-white text-[13.5px] cursor-pointer hover:bg-accent-hover"
-            >
+            <button type="submit" className={buttonVariants()}>
               Open {invite.team.name}
             </button>
           </form>
         </>
       ) : (
         <>
-          <p className="text-[14.5px] text-ink-soft mb-4">
-            <strong>{invite.createdBy.name}</strong> invited you to plan <strong>{invite.team.name}</strong>{" "}
-            together.
+          <p className="mb-5 text-pretty text-sm leading-relaxed text-ink-soft">
+            <strong className="font-semibold text-ink">{invite.createdBy.name}</strong> invited you to plan{" "}
+            <strong className="font-semibold text-ink">{invite.team.name}</strong> together.
           </p>
           <form action={accept}>
-            <button
-              type="submit"
-              className="h-10 px-4 rounded-[9px] border-0 bg-accent text-white text-[13.5px] cursor-pointer hover:bg-accent-hover"
-            >
+            <button type="submit" className={buttonVariants()}>
               Join {invite.team.name}
             </button>
           </form>
@@ -99,28 +102,22 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 
 function Shell({ children, signedInAs }: { children: React.ReactNode; signedInAs?: string }) {
   return (
-    <div className="min-h-screen bg-canvas flex items-center justify-center p-5">
-      <div className="w-full max-w-[420px] bg-card border border-line rounded-card p-7 box-border">
-        <div className="flex items-center justify-between gap-2.5 mb-5">
-          <div className="flex items-center gap-2.5 flex-none">
-            <span className="w-[11px] h-[11px] rounded-full bg-accent block" />
-            <h1 className="m-0 text-[21px] font-semibold tracking-[-0.01em] text-ink whitespace-nowrap">
-              Travel Planner
-            </h1>
+    <AuthShell
+      wide
+      aside={
+        signedInAs && (
+          <div className="flex min-w-0 items-center gap-2 text-xs text-muted">
+            <span className="truncate">{signedInAs}</span>
+            <form action={logout} className="flex-none">
+              <button type="submit" className="whitespace-nowrap font-medium text-accent-ink hover:text-accent-hover">
+                Sign out
+              </button>
+            </form>
           </div>
-          {signedInAs && (
-            <div className="flex items-center gap-1.5 text-[12px] text-muted-3 min-w-0">
-              <span className="overflow-hidden text-ellipsis whitespace-nowrap">{signedInAs}</span>
-              <form action={logout} className="flex-none">
-                <button type="submit" className="text-accent bg-transparent border-0 cursor-pointer p-0 whitespace-nowrap">
-                  Sign out
-                </button>
-              </form>
-            </div>
-          )}
-        </div>
-        {children}
-      </div>
-    </div>
+        )
+      }
+    >
+      {children}
+    </AuthShell>
   );
 }
