@@ -29,8 +29,8 @@ is configured for the existing Tailwind 3 project. Add only components we use.
 
 - Use Button variants consistently: primary for save/create, outline for secondary
   actions, ghost for contextual actions, destructive for confirmed deletion.
-- Keep icon controls at least 36px and provide accessible names. The task checkbox
-  has an expanded target independent of its visual size.
+- Keep icon controls at least 36px and provide accessible names. File pickers are
+  driven by a labelled button; the native input stays visually hidden.
 - Put edit/delete actions in an overflow menu. Stop deletion requires the shared
   confirmation dialog; initial focus belongs on the non-destructive option.
 - Use labeled fields, inline validation, visible keyboard focus, and pending states

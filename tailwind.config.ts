@@ -40,6 +40,7 @@ const config: Config = {
         accent: "oklch(0.62 0.19 285)",
         "accent-hover": "oklch(0.55 0.19 285)",
         "accent-soft": "oklch(0.93 0.045 288)",
+        "accent-muted": "oklch(0.8 0.1 286)",
         "accent-ink": "oklch(0.42 0.16 285)",
         "task-green": "oklch(0.7 0.15 155)",
         "task-green-soft": "oklch(0.95 0.05 155)",

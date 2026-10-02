@@ -22,14 +22,13 @@ enum ItemSection {
 }
 
 model User {
-  id             String       @id @default(cuid())
-  email          String       @unique
-  name           String
-  passwordHash   String
-  createdAt      DateTime     @default(now())
-  memberships    Membership[]
-  invitesSent    Invite[]     @relation("InviteCreatedBy")
-  assignedTasks  Task[]       @relation("TaskAssignee")
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  memberships  Membership[]
+  invitesSent  Invite[]     @relation("InviteCreatedBy")
 }
 
 model Team {
@@ -39,7 +38,6 @@ model Team {
   createdAt   DateTime     @default(now())
   memberships Membership[]
   trips       Trip[]
-  tasks       Task[]
   invites     Invite[]
 }
 
@@ -84,30 +82,32 @@ model Trip {
 }
 
 model TripItem {
-  id         String      @id @default(cuid())
-  trip       Trip        @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  tripId     String
-  section    ItemSection
-  title      String
-  url        String      @default("")
-  costAmount Float?
-  order      Int         @default(0)
+  id          String       @id @default(cuid())
+  trip        Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId      String
+  section     ItemSection
+  title       String
+  url         String       @default("")
+  costAmount  Float?
+  order       Int          @default(0)
+  attachments Attachment[]
 
   @@index([tripId])
 }
 
-model Task {
-  id         String   @id @default(cuid())
-  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  teamId     String
-  title      String
-  tag        String   @default("unscheduled")
-  done       Boolean  @default(false)
-  order      Int      @default(0)
-  createdAt  DateTime @default(now())
-  assignee   User?    @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  assigneeId String?
+/// A PDF (ticket, confirmation, receipt) attached to a booking. Bytes live in
+/// Vercel Blob when BLOB_READ_WRITE_TOKEN is configured (blobUrl), otherwise
+/// in Postgres (data). Always served through /api/attachments/[id].
+model Attachment {
+  id          String   @id @default(cuid())
+  item        TripItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId      String
+  name        String
+  contentType String
+  size        Int
+  blobUrl     String?
+  data        Bytes?
+  createdAt   DateTime @default(now())
 
-  @@index([teamId])
-  @@index([assigneeId])
+  @@index([itemId])
 }

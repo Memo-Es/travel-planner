@@ -1,26 +1,21 @@
 "use client";
 
 import { useId } from "react";
-import {
-  AnimatedBackground,
-  AnimatedNumber,
-} from "@/components/motion/primitives";
+import { AnimatedBackground } from "@/components/motion/primitives";
 import { cn } from "@/lib/utils";
 import type { MobileTab } from "@/components/Planner";
 
 const TABS: { id: MobileTab; label: string; dot: string }[] = [
   { id: "links", label: "Trips", dot: "bg-accent" },
   { id: "calendar", label: "Calendar", dot: "bg-accent" },
-  { id: "tasks", label: "Tasks", dot: "bg-task-green" },
+  { id: "finances", label: "Finances", dot: "bg-task-green" },
 ];
 
 export default function MobileTabs({
   active,
-  openCount,
   onChange,
 }: {
   active: MobileTab;
-  openCount: number;
   onChange: (tab: MobileTab) => void;
 }) {
   const highlightId = useId();
@@ -56,9 +51,6 @@ export default function MobileTabs({
               )}
             />
             <span>{tab.label}</span>
-            {tab.id === "tasks" && (
-              <AnimatedNumber value={openCount} className="text-muted" />
-            )}
           </button>
         );
       })}

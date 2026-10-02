@@ -58,14 +58,3 @@ export const HOLIDAY_NOTES = [
   { id: "note-2", label: "Day of the Dead", start: "2026-11-02", end: "2026-11-02" },
   { id: "note-3", label: "Rail pass activates", start: "2026-11-16", end: "2026-11-16" },
 ];
-
-export function demoTasks(teamId: string): Prisma.TaskCreateManyInput[] {
-  const rows = [
-    { title: "Book BCN → Paris train", tag: "19 Nov", done: false },
-    { title: "Confirm Amsterdam apartment", tag: "24 Nov", done: false },
-    { title: "Renew travel insurance", tag: "before 16 Nov", done: false },
-    { title: "Belgium: reserve Bruges tour", tag: "23 Nov", done: false },
-    { title: "Download offline maps", tag: "anytime", done: true },
-  ];
-  return rows.map((r, i) => ({ teamId, ...r, order: i }));
-}

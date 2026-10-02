@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatedNumber, Disclosure } from "@/components/motion/primitives";
-import { useState, type KeyboardEvent } from "react";
+import { useState } from "react";
 import {
   Plus,
   Trash2,
@@ -14,6 +14,7 @@ import {
   Plane,
   MapPin,
   Check,
+  FileText,
 } from "lucide-react";
 import type { TripData, ItemSectionKey, ItemData } from "@/lib/types";
 import { fmtRange, nightsBetween } from "@/lib/dates";
@@ -23,7 +24,9 @@ import {
   sectionTotal,
   hostFromUrl,
 } from "@/lib/tripSections";
-import { currencySymbol, formatCost, formatTotal } from "@/lib/currency";
+import { formatCost, formatTotal } from "@/lib/currency";
+import { attachmentHref } from "@/lib/uploads";
+import BookingForm from "@/components/planner/BookingForm";
 import { STOP_COLORS } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +45,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Editing, FormState } from "@/components/Planner";
 
+function editState(item: ItemData): FormState {
+  return {
+    t: item.t,
+    url: item.url,
+    cost: item.costAmount === null ? "" : String(item.costAmount),
+    files: [],
+    removeIds: [],
+  };
+}
+
 export default function TripDrawer({
   trip,
   currency,
@@ -51,6 +64,7 @@ export default function TripDrawer({
   formError,
   saving,
   onFormChange,
+  onFormError,
   onClose,
   onStartAdd,
   onStartEdit,
@@ -70,6 +84,7 @@ export default function TripDrawer({
   formError: string | null;
   saving: boolean;
   onFormChange: (f: FormState) => void;
+  onFormError: (message: string | null) => void;
   onClose: () => void;
   onStartAdd: (key: ItemSectionKey) => void;
   onStartEdit: (
@@ -95,17 +110,6 @@ export default function TripDrawer({
   const [editingLabel, setEditingLabel] = useState(false);
   const [labelDraft, setLabelDraft] = useState(trip.label);
   const datesValid = !!startDraft && !!endDraft && endDraft >= startDraft;
-
-  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" && !saving) {
-      e.preventDefault();
-      onSaveForm();
-    }
-    if (e.key === "Escape") {
-      e.stopPropagation();
-      onCancelForm();
-    }
-  }
 
   function saveLabel() {
     const trimmed = labelDraft.trim();
@@ -348,14 +352,7 @@ export default function TripDrawer({
                         <button
                           className="min-w-0 flex-1 text-pretty rounded text-left text-sm font-medium leading-6 text-ink"
                           onClick={() =>
-                            onStartEdit(sec.key, item.id, {
-                              t: item.t,
-                              url: item.url,
-                              cost:
-                                item.costAmount === null
-                                  ? ""
-                                  : String(item.costAmount),
-                            })
+                            onStartEdit(sec.key, item.id, editState(item))
                           }
                         >
                           {item.t}
@@ -374,14 +371,7 @@ export default function TripDrawer({
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
                               onSelect={() =>
-                                onStartEdit(sec.key, item.id, {
-                                  t: item.t,
-                                  url: item.url,
-                                  cost:
-                                    item.costAmount === null
-                                      ? ""
-                                      : String(item.costAmount),
-                                })
+                                onStartEdit(sec.key, item.id, editState(item))
                               }
                             >
                               <Pencil />
@@ -423,6 +413,24 @@ export default function TripDrawer({
                           {formatCost(item.costAmount, currency)}
                         </span>
                       </div>
+                      {item.attachments.length > 0 && (
+                        <ul className="mt-2 flex flex-wrap gap-1.5">
+                          {item.attachments.map((a) => (
+                            <li key={a.id} className="min-w-0 max-w-full">
+                              <a
+                                href={attachmentHref(a.id)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="flex min-w-0 items-center gap-1.5 rounded-md border border-line bg-secondary/60 px-2 py-1 text-xs text-ink-soft hover:border-input hover:text-ink"
+                              >
+                                <FileText className="size-3.5 shrink-0 text-muted" />
+                                <span className="truncate">{a.name}</span>
+                                <span className="sr-only"> (PDF, opens in a new tab)</span>
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                       <div className="mt-3">
                         <Badge
                           variant={isScheduled(item) ? "success" : "secondary"}
@@ -440,91 +448,24 @@ export default function TripDrawer({
                   )}
                 </div>
                 <Disclosure open={showForm}>
-                  <div className="space-y-3 rounded-xl border border-line bg-secondary/50 p-4">
-                    <label className="block space-y-2">
-                      <span className="field-label">Name</span>
-                      <Input
-                        value={form.t}
-                        onChange={(e) =>
-                          onFormChange({ ...form, t: e.target.value })
-                        }
-                        onKeyDown={handleKeyDown}
-                        placeholder={sec.placeholder}
-                        autoFocus
-                        aria-invalid={!!formError?.startsWith("Name")}
-                        aria-describedby={
-                          formError ? "booking-error" : undefined
-                        }
-                      />
-                    </label>
-                    <label className="block space-y-2">
-                      <span className="field-label">Booking link</span>
-                      <Input
-                        value={form.url}
-                        onChange={(e) =>
-                          onFormChange({ ...form, url: e.target.value })
-                        }
-                        onKeyDown={handleKeyDown}
-                        placeholder="https://…"
-                        inputMode="url"
-                        aria-invalid={!!formError?.startsWith("Link")}
-                        aria-describedby={
-                          formError ? "booking-error" : undefined
-                        }
-                      />
-                    </label>
-                    <label className="block space-y-2">
-                      <span className="field-label">
-                        Cost ({currencySymbol(currency)})
-                      </span>
-                      <Input
-                        value={form.cost}
-                        onChange={(e) =>
-                          onFormChange({ ...form, cost: e.target.value })
-                        }
-                        onKeyDown={handleKeyDown}
-                        placeholder="0.00"
-                        inputMode="decimal"
-                        aria-describedby={
-                          formError ? "booking-error" : "booking-hint"
-                        }
-                      />
-                    </label>
-                    {formError ? (
-                      <p
-                        id="booking-error"
-                        role="alert"
-                        className="field-error"
-                      >
-                        {formError}
-                      </p>
-                    ) : (
-                      <p
-                        id="booking-hint"
-                        className="text-pretty text-xs leading-relaxed text-muted"
-                      >
-                        Add a name, link and cost to mark this booking as
-                        scheduled.
-                      </p>
-                    )}
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={saving}
-                        onClick={onCancelForm}
-                      >
-                        Cancel
-                      </Button>
-                      <Button size="sm" disabled={saving} onClick={onSaveForm}>
-                        {saving
-                          ? "Saving…"
-                          : editing?.itemId
-                            ? "Save changes"
-                            : "Add booking"}
-                      </Button>
-                    </div>
-                  </div>
+                  <BookingForm
+                    form={form}
+                    onChange={onFormChange}
+                    error={formError}
+                    onError={onFormError}
+                    saving={saving}
+                    onSave={onSaveForm}
+                    onCancel={onCancelForm}
+                    currency={currency}
+                    placeholder={sec.placeholder}
+                    submitLabel={editing?.itemId ? "Save changes" : "Add booking"}
+                    existing={
+                      editing?.itemId
+                        ? (items.find((i) => i.id === editing.itemId)
+                            ?.attachments ?? [])
+                        : []
+                    }
+                  />
                 </Disclosure>
                 {!showForm && (
                   <Button

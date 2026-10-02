@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/team";
 import { lookupDestinationPhoto } from "@/lib/photo";
 import { STOP_COLORS } from "@/lib/theme";
+import { requireAttachmentAccess, requireItemAccess } from "@/lib/access";
+import { removeFile } from "@/lib/storage";
 
 async function requireTeamMembership(teamId: string) {
   const user = await requireUser();
@@ -45,7 +47,12 @@ export async function createTrip(teamId: string) {
 
 export async function deleteTrip(tripId: string) {
   await requireTripAccess(tripId);
+  const files = await prisma.attachment.findMany({
+    where: { item: { tripId }, blobUrl: { not: null } },
+    select: { blobUrl: true },
+  });
   await prisma.trip.delete({ where: { id: tripId } });
+  await Promise.allSettled(files.map(removeFile));
   revalidatePath("/");
 }
 
@@ -104,35 +111,36 @@ export async function addItem(
   await requireTripAccess(tripId);
   const parsed = itemSchema.parse(input);
   const count = await prisma.tripItem.count({ where: { tripId, section } });
-  await prisma.tripItem.create({
+  const item = await prisma.tripItem.create({
     data: { tripId, section, order: count, ...parsed },
+    select: { id: true },
   });
   revalidatePath("/");
+  return item.id;
 }
 
 export async function updateItem(itemId: string, input: { title: string; url: string; costAmount: number | null }) {
-  const user = await requireUser();
-  const item = await prisma.tripItem.findUnique({ where: { id: itemId }, include: { trip: true } });
-  if (!item) throw new Error("Item not found");
-  const membership = await prisma.membership.findUnique({
-    where: { userId_teamId: { userId: user.id, teamId: item.trip.teamId } },
-  });
-  if (!membership) throw new Error("Not a member of this team");
-
+  await requireItemAccess(itemId);
   const parsed = itemSchema.parse(input);
   await prisma.tripItem.update({ where: { id: itemId }, data: parsed });
   revalidatePath("/");
 }
 
 export async function deleteItem(itemId: string) {
-  const user = await requireUser();
-  const item = await prisma.tripItem.findUnique({ where: { id: itemId }, include: { trip: true } });
-  if (!item) return;
-  const membership = await prisma.membership.findUnique({
-    where: { userId_teamId: { userId: user.id, teamId: item.trip.teamId } },
+  await requireItemAccess(itemId);
+  const files = await prisma.attachment.findMany({
+    where: { itemId, blobUrl: { not: null } },
+    select: { blobUrl: true },
   });
-  if (!membership) throw new Error("Not a member of this team");
-
   await prisma.tripItem.delete({ where: { id: itemId } });
+  await Promise.allSettled(files.map(removeFile));
+  revalidatePath("/");
+}
+
+export async function deleteAttachment(attachmentId: string) {
+  const attachment = await requireAttachmentAccess(attachmentId);
+  if (!attachment) return;
+  await prisma.attachment.delete({ where: { id: attachmentId } });
+  await removeFile(attachment).catch(() => {});
   revalidatePath("/");
 }
