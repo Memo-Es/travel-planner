@@ -131,14 +131,17 @@ export default function TripDrawer({
           document.getElementById("close-trip")?.focus();
         }}
       >
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line-soft pb-5">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line-soft pb-4">
           <div className="min-w-0 flex-1">
-            <p className="section-label mb-2">Trip details</p>
-            <DialogTitle className={editingLabel ? "sr-only" : "text-2xl"}>
+            <p className="section-label">Stop</p>
+            <DialogTitle
+              className={editingLabel ? "sr-only" : "mt-1 text-2xl"}
+            >
               {trip.label}
             </DialogTitle>
             {editingLabel ? (
               <Input
+                className="mt-1.5"
                 aria-label="Stop name"
                 value={labelDraft}
                 onChange={(e) => setLabelDraft(e.target.value)}
@@ -156,7 +159,7 @@ export default function TripDrawer({
               <Button
                 variant="ghost"
                 size="sm"
-                className="-ml-3 mt-1 h-8 text-xs tabular-nums"
+                className="-ml-2.5 mt-1 h-8 px-2.5 font-normal tabular-nums text-muted"
                 aria-expanded={editingDates}
                 onClick={() => {
                   setStartDraft(trip.start);
@@ -174,7 +177,7 @@ export default function TripDrawer({
               Manage dates and bookings for {trip.label}.
             </DialogDescription>
           </div>
-          <div className="flex gap-1">
+          <div className="-mr-2 -mt-2 flex">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label="Stop options">
@@ -222,9 +225,9 @@ export default function TripDrawer({
             />
           )}
           <Disclosure open={editingDates}>
-            <div className="space-y-3 rounded-xl border border-line bg-secondary/50 p-4">
+            <div className="space-y-4 rounded-xl border border-line bg-secondary/60 p-4">
               <div className="grid grid-cols-2 gap-3">
-                <label className="space-y-2">
+                <label className="block min-w-0 space-y-1.5">
                   <span className="field-label">Arrival</span>
                   <Input
                     type="date"
@@ -232,7 +235,7 @@ export default function TripDrawer({
                     onChange={(e) => setStartDraft(e.target.value)}
                   />
                 </label>
-                <label className="space-y-2">
+                <label className="block min-w-0 space-y-1.5">
                   <span className="field-label">Departure</span>
                   <Input
                     type="date"
@@ -272,7 +275,7 @@ export default function TripDrawer({
           </Disclosure>
           <fieldset className="min-w-0">
             <legend className="field-label mb-2">Calendar color</legend>
-            <div className="flex flex-wrap gap-1">
+            <div className="-ml-1.5 flex flex-wrap gap-0.5">
               {STOP_COLORS.map((c) => {
                 const active = stopColor(trip.color).id === c.id;
                 return (
@@ -285,20 +288,20 @@ export default function TripDrawer({
                     className="flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-hover"
                   >
                     <span
-                      className="flex size-5 items-center justify-center rounded-full"
+                      className="flex size-6 items-center justify-center rounded-full"
                       style={{
                         background: c.soft,
                         color: c.ink,
                         boxShadow: active
-                          ? `0 0 0 2px white, 0 0 0 3px ${c.ink}`
-                          : undefined,
+                          ? `0 0 0 2px white, 0 0 0 3.5px ${c.ink}`
+                          : `inset 0 0 0 1px rgb(28 25 23 / 0.06)`,
                       }}
                     >
                       {active ? (
                         <Check size={12} strokeWidth={3} />
                       ) : (
                         <span
-                          className="size-2 rounded-full"
+                          className="size-2.5 rounded-full"
                           style={{ background: c.base }}
                         />
                       )}
@@ -312,166 +315,170 @@ export default function TripDrawer({
           {SECTION_DEFS.map((sec) => {
             const items: ItemData[] = trip[sec.key];
             const total = sectionTotal(items);
-            const showForm = editing?.key === sec.key;
+            const adding = editing?.key === sec.key && editing.itemId === null;
             const Icon =
               sec.key === "stay"
                 ? Hotel
                 : sec.key === "transport"
                   ? Plane
                   : MapPin;
+            const form$ = (existing: ItemData["attachments"], label: string) => (
+              <BookingForm
+                form={form}
+                onChange={onFormChange}
+                error={formError}
+                onError={onFormError}
+                saving={saving}
+                onSave={onSaveForm}
+                onCancel={onCancelForm}
+                currency={currency}
+                placeholder={sec.placeholder}
+                submitLabel={label}
+                existing={existing}
+              />
+            );
             return (
               <section
                 key={sec.key}
-                className="space-y-3"
                 aria-labelledby={`section-${sec.key}`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <h3
                     id={`section-${sec.key}`}
-                    className="flex items-center gap-2 text-sm font-semibold"
+                    className="flex items-center gap-2 text-sm font-semibold text-ink"
                   >
                     <Icon className="size-4 text-muted" />
                     {sec.name}
-                    <span className="font-normal tabular-nums text-muted">
+                    <span className="text-xs font-normal tabular-nums text-muted">
                       {items.length}
                     </span>
                   </h3>
                   {total > 0 && (
-                    <span className="text-xs font-medium tabular-nums text-muted">
+                    <span className="text-sm font-medium tabular-nums text-ink-soft">
                       {formatTotal(total, currency)}
                     </span>
                   )}
                 </div>
-                <div className="space-y-2">
-                  {items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="booking-card rounded-xl border border-line bg-white p-3 shadow-panel hover:border-input"
-                    >
-                      <div className="flex items-start gap-2">
-                        <button
-                          className="min-w-0 flex-1 text-pretty rounded text-left text-sm font-medium leading-6 text-ink"
-                          onClick={() =>
-                            onStartEdit(sec.key, item.id, editState(item))
-                          }
-                        >
-                          {item.t}
-                        </button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="-mr-1 -mt-1"
-                              aria-label={`Options for ${item.t}`}
-                            >
-                              <MoreHorizontal />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onSelect={() =>
-                                onStartEdit(sec.key, item.id, editState(item))
-                              }
-                            >
-                              <Pencil />
-                              Edit booking
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              destructive
-                              onSelect={() => onDeleteItem(item.id)}
-                            >
-                              <Trash2 />
-                              Remove booking
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                <div className="mt-3 space-y-2">
+                  {items.map((item) =>
+                    editing?.itemId === item.id ? (
+                      <div key={item.id} className="-mx-1 p-1">
+                        {form$(item.attachments, "Save changes")}
                       </div>
-                      <div className="mt-1 flex items-center justify-between gap-2">
-                        {item.url ? (
-                          <a
-                            href={item.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex min-w-0 items-center gap-1 rounded text-xs hover:underline"
+                    ) : (
+                      <article
+                        key={item.id}
+                        className="booking-card rounded-xl border border-line bg-white py-3 pl-4 pr-2 shadow-panel hover:border-input"
+                      >
+                        <div className="flex items-start gap-3">
+                          <button
+                            className="min-w-0 flex-1 text-pretty rounded text-left text-sm font-medium leading-5 text-ink"
+                            onClick={() =>
+                              onStartEdit(sec.key, item.id, editState(item))
+                            }
                           >
-                            <span className="truncate">
-                              {hostFromUrl(item.url)}
+                            {item.t}
+                          </button>
+                          {item.costAmount === null ? (
+                            <span className="shrink-0 pt-px text-xs leading-5 text-muted">
+                              No cost
                             </span>
-                            <ArrowUpRight className="size-3 shrink-0" />
-                            <span className="sr-only">
-                              {" "}
-                              (opens in a new tab)
+                          ) : (
+                            <span className="shrink-0 text-sm font-medium leading-5 tabular-nums text-ink">
+                              {formatCost(item.costAmount, currency)}
                             </span>
-                          </a>
-                        ) : (
-                          <span className="text-xs text-muted">
-                            Booking link pending
-                          </span>
-                        )}
-                        <span className="shrink-0 text-sm font-medium tabular-nums text-ink-soft">
-                          {formatCost(item.costAmount, currency)}
-                        </span>
-                      </div>
-                      {item.attachments.length > 0 && (
-                        <ul className="mt-2 flex flex-wrap gap-1.5">
-                          {item.attachments.map((a) => (
-                            <li key={a.id} className="min-w-0 max-w-full">
-                              <a
-                                href={attachmentHref(a.id)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex min-w-0 items-center gap-1.5 rounded-md border border-line bg-secondary/60 px-2 py-1 text-xs text-ink-soft hover:border-input hover:text-ink"
+                          )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="-my-2 size-9"
+                                aria-label={`Options for ${item.t}`}
                               >
-                                <FileText className="size-3.5 shrink-0 text-muted" />
-                                <span className="truncate">{a.name}</span>
-                                <span className="sr-only"> (PDF, opens in a new tab)</span>
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <div className="mt-3">
-                        <Badge
-                          variant={isScheduled(item) ? "success" : "secondary"}
-                        >
-                          {isScheduled(item) && <Check className="size-3" />}
-                          {isScheduled(item) ? "Scheduled" : "Incomplete"}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                  {items.length === 0 && !showForm && (
-                    <p className="text-pretty rounded-xl border border-dashed border-line px-3 py-4 text-xs leading-relaxed text-muted">
+                                <MoreHorizontal />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onSelect={() =>
+                                  onStartEdit(sec.key, item.id, editState(item))
+                                }
+                              >
+                                <Pencil />
+                                Edit booking
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                destructive
+                                onSelect={() => onDeleteItem(item.id)}
+                              >
+                                <Trash2 />
+                                Remove booking
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        <div className="mt-2 flex min-w-0 items-center gap-2 pr-2">
+                          <Badge
+                            variant={isScheduled(item) ? "success" : "secondary"}
+                          >
+                            {isScheduled(item) && <Check className="size-3" />}
+                            {isScheduled(item) ? "Scheduled" : "Incomplete"}
+                          </Badge>
+                          {item.url ? (
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex min-w-0 items-center gap-1 rounded text-xs hover:underline"
+                            >
+                              <span className="truncate">
+                                {hostFromUrl(item.url)}
+                              </span>
+                              <ArrowUpRight className="size-3 shrink-0" />
+                              <span className="sr-only"> (opens in a new tab)</span>
+                            </a>
+                          ) : (
+                            <span className="truncate text-xs text-muted">
+                              No booking link
+                            </span>
+                          )}
+                        </div>
+                        {item.attachments.length > 0 && (
+                          <ul className="mt-2 flex flex-wrap gap-1.5 pr-2">
+                            {item.attachments.map((a) => (
+                              <li key={a.id} className="min-w-0 max-w-full">
+                                <a
+                                  href={attachmentHref(a.id)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex min-w-0 items-center gap-1.5 rounded-md border border-line bg-secondary px-2 py-1 text-xs text-ink-soft hover:border-input hover:text-ink"
+                                >
+                                  <FileText className="size-3.5 shrink-0 text-muted" />
+                                  <span className="truncate">{a.name}</span>
+                                  <span className="sr-only"> (PDF, opens in a new tab)</span>
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </article>
+                    ),
+                  )}
+                  {items.length === 0 && !adding && (
+                    <p className="text-pretty rounded-xl border border-dashed border-line px-4 py-3 text-xs leading-relaxed text-muted">
                       No {sec.name.toLowerCase()} added yet.
                     </p>
                   )}
                 </div>
-                <Disclosure open={showForm}>
-                  <BookingForm
-                    form={form}
-                    onChange={onFormChange}
-                    error={formError}
-                    onError={onFormError}
-                    saving={saving}
-                    onSave={onSaveForm}
-                    onCancel={onCancelForm}
-                    currency={currency}
-                    placeholder={sec.placeholder}
-                    submitLabel={editing?.itemId ? "Save changes" : "Add booking"}
-                    existing={
-                      editing?.itemId
-                        ? (items.find((i) => i.id === editing.itemId)
-                            ?.attachments ?? [])
-                        : []
-                    }
-                  />
+                <Disclosure open={adding}>
+                  <div className="mt-2">{form$([], "Add booking")}</div>
                 </Disclosure>
-                {!showForm && (
+                {!adding && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="-ml-2 text-accent-ink"
+                    className="-ml-2.5 mt-2 px-2.5 text-ink-soft"
                     onClick={() => onStartAdd(sec.key)}
                   >
                     <Plus />

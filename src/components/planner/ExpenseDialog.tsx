@@ -62,7 +62,7 @@ export default function ExpenseDialog({
         placement={isMobile ? "bottom" : "center"}
         aria-describedby="expense-description"
       >
-        <header className="flex shrink-0 items-start justify-between gap-3 pb-4">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line-soft pb-4">
           <div>
             <DialogTitle>Add expense</DialogTitle>
             <DialogDescription id="expense-description" className="mt-1">
@@ -72,6 +72,7 @@ export default function ExpenseDialog({
           <Button
             variant="ghost"
             size="icon"
+            className="-mr-2 -mt-2"
             onClick={onClose}
             disabled={saving}
             aria-label="Close add expense"
@@ -79,7 +80,7 @@ export default function ExpenseDialog({
             <X />
           </Button>
         </header>
-        <div className="-mx-1 min-h-0 overflow-y-auto overscroll-contain px-1 pb-1">
+        <div className="-mx-1 min-h-0 overflow-y-auto overscroll-contain px-1 pb-1 pt-5">
           <BookingForm
             form={form}
             onChange={(f) => {
@@ -95,9 +96,10 @@ export default function ExpenseDialog({
             placeholder={section.placeholder}
             submitLabel="Add expense"
             autoFocus={false}
+            framed={false}
             before={
               <div className="grid grid-cols-2 gap-3">
-                <label className="block min-w-0 space-y-2">
+                <label className="block min-w-0 space-y-1.5">
                   <span className="field-label">Category</span>
                   <NativeSelect
                     autoFocus
@@ -116,7 +118,7 @@ export default function ExpenseDialog({
                     ))}
                   </NativeSelect>
                 </label>
-                <label className="block min-w-0 space-y-2">
+                <label className="block min-w-0 space-y-1.5">
                   <span className="field-label">Stop</span>
                   <NativeSelect
                     value={form.tripId}

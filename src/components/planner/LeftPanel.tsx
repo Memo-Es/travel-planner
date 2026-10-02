@@ -74,25 +74,26 @@ export default function LeftPanel({
 
   return (
     <aside aria-label="Trips" className={card + " p-5 " + positionClass}>
-      <div className="mb-1 flex items-start justify-between gap-1">
+      <header className="flex shrink-0 items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="section-label mb-2">Your itinerary</p>
-          <h2 className="panel-heading break-words">{teamName}</h2>
+          <p className="section-label">Your itinerary</p>
+          <h2 className="panel-heading mt-1.5 break-words">{teamName}</h2>
         </div>
         <Button
           variant="ghost"
           size="icon"
+          className="-mr-2 -mt-2"
           onClick={showClose ? onClose : onOpenSettings}
           aria-label={showClose ? "Close trips" : "Trip settings"}
         >
           {showClose ? <X /> : <Settings2 />}
         </Button>
-      </div>
+      </header>
       {showClose && (
         <Button
           variant="ghost"
           size="sm"
-          className="mt-2 self-start"
+          className="-ml-3 mt-2 self-start"
           onClick={onOpenSettings}
         >
           <Settings2 />
@@ -115,14 +116,14 @@ export default function LeftPanel({
       )}
       <nav
         aria-label="Trip stops"
-        className="-mx-2 mt-5 min-h-0 space-y-1 overflow-y-auto px-1"
+        className="-mx-2 mt-5 min-h-0 space-y-0.5 overflow-y-auto overscroll-contain"
       >
         {trips.map((t) => (
           <div
             key={t.id}
             className={
-              "relative isolate flex items-center rounded-xl transition-colors " +
-              (selectedTripId === t.id ? "" : "hover:bg-hover")
+              "list-row group relative isolate flex items-center gap-1 pr-1 " +
+              (selectedTripId === t.id ? "hover:bg-transparent" : "")
             }
           >
             {selectedTripId === t.id && (
@@ -134,18 +135,18 @@ export default function LeftPanel({
             <button
               onClick={() => onSelectTrip(t)}
               aria-current={selectedTripId === t.id ? "true" : undefined}
-              className="flex min-w-0 flex-1 items-center gap-3 rounded-xl py-3 pl-2 text-left"
+              className="row-main flex min-w-0 flex-1 items-center gap-3 rounded-lg py-2 pl-2 text-left"
             >
               {t.photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={t.photoUrl}
                   alt=""
-                  className="size-8 shrink-0 rounded-lg object-cover"
+                  className="size-9 shrink-0 rounded-lg object-cover"
                 />
               ) : (
                 <span
-                  className="flex size-8 shrink-0 items-center justify-center rounded-lg"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-lg"
                   style={{
                     background: stopColor(t.color).soft,
                     color: stopColor(t.color).ink,
@@ -158,7 +159,7 @@ export default function LeftPanel({
                 <span className="block truncate text-sm font-medium text-ink">
                   {t.label}
                 </span>
-                <span className="mt-1 flex items-center gap-2 text-xs tabular-nums text-muted">
+                <span className="mt-0.5 flex items-center gap-1.5 text-xs tabular-nums text-muted">
                   {fmtRange(t.start, t.end)}
                   {t.stay.some(isScheduled) && (
                     <Hotel size={12} role="img" aria-label="Stay scheduled" />
@@ -175,6 +176,10 @@ export default function LeftPanel({
                   variant="ghost"
                   size="icon"
                   aria-label={`Options for ${t.label}`}
+                  className={
+                    "focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100 [@media(hover:none)]:opacity-100 " +
+                    (selectedTripId === t.id ? "opacity-100" : "opacity-0")
+                  }
                 >
                   <MoreHorizontal />
                 </Button>
@@ -205,41 +210,34 @@ export default function LeftPanel({
         variant="outline"
         onClick={onAddTrip}
         disabled={addingTrip}
-        className="mt-4 w-full justify-start"
+        className="mb-6 mt-3 w-full justify-start"
       >
         {addingTrip ? <Loader2 className="animate-spin" /> : <Plus />}
         {addingTrip ? "Adding stop…" : "Add stop"}
       </Button>
-      <footer className="mt-auto shrink-0 pt-6">
-        <div className="mb-4 text-xs leading-relaxed tabular-nums text-muted">
-          <p>{todayLabel}</p>
-          <p>
-            {trips.length} {trips.length === 1 ? "stop" : "stops"} planned
-          </p>
-        </div>
-        <div className="flex items-center justify-between gap-2 border-t border-line-soft pt-4">
-          <div className="flex min-w-0 items-center gap-2">
-            <span
-              aria-hidden="true"
-              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-ink"
-            >
-              {initials(userName)}
-            </span>
-            <span className="truncate text-xs font-medium text-ink-soft">
+      <footer className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-line-soft pt-4">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span
+            aria-hidden="true"
+            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-ink"
+          >
+            {initials(userName)}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-medium text-ink-soft">
               {userName}
             </span>
-          </div>
-          <form action={logout}>
-            <Button
-              type="submit"
-              variant="ghost"
-              size="sm"
-              className="px-2 text-xs"
-            >
-              Sign out
-            </Button>
-          </form>
+            <span className="block truncate text-xs tabular-nums text-muted">
+              {trips.length} {trips.length === 1 ? "stop" : "stops"} ·{" "}
+              {todayLabel}
+            </span>
+          </span>
         </div>
+        <form action={logout} className="shrink-0">
+          <Button type="submit" variant="ghost" size="sm" className="-mr-2">
+            Sign out
+          </Button>
+        </form>
       </footer>
     </aside>
   );
