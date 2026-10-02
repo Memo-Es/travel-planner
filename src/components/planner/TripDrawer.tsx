@@ -27,7 +27,7 @@ import {
 import { formatCost, formatTotal } from "@/lib/currency";
 import { attachmentHref } from "@/lib/uploads";
 import BookingForm from "@/components/planner/BookingForm";
-import { STOP_COLORS } from "@/lib/theme";
+import { STOP_COLORS, stopColor } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -274,7 +274,7 @@ export default function TripDrawer({
             <legend className="field-label mb-2">Calendar color</legend>
             <div className="flex flex-wrap gap-1">
               {STOP_COLORS.map((c) => {
-                const active = (trip.color ?? "violet") === c.id;
+                const active = stopColor(trip.color).id === c.id;
                 return (
                   <button
                     key={c.id}

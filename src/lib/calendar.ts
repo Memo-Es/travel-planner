@@ -74,8 +74,8 @@ export function buildWeeks(
       const inMonth = d.getUTCMonth() === m;
       days.push({
         label: d.getUTCDate() === 1 && cellW > 52 ? "1 " + MONTHS_SHORT[d.getUTCMonth()] : String(d.getUTCDate()),
-        bg: inMonth ? "#ffffff" : "#fbfaf9",
-        color: cur === opts.todayMs ? ACCENT_INK : inMonth ? "#4b4843" : "#c3bfb9",
+        bg: inMonth ? "#ffffff" : "#F8F7F6",
+        color: cur === opts.todayMs ? ACCENT_INK : inMonth ? "#484442" : "#B5AEAB",
         weight: cur === opts.todayMs ? 700 : 400,
       });
     }
@@ -149,8 +149,8 @@ export function buildWeeks(
           boxSizing: "border-box",
           fontSize: 11.5,
           lineHeight: 1,
-          color: e.isNote ? "#7c7873" : c ? c.ink : ACCENT_INK,
-          background: e.isNote ? "#f4f3f1" : c ? c.soft : ACCENT_SOFT,
+          color: e.isNote ? "#635C57" : c ? c.ink : ACCENT_INK,
+          background: e.isNote ? "#F6F5F5" : c ? c.soft : ACCENT_SOFT,
           borderRadius: contL ? "0 999px 999px 0" : contR ? "999px 0 0 999px" : 999,
           opacity: contL ? 0.72 : 1,
           pointerEvents: e.isNote ? "none" : "auto",

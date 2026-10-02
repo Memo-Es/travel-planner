@@ -3,17 +3,18 @@ import type { Prisma } from "@prisma/client";
 /** The Barcelona → Copenhagen demo itinerary from the original Claude Design
  * prototype. Seeded onto every new team so first login isn't empty. */
 export function demoTrips(teamId: string): Prisma.TripCreateManyInput[] {
-  const rows: { id: string; label: string; start: string; end: string }[] = [
-    { id: "bcn", label: "Barcelona", start: "2026-11-16", end: "2026-11-19" },
-    { id: "par", label: "Paris", start: "2026-11-19", end: "2026-11-22" },
-    { id: "bel", label: "Belgium", start: "2026-11-22", end: "2026-11-24" },
-    { id: "ams", label: "Amsterdam", start: "2026-11-24", end: "2026-11-28" },
-    { id: "ham", label: "Hamburg", start: "2026-11-27", end: "2026-11-30" },
-    { id: "cph", label: "Copenhagen", start: "2026-11-30", end: "2026-12-04" },
+  const rows: { id: string; label: string; start: string; end: string; color: string }[] = [
+    { id: "bcn", label: "Barcelona", start: "2026-11-16", end: "2026-11-19", color: "clay" },
+    { id: "par", label: "Paris", start: "2026-11-19", end: "2026-11-22", color: "lavender" },
+    { id: "bel", label: "Belgium", start: "2026-11-22", end: "2026-11-24", color: "khaki" },
+    { id: "ams", label: "Amsterdam", start: "2026-11-24", end: "2026-11-28", color: "sage" },
+    { id: "ham", label: "Hamburg", start: "2026-11-27", end: "2026-11-30", color: "stone" },
+    { id: "cph", label: "Copenhagen", start: "2026-11-30", end: "2026-12-04", color: "lavender" },
   ];
   return rows.map((r, i) => ({
     teamId,
     label: r.label,
+    color: r.color,
     start: new Date(r.start),
     end: new Date(r.end),
     order: i,

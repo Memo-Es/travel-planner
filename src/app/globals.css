@@ -4,16 +4,17 @@
 
 @layer base {
   :root {
-    --background: 40 10% 94%;
-    --foreground: 40 6% 10%;
-    --primary: 255 57% 51%;
+    /* Chatelle 700 primary, Mine Shaft neutrals, muted brick for danger. */
+    --background: 30 27% 94%;
+    --foreground: 30 6% 14%;
+    --primary: 268 15% 50%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 40 12% 95%;
-    --secondary-foreground: 40 6% 19%;
-    --destructive: 0 65% 43%;
-    --border: 40 11% 88%;
-    --input: 40 10% 83%;
-    --ring: 255 57% 51%;
+    --secondary: 0 5% 96%;
+    --secondary-foreground: 20 4% 27%;
+    --destructive: 6 48% 43%;
+    --border: 20 6% 90%;
+    --input: 26 8% 82%;
+    --ring: 268 15% 50%;
     --radius: 0.625rem;
   }
 
@@ -44,11 +45,11 @@
     outline-offset: 3px;
   }
   ::selection {
-    background: oklch(0.93 0.045 288);
-    color: #1c1b19;
+    background: #E8E6EE;
+    color: #262422;
   }
   ::placeholder {
-    color: #77716a;
+    color: #746B66;
   }
   a {
     @apply text-accent-ink;
@@ -100,7 +101,7 @@
   @media (hover: hover) and (prefers-reduced-motion: no-preference) {
     .booking-card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px -10px rgb(28 27 25 / 0.18);
+      box-shadow: 0 8px 20px -10px rgb(38 36 34 / 0.16);
     }
   }
   @media (prefers-reduced-motion: no-preference) {
