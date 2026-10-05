@@ -3,6 +3,8 @@
 import type * as React from "react";
 import { Hotel, Plane } from "lucide-react";
 import type { CalendarWeek } from "@/lib/calendar";
+import type { Plan } from "@/lib/itinerary";
+import { stopColor } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 const WEEKDAYS_FULL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -36,8 +38,11 @@ export default function CalendarView({
   onBarPointerDown,
   onOpenTrip,
   onResizeStart,
+  plans,
 }: {
   weeks: CalendarWeek[];
+  /** Plans by "YYYY-MM-DD", shown as a one-line preview in each day. */
+  plans: Map<string, Plan[]>;
   width: number;
   onOpenTrip: (tripId: string) => void;
   onBarPointerDown: (tripId: string, clientX: number) => void;
@@ -67,20 +72,54 @@ export default function CalendarView({
 
       {weeks.map((week, wi) => (
         <div key={wi} style={week.rowStyle}>
-          {week.days.map((day, di) => (
-            <div
-              key={di}
-              className="box-border min-w-0 border-b border-r border-line-soft px-1.5 pt-1"
-              style={{ background: day.bg }}
-            >
+          {week.days.map((day, di) => {
+            const dayPlans = plans.get(day.date) ?? [];
+            const first = dayPlans[0];
+            return (
               <div
-                className="whitespace-nowrap text-right text-xs tabular-nums"
-                style={{ color: day.color, fontWeight: day.weight }}
+                key={di}
+                className="box-border flex min-w-0 flex-col border-b border-r border-line-soft px-1.5 pt-1"
+                style={{ background: day.bg }}
               >
-                {day.label}
+                <div
+                  className="whitespace-nowrap text-right text-xs tabular-nums"
+                  style={{ color: day.color, fontWeight: day.weight }}
+                >
+                  {day.label}
+                </div>
+                {first && (
+                  <button
+                    type="button"
+                    onClick={() => onOpenTrip(first.trip.id)}
+                    title={dayPlans
+                      .map((p) => `${p.item.time ?? "—"}  ${p.item.t}`)
+                      .join("\n")}
+                    aria-label={`${dayPlans.length} ${dayPlans.length === 1 ? "plan" : "plans"}: ${dayPlans
+                      .map((p) => (p.item.time ? `${p.item.time} ${p.item.t}` : p.item.t))
+                      .join(", ")}`}
+                    className="relative z-bar-focus -mx-1 mb-1 mt-auto flex min-w-0 items-center gap-1 rounded px-1 py-0.5 text-left text-[11px] leading-4 text-ink-soft transition-colors duration-150 hover:bg-secondary"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="size-1.5 shrink-0 rounded-full"
+                      style={{ background: stopColor(first.trip.color).base }}
+                    />
+                    {first.item.time && (
+                      <span className="shrink-0 font-medium tabular-nums">
+                        {first.item.time}
+                      </span>
+                    )}
+                    <span className="min-w-0 truncate">{first.item.t}</span>
+                    {dayPlans.length > 1 && (
+                      <span className="shrink-0 text-muted">
+                        +{dayPlans.length - 1}
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
           <div className="absolute inset-0 pointer-events-none">
             {week.bars.map((bar) => (
               <Bar

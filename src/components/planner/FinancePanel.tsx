@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Paperclip, Plus, X } from "lucide-react";
 import { AnimatedNumber } from "@/components/motion/primitives";
 import { Button } from "@/components/ui/button";
@@ -14,9 +15,9 @@ const SECTION_SWATCH = {
   activities: "bg-accent-muted",
 };
 const EMPTY_LABEL = {
-  stay: "No stays yet",
-  transport: "No transport yet",
-  activities: "No activities yet",
+  stay: "No stay costs yet",
+  transport: "No transport costs yet",
+  activities: "No activity costs yet",
 };
 
 type Row = { trip: TripData; item: ItemData };
@@ -25,6 +26,7 @@ export default function FinancePanel({
   card,
   overlay,
   isMobile,
+  tabs,
   trips,
   currency,
   total,
@@ -37,6 +39,8 @@ export default function FinancePanel({
   card: string;
   overlay: boolean;
   isMobile: boolean;
+  /** Tabs switching between the right column's views. */
+  tabs?: ReactNode;
   trips: TripData[];
   currency: string;
   total: number;
@@ -59,6 +63,8 @@ export default function FinancePanel({
     return {
       ...sec,
       rows,
+      // Plans without a cost live in the itinerary; money stays here.
+      costed: rows.filter((r) => r.item.costAmount !== null),
       total: sum,
       share: total > 0 ? Math.round((sum / total) * 100) : 0,
     };
@@ -71,6 +77,7 @@ export default function FinancePanel({
 
   return (
     <aside aria-label="Finances" className={card + " p-5 " + positionClass}>
+      {tabs && <div className="mb-5 shrink-0">{tabs}</div>}
       <header className="flex shrink-0 items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="section-label">Finances</p>
@@ -137,18 +144,18 @@ export default function FinancePanel({
               >
                 {g.name}
                 <span className="text-xs font-normal tabular-nums text-muted">
-                  {g.rows.length}
+                  {g.costed.length}
                 </span>
               </h3>
               <span className="shrink-0 text-sm font-semibold tabular-nums text-ink">
                 {money(g.total)}
               </span>
             </div>
-            {g.rows.length === 0 ? (
+            {g.costed.length === 0 ? (
               <p className="mt-2 text-xs text-muted">{EMPTY_LABEL[g.key]}</p>
             ) : (
               <ul className="-mx-2 mt-1.5">
-                {g.rows.map(({ trip, item }) => (
+                {g.costed.map(({ trip, item }) => (
                   <li key={item.id}>
                     <button
                       type="button"
@@ -175,15 +182,9 @@ export default function FinancePanel({
                           )}
                         </span>
                       </span>
-                      {item.costAmount === null ? (
-                        <span className="shrink-0 text-xs text-muted">
-                          No cost
-                        </span>
-                      ) : (
-                        <span className="shrink-0 text-sm tabular-nums text-ink">
-                          {money(item.costAmount)}
-                        </span>
-                      )}
+                      <span className="shrink-0 text-sm tabular-nums text-ink">
+                        {money(item.costAmount!)}
+                      </span>
                     </button>
                   </li>
                 ))}

@@ -17,6 +17,7 @@ import BookingForm, {
 import type { ItemSectionKey, TripData } from "@/lib/types";
 import { SECTION_DEFS } from "@/lib/tripSections";
 import { fmtRange } from "@/lib/dates";
+import { PLANNED_SECTIONS, tripDays } from "@/lib/itinerary";
 
 export type ExpenseFormState = BookingFormState & {
   key: ItemSectionKey;
@@ -26,6 +27,8 @@ export type ExpenseFormState = BookingFormState & {
 export default function ExpenseDialog({
   trips,
   defaultTripId,
+  defaultKey = "stay",
+  defaultDate = "",
   currency,
   isMobile,
   error,
@@ -36,6 +39,9 @@ export default function ExpenseDialog({
 }: {
   trips: TripData[];
   defaultTripId: string;
+  defaultKey?: ItemSectionKey;
+  /** Pre-selects a day, e.g. when adding a plan from the itinerary. */
+  defaultDate?: string;
   currency: string;
   isMobile: boolean;
   error: string | null;
@@ -46,10 +52,17 @@ export default function ExpenseDialog({
 }) {
   const [form, setForm] = useState<ExpenseFormState>({
     ...EMPTY_BOOKING_FORM,
-    key: "stay",
+    key: defaultKey,
     tripId: defaultTripId,
+    date: defaultDate,
   });
   const section = SECTION_DEFS.find((s) => s.key === form.key)!;
+  const selectedTrip = trips.find((t) => t.id === form.tripId);
+  const days =
+    selectedTrip && PLANNED_SECTIONS.includes(form.key)
+      ? tripDays(selectedTrip)
+      : undefined;
+  const isPlan = defaultKey !== "stay" || !!defaultDate;
 
   return (
     <Dialog
@@ -64,7 +77,7 @@ export default function ExpenseDialog({
       >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line-soft pb-4">
           <div>
-            <DialogTitle>Add expense</DialogTitle>
+            <DialogTitle>{isPlan ? "Add plan" : "Add expense"}</DialogTitle>
             <DialogDescription id="expense-description" className="mt-1">
               It&apos;s saved as a booking on the stop you choose.
             </DialogDescription>
@@ -75,7 +88,7 @@ export default function ExpenseDialog({
             className="-mr-2 -mt-2"
             onClick={onClose}
             disabled={saving}
-            aria-label="Close add expense"
+            aria-label={isPlan ? "Close add plan" : "Close add expense"}
           >
             <X />
           </Button>
@@ -90,11 +103,14 @@ export default function ExpenseDialog({
             error={error}
             onError={onError}
             saving={saving}
-            onSave={() => onSave(form)}
+            onSave={() =>
+              onSave(days ? form : { ...form, date: "", time: "" })
+            }
             onCancel={onClose}
             currency={currency}
             placeholder={section.placeholder}
-            submitLabel="Add expense"
+            submitLabel={isPlan ? "Add plan" : "Add expense"}
+            days={days}
             autoFocus={false}
             framed={false}
             before={
@@ -122,9 +138,18 @@ export default function ExpenseDialog({
                   <span className="field-label">Stop</span>
                   <NativeSelect
                     value={form.tripId}
-                    onChange={(e) =>
-                      setForm({ ...form, tripId: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const next = trips.find((t) => t.id === e.target.value);
+                      // A day from the previous stop wouldn't fit this one.
+                      const keepDay =
+                        next && tripDays(next).includes(form.date);
+                      setForm({
+                        ...form,
+                        tripId: e.target.value,
+                        date: keepDay ? form.date : "",
+                        time: keepDay ? form.time : "",
+                      });
+                    }}
                   >
                     {trips.map((t) => (
                       <option key={t.id} value={t.id}>

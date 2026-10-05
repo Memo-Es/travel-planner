@@ -101,15 +101,32 @@ const itemSchema = z.object({
     .finite()
     .max(10_000_000)
     .nullable(),
+  date: dateStringSchema.nullable(),
+  time: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time")
+    .nullable(),
 });
+
+type ItemInput = z.input<typeof itemSchema>;
+
+/** A time only makes sense on a day, so a time without a date is dropped. */
+function toItemData(input: ItemInput) {
+  const { date, time, ...rest } = itemSchema.parse(input);
+  return {
+    ...rest,
+    date: date ? new Date(date) : null,
+    time: date ? time : null,
+  };
+}
 
 export async function addItem(
   tripId: string,
   section: "STAY" | "TRANSPORT" | "ACTIVITIES",
-  input: { title: string; url: string; costAmount: number | null },
+  input: ItemInput,
 ) {
   await requireTripAccess(tripId);
-  const parsed = itemSchema.parse(input);
+  const parsed = toItemData(input);
   const count = await prisma.tripItem.count({ where: { tripId, section } });
   const item = await prisma.tripItem.create({
     data: { tripId, section, order: count, ...parsed },
@@ -119,9 +136,9 @@ export async function addItem(
   return item.id;
 }
 
-export async function updateItem(itemId: string, input: { title: string; url: string; costAmount: number | null }) {
+export async function updateItem(itemId: string, input: ItemInput) {
   await requireItemAccess(itemId);
-  const parsed = itemSchema.parse(input);
+  const parsed = toItemData(input);
   await prisma.tripItem.update({ where: { id: itemId }, data: parsed });
   revalidatePath("/");
 }

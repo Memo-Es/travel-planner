@@ -92,7 +92,17 @@ function toItem(i: {
   title: string;
   url: string;
   costAmount: number | null;
+  date: Date | null;
+  time: string | null;
   attachments: AttachmentData[];
 }): ItemData {
-  return { id: i.id, t: i.title, url: i.url, costAmount: i.costAmount, attachments: i.attachments };
+  return {
+    id: i.id,
+    t: i.title,
+    url: i.url,
+    costAmount: i.costAmount,
+    date: i.date ? i.date.toISOString().slice(0, 10) : null,
+    time: i.time,
+    attachments: i.attachments,
+  };
 }
