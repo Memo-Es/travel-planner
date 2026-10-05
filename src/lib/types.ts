@@ -9,6 +9,10 @@ export type ItemData = {
   t: string;
   url: string;
   costAmount: number | null;
+  /** Day the plan happens, "YYYY-MM-DD", if it has one. */
+  date: string | null;
+  /** Local start time, "HH:mm", if it has one. */
+  time: string | null;
   attachments: AttachmentData[];
 };
 

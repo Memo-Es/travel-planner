@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { ACCENT, ACCENT_INK, ACCENT_SOFT, stopColor } from "@/lib/theme";
-import { DAY, MONTHS_SHORT, ms } from "@/lib/dates";
+import { DAY, MONTHS_SHORT, ms, toDateInput } from "@/lib/dates";
 
 export type CalendarEvent = {
   id: string;
@@ -14,6 +14,8 @@ export type CalendarEvent = {
 };
 
 export type DayCell = {
+  /** "YYYY-MM-DD" */
+  date: string;
   label: string;
   bg: string;
   color: string;
@@ -41,12 +43,21 @@ export type CalendarWeek = {
   rowStyle: CSSProperties;
 };
 
+/** Height reserved under the bars for a day's plan preview. */
+const PREVIEW_H = 22;
+
 /** Direct port of the Claude Design prototype's lane-packing algorithm, so trip
  * bars keep the exact same overlap-free layout at any viewport width. */
 export function buildWeeks(
   cursor: { y: number; m: number },
   events: CalendarEvent[],
-  opts: { startWeekOn: "Sunday" | "Monday"; mainWidth: number; todayMs: number },
+  opts: {
+    startWeekOn: "Sunday" | "Monday";
+    mainWidth: number;
+    todayMs: number;
+    /** Days with plans get room under the bars for a preview line. */
+    plannedDates?: Set<string>;
+  },
 ): CalendarWeek[] {
   const { y, m } = cursor;
   const startOn = opts.startWeekOn === "Monday" ? 1 : 0;
@@ -73,6 +84,7 @@ export function buildWeeks(
       const d = new Date(cur);
       const inMonth = d.getUTCMonth() === m;
       days.push({
+        date: toDateInput(cur),
         label: d.getUTCDate() === 1 && cellW > 52 ? "1 " + MONTHS_SHORT[d.getUTCMonth()] : String(d.getUTCDate()),
         bg: inMonth ? "#ffffff" : "#fafaf9", // stone-50
         color: cur === opts.todayMs ? ACCENT_INK : inMonth ? "#44403c" : "#a8a29e", // stone-700 / 400
@@ -165,7 +177,11 @@ export function buildWeeks(
       rowStyle: {
         position: "relative",
         flex: "1 1 auto",
-        minHeight: band + Math.max(1, lanes.length) * pitch + 8,
+        minHeight:
+          band +
+          Math.max(1, lanes.length) * pitch +
+          8 +
+          (days.some((d) => opts.plannedDates?.has(d.date)) ? PREVIEW_H : 0),
         display: "grid",
         gridTemplateColumns: "repeat(7,minmax(0,1fr))",
       },

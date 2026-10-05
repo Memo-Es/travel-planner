@@ -89,6 +89,10 @@ model TripItem {
   title       String
   url         String       @default("")
   costAmount  Float?
+  // When a plan happens: a calendar day at the destination, plus an optional
+  // local "HH:mm" time. Kept as wall-clock values so they never shift.
+  date        DateTime?    @db.Date
+  time        String?
   order       Int          @default(0)
   attachments Attachment[]
 

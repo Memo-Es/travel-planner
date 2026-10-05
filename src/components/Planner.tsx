@@ -21,6 +21,7 @@ import {
 import { MONTHS_LONG, DAY, ms, toDateInput } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
 import { isScheduled, sectionTotal } from "@/lib/tripSections";
+import { defaultTripId, plansByDate } from "@/lib/itinerary";
 import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
 import {
   createTrip,
@@ -53,6 +54,8 @@ import {
 import LeftPanel from "@/components/planner/LeftPanel";
 import LeftRail from "@/components/planner/LeftRail";
 import FinancePanel from "@/components/planner/FinancePanel";
+import ItineraryPanel from "@/components/planner/ItineraryPanel";
+import RightTabs, { type RightView } from "@/components/planner/RightTabs";
 import ExpenseDialog, {
   type ExpenseFormState,
 } from "@/components/planner/ExpenseDialog";
@@ -70,7 +73,7 @@ import Toast from "@/components/planner/Toast";
 export type Editing = { key: ItemSectionKey; itemId: string | null } | null;
 export type FormState = BookingFormState;
 export type Overlay = "links" | "finances" | null;
-export type MobileTab = "links" | "calendar" | "finances";
+export type MobileTab = "links" | "calendar" | "itinerary" | "finances";
 
 const SECTION_ENUM = {
   stay: "STAY",
@@ -161,6 +164,13 @@ export default function Planner({
   const [notification, setNotification] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
+  const [expenseDefaults, setExpenseDefaults] = useState<{
+    tripId: string | null;
+    key: ItemSectionKey;
+    date: string;
+  }>({ tripId: null, key: "stay", date: "" });
+  const [rightView, setRightView] = useState<RightView>("itinerary");
+  const [itineraryTripId, setItineraryTripId] = useState<string | null>(null);
   const [expenseError, setExpenseError] = useState<string | null>(null);
   const [expenseSaving, setExpenseSaving] = useState(false);
   const [dragging, setDragging] = useState<DragState>(null);
@@ -198,6 +208,7 @@ export default function Planner({
   useEffect(() => {
     if (pendingOpenTripId && trips.some((t) => t.id === pendingOpenTripId)) {
       setOpenTripId(pendingOpenTripId);
+      setItineraryTripId(pendingOpenTripId);
       setPendingOpenTripId(null);
     }
   }, [trips, pendingOpenTripId]);
@@ -214,6 +225,17 @@ export default function Planner({
   const width = mainWidth(vw, mode, LEFT_W, RIGHT_W, RAIL_W);
 
   const trip = trips.find((t) => t.id === openTripId) ?? null;
+  // The itinerary follows the last stop you opened, falling back to the stop
+  // happening now (or next).
+  const itineraryTrip = trips.some((t) => t.id === itineraryTripId)
+    ? itineraryTripId
+    : defaultTripId(trips, todayMs);
+  const plans = useMemo(() => plansByDate(trips), [trips]);
+
+  function openTrip(tripId: string) {
+    setOpenTripId(tripId);
+    setItineraryTripId(tripId);
+  }
 
   const events: CalendarEvent[] = useMemo(() => {
     const noteEvents: CalendarEvent[] = HOLIDAY_NOTES.map((n) => ({
@@ -248,14 +270,16 @@ export default function Planner({
         startWeekOn: "Sunday",
         mainWidth: width,
         todayMs,
+        plannedDates: new Set(plans.keys()),
       }),
-    [cursor, events, width, todayMs],
+    [cursor, events, width, todayMs, plans],
   );
 
   function jumpToTrip(t: TripData, openDrawer = true) {
     const [y, m] = t.start.split("-").map(Number);
     setCursor({ y, m: m - 1 });
     setOverlay(null);
+    setItineraryTripId(t.id);
     if (openDrawer) setOpenTripId(t.id);
     if (isMobile) setMobileTab("calendar");
   }
@@ -340,6 +364,8 @@ export default function Planner({
       title: f.t.trim(),
       url: f.url.trim(),
       costAmount: parseCost(f.cost),
+      date: f.date || null,
+      time: f.date && f.time ? f.time : null,
     };
     let itemId = target.itemId;
     if (itemId === null)
@@ -415,9 +441,32 @@ export default function Planner({
       t: item.t,
       url: item.url,
       cost: item.costAmount === null ? "" : String(item.costAmount),
+      date: item.date ?? "",
+      time: item.time ?? "",
       files: [],
       removeIds: [],
     });
+  }
+
+  function openExpense(defaults: {
+    tripId?: string | null;
+    key?: ItemSectionKey;
+    date?: string;
+  } = {}) {
+    setExpenseDefaults({
+      tripId: defaults.tripId ?? null,
+      key: defaults.key ?? "stay",
+      date: defaults.date ?? "",
+    });
+    setExpenseError(null);
+    setExpenseOpen(true);
+  }
+
+  /** Opens whichever surface holds the right column at this width. */
+  function openRightView(view: RightView) {
+    setRightView(view);
+    if (isMobile) setMobileTab(view);
+    else if (isCompact) setOverlay("finances");
   }
 
   function onFormChange(f: FormState) {
@@ -573,7 +622,7 @@ export default function Planner({
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       if (!hasMoved) {
-        setOpenTripId(tripId);
+        openTrip(tripId);
         return;
       }
       document.body.style.userSelect = "";
@@ -615,8 +664,17 @@ export default function Planner({
     ? mobileTab === "links"
     : mode === "full" || activeOverlay === "links";
   const showRightPanel = isMobile
-    ? mobileTab === "finances"
+    ? mobileTab === "finances" || mobileTab === "itinerary"
     : mode === "full" || activeOverlay === "finances";
+  const shownRightView: RightView = isMobile
+    ? mobileTab === "itinerary"
+      ? "itinerary"
+      : "finances"
+    : rightView;
+  // On mobile the bottom tab bar already switches between the two views.
+  const rightTabs = isMobile ? undefined : (
+    <RightTabs view={rightView} onChange={setRightView} />
+  );
   const showCalendar = isMobile ? mobileTab === "calendar" : true;
 
   const now = new Date();
@@ -769,25 +827,48 @@ export default function Planner({
             weeks={weeks}
             width={width}
             onBarPointerDown={onBarPointerDown}
-            onOpenTrip={setOpenTripId}
+            onOpenTrip={openTrip}
             onResizeStart={onResizeStart}
+            plans={plans}
           />
         </main>
       )}
 
-      {showRightPanel && (
+      {showRightPanel && shownRightView === "itinerary" && (
+        <ItineraryPanel
+          card={CARD}
+          overlay={activeOverlay === "finances"}
+          isMobile={isMobile}
+          tabs={
+            rightTabs ?? (
+              <h2 className="panel-heading">Itinerary</h2>
+            )
+          }
+          trips={trips}
+          tripId={itineraryTrip}
+          currency={teamCurrency}
+          todayDate={toDateInput(todayMs)}
+          onSelectTrip={setItineraryTripId}
+          onOpenItem={openExpenseFromPanel}
+          onAddPlan={(tripId, date) =>
+            openExpense({ tripId, key: "activities", date: date ?? "" })
+          }
+          onClose={closeOverlay}
+          showClose={!!activeOverlay}
+        />
+      )}
+
+      {showRightPanel && shownRightView === "finances" && (
         <FinancePanel
           card={CARD}
           overlay={activeOverlay === "finances"}
           isMobile={isMobile}
+          tabs={rightTabs}
           trips={trips}
           currency={teamCurrency}
           total={tripTotal}
           onOpenItem={openExpenseFromPanel}
-          onAddExpense={() => {
-            setExpenseError(null);
-            setExpenseOpen(true);
-          }}
+          onAddExpense={() => openExpense()}
           canAddExpense={trips.length > 0}
           onClose={closeOverlay}
           showClose={!!activeOverlay}
@@ -798,7 +879,8 @@ export default function Planner({
         <RightRail
           total={tripTotal}
           currency={teamCurrency}
-          onOpenFinances={() => setOverlay("finances")}
+          onOpenFinances={() => openRightView("finances")}
+          onOpenItinerary={() => openRightView("itinerary")}
         />
       )}
 
@@ -835,7 +917,11 @@ export default function Planner({
           <ExpenseDialog
             key="expense"
             trips={trips}
-            defaultTripId={openTripId ?? trips[0]?.id ?? ""}
+            defaultTripId={
+              expenseDefaults.tripId ?? openTripId ?? trips[0]?.id ?? ""
+            }
+            defaultKey={expenseDefaults.key}
+            defaultDate={expenseDefaults.date}
             currency={teamCurrency}
             isMobile={isMobile}
             error={expenseError}

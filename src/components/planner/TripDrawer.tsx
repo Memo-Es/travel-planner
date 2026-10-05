@@ -15,6 +15,7 @@ import {
   MapPin,
   Check,
   FileText,
+  Clock,
 } from "lucide-react";
 import type { TripData, ItemSectionKey, ItemData } from "@/lib/types";
 import { fmtRange, nightsBetween } from "@/lib/dates";
@@ -25,6 +26,13 @@ import {
   hostFromUrl,
 } from "@/lib/tripSections";
 import { formatCost, formatTotal } from "@/lib/currency";
+import {
+  PLANNED_SECTIONS,
+  fmtDay,
+  freeParts,
+  itineraryFor,
+  tripDays,
+} from "@/lib/itinerary";
 import { attachmentHref } from "@/lib/uploads";
 import BookingForm from "@/components/planner/BookingForm";
 import { STOP_COLORS, stopColor } from "@/lib/theme";
@@ -50,6 +58,8 @@ function editState(item: ItemData): FormState {
     t: item.t,
     url: item.url,
     cost: item.costAmount === null ? "" : String(item.costAmount),
+    date: item.date ?? "",
+    time: item.time ?? "",
     files: [],
     removeIds: [],
   };
@@ -335,8 +345,129 @@ export default function TripDrawer({
                 placeholder={sec.placeholder}
                 submitLabel={label}
                 existing={existing}
+                days={
+                  PLANNED_SECTIONS.includes(sec.key) ? tripDays(trip) : undefined
+                }
               />
             );
+            const renderCard = (item: ItemData) => (
+              <article
+                  key={item.id}
+                  className="booking-card rounded-xl border border-line bg-white py-3 pl-4 pr-2 shadow-panel hover:border-input"
+                >
+                  <div className="flex items-start gap-3">
+                    <button
+                      className="min-w-0 flex-1 text-pretty rounded text-left text-sm font-medium leading-5 text-ink"
+                      onClick={() =>
+                        onStartEdit(sec.key, item.id, editState(item))
+                      }
+                    >
+                      {item.t}
+                    </button>
+                    {item.costAmount === null ? (
+                      <span className="shrink-0 pt-px text-xs leading-5 text-muted">
+                        No cost
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-sm font-medium leading-5 tabular-nums text-ink">
+                        {formatCost(item.costAmount, currency)}
+                      </span>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="-my-2 size-9"
+                          aria-label={`Options for ${item.t}`}
+                        >
+                          <MoreHorizontal />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onSelect={() =>
+                            onStartEdit(sec.key, item.id, editState(item))
+                          }
+                        >
+                          <Pencil />
+                          Edit booking
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          destructive
+                          onSelect={() => onDeleteItem(item.id)}
+                        >
+                          <Trash2 />
+                          Remove booking
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  {item.date && (sec.key !== "activities" || item.time) && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-xs font-medium tabular-nums text-ink-soft">
+                      <Clock className="size-3.5 shrink-0 text-muted" />
+                      {/* Activities are already grouped under their day. */}
+                      {sec.key === "activities"
+                        ? item.time
+                        : `${fmtDay(item.date)}${item.time ? ` · ${item.time}` : ""}`}
+                    </p>
+                  )}
+                  <div className="mt-2 flex min-w-0 items-center gap-2 pr-2">
+                    <Badge
+                      variant={isScheduled(item) ? "success" : "secondary"}
+                    >
+                      {isScheduled(item) && <Check className="size-3" />}
+                      {isScheduled(item) ? "Scheduled" : "Incomplete"}
+                    </Badge>
+                    {item.url ? (
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex min-w-0 items-center gap-1 rounded text-xs hover:underline"
+                      >
+                        <span className="truncate">
+                          {hostFromUrl(item.url)}
+                        </span>
+                        <ArrowUpRight className="size-3 shrink-0" />
+                        <span className="sr-only"> (opens in a new tab)</span>
+                      </a>
+                    ) : (
+                      <span className="truncate text-xs text-muted">
+                        No booking link
+                      </span>
+                    )}
+                  </div>
+                  {item.attachments.length > 0 && (
+                    <ul className="mt-2 flex flex-wrap gap-1.5 pr-2">
+                      {item.attachments.map((a) => (
+                        <li key={a.id} className="min-w-0 max-w-full">
+                          <a
+                            href={attachmentHref(a.id)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex min-w-0 items-center gap-1.5 rounded-md border border-line bg-secondary px-2 py-1 text-xs text-ink-soft hover:border-input hover:text-ink"
+                          >
+                            <FileText className="size-3.5 shrink-0 text-muted" />
+                            <span className="truncate">{a.name}</span>
+                            <span className="sr-only"> (PDF, opens in a new tab)</span>
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </article>
+            );
+            const card$ = (item: ItemData) =>
+              editing?.itemId === item.id ? (
+                <div key={item.id} className="-mx-1 p-1">
+                  {form$(item.attachments, "Save changes")}
+                </div>
+              ) : (
+                renderCard(item)
+              );
+            // Activities read as a day-by-day plan; other sections stay a list.
+            const byDay = sec.key === "activities" ? itineraryFor(trip) : null;
             return (
               <section
                 key={sec.key}
@@ -360,111 +491,48 @@ export default function TripDrawer({
                   )}
                 </div>
                 <div className="mt-3 space-y-2">
-                  {items.map((item) =>
-                    editing?.itemId === item.id ? (
-                      <div key={item.id} className="-mx-1 p-1">
-                        {form$(item.attachments, "Save changes")}
-                      </div>
-                    ) : (
-                      <article
-                        key={item.id}
-                        className="booking-card rounded-xl border border-line bg-white py-3 pl-4 pr-2 shadow-panel hover:border-input"
-                      >
-                        <div className="flex items-start gap-3">
-                          <button
-                            className="min-w-0 flex-1 text-pretty rounded text-left text-sm font-medium leading-5 text-ink"
-                            onClick={() =>
-                              onStartEdit(sec.key, item.id, editState(item))
-                            }
-                          >
-                            {item.t}
-                          </button>
-                          {item.costAmount === null ? (
-                            <span className="shrink-0 pt-px text-xs leading-5 text-muted">
-                              No cost
-                            </span>
-                          ) : (
-                            <span className="shrink-0 text-sm font-medium leading-5 tabular-nums text-ink">
-                              {formatCost(item.costAmount, currency)}
-                            </span>
-                          )}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="-my-2 size-9"
-                                aria-label={`Options for ${item.t}`}
-                              >
-                                <MoreHorizontal />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onSelect={() =>
-                                  onStartEdit(sec.key, item.id, editState(item))
-                                }
-                              >
-                                <Pencil />
-                                Edit booking
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                destructive
-                                onSelect={() => onDeleteItem(item.id)}
-                              >
-                                <Trash2 />
-                                Remove booking
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                        <div className="mt-2 flex min-w-0 items-center gap-2 pr-2">
-                          <Badge
-                            variant={isScheduled(item) ? "success" : "secondary"}
-                          >
-                            {isScheduled(item) && <Check className="size-3" />}
-                            {isScheduled(item) ? "Scheduled" : "Incomplete"}
-                          </Badge>
-                          {item.url ? (
-                            <a
-                              href={item.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex min-w-0 items-center gap-1 rounded text-xs hover:underline"
-                            >
-                              <span className="truncate">
-                                {hostFromUrl(item.url)}
-                              </span>
-                              <ArrowUpRight className="size-3 shrink-0" />
-                              <span className="sr-only"> (opens in a new tab)</span>
-                            </a>
-                          ) : (
-                            <span className="truncate text-xs text-muted">
-                              No booking link
-                            </span>
+                  {byDay
+                    ? items.length > 0 && (
+                        <div className="space-y-4">
+                          {byDay.days.map(({ date, plans }) => {
+                            const acts = plans.filter(
+                              (p) => p.key === "activities",
+                            );
+                            const free = freeParts(plans);
+                            return (
+                              <div key={date} className="space-y-2">
+                                <h4 className="flex items-baseline justify-between gap-2 text-xs font-medium text-ink-soft">
+                                  {fmtDay(date)}
+                                  {acts.length === 0 ? (
+                                    <span className="font-normal text-muted">
+                                      Free day
+                                    </span>
+                                  ) : (
+                                    free &&
+                                    free.length > 0 && (
+                                      <span className="font-normal text-muted">
+                                        Free {free.join(", ")}
+                                      </span>
+                                    )
+                                  )}
+                                </h4>
+                                {acts.map((p) => card$(p.item))}
+                              </div>
+                            );
+                          })}
+                          {byDay.undated.some((p) => p.key === "activities") && (
+                            <div className="space-y-2">
+                              <h4 className="text-xs font-medium text-ink-soft">
+                                No day yet
+                              </h4>
+                              {byDay.undated
+                                .filter((p) => p.key === "activities")
+                                .map((p) => card$(p.item))}
+                            </div>
                           )}
                         </div>
-                        {item.attachments.length > 0 && (
-                          <ul className="mt-2 flex flex-wrap gap-1.5 pr-2">
-                            {item.attachments.map((a) => (
-                              <li key={a.id} className="min-w-0 max-w-full">
-                                <a
-                                  href={attachmentHref(a.id)}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="flex min-w-0 items-center gap-1.5 rounded-md border border-line bg-secondary px-2 py-1 text-xs text-ink-soft hover:border-input hover:text-ink"
-                                >
-                                  <FileText className="size-3.5 shrink-0 text-muted" />
-                                  <span className="truncate">{a.name}</span>
-                                  <span className="sr-only"> (PDF, opens in a new tab)</span>
-                                </a>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </article>
-                    ),
-                  )}
+                      )
+                    : items.map(card$)}
                   {items.length === 0 && !adding && (
                     <p className="text-pretty rounded-xl border border-dashed border-line px-4 py-3 text-xs leading-relaxed text-muted">
                       No {sec.name.toLowerCase()} added yet.

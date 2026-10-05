@@ -3,7 +3,8 @@
 import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { FileText, Paperclip, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, NativeSelect } from "@/components/ui/input";
+import { fmtDay } from "@/lib/itinerary";
 import type { AttachmentData } from "@/lib/types";
 import { currencySymbol } from "@/lib/currency";
 import {
@@ -17,6 +18,10 @@ export type BookingFormState = {
   t: string;
   url: string;
   cost: string;
+  /** "YYYY-MM-DD" or "" when the plan has no day yet. */
+  date: string;
+  /** "HH:mm" or "" for any time that day. */
+  time: string;
   /** New PDFs to upload on save. */
   files: File[];
   /** Existing attachments staged for removal on save. */
@@ -27,6 +32,8 @@ export const EMPTY_BOOKING_FORM: BookingFormState = {
   t: "",
   url: "",
   cost: "",
+  date: "",
+  time: "",
   files: [],
   removeIds: [],
 };
@@ -46,6 +53,7 @@ export default function BookingForm({
   autoFocus = true,
   framed = true,
   before,
+  days,
 }: {
   form: BookingFormState;
   onChange: (f: BookingFormState) => void;
@@ -63,6 +71,8 @@ export default function BookingForm({
   framed?: boolean;
   /** Extra fields rendered above the name (e.g. category and stop). */
   before?: ReactNode;
+  /** The stop's days; when given, the plan can be placed on a day and time. */
+  days?: string[];
 }) {
   const id = useId();
   const errorId = `${id}-error`;
@@ -125,6 +135,51 @@ export default function BookingForm({
           aria-describedby={error ? errorId : undefined}
         />
       </label>
+      {days && (
+        <div className="grid grid-cols-[minmax(0,1fr)_8rem] gap-3">
+          <label className="block min-w-0 space-y-1.5">
+            <span className="field-label">Day</span>
+            <NativeSelect
+              value={form.date}
+              onChange={(e) =>
+                onChange({
+                  ...form,
+                  date: e.target.value,
+                  time: e.target.value ? form.time : "",
+                })
+              }
+            >
+              <option value="">No day yet</option>
+              {/* Keep a saved day selectable even if the stop moved. */}
+              {form.date && !days.includes(form.date) && (
+                <option value={form.date}>{fmtDay(form.date)}</option>
+              )}
+              {days.map((d) => (
+                <option key={d} value={d}>
+                  {fmtDay(d)}
+                </option>
+              ))}
+            </NativeSelect>
+          </label>
+          <label className="block space-y-1.5">
+            <span className="field-label">Time</span>
+            <Input
+              type="time"
+              value={form.time}
+              disabled={!form.date}
+              onChange={(e) => onChange({ ...form, time: e.target.value })}
+              onKeyDown={handleKeyDown}
+              className="tabular-nums"
+              aria-describedby={!form.date ? `${id}-time-hint` : undefined}
+            />
+            {!form.date && (
+              <span id={`${id}-time-hint`} className="sr-only">
+                Choose a day first
+              </span>
+            )}
+          </label>
+        </div>
+      )}
       <div className="grid grid-cols-[minmax(0,1fr)_8rem] gap-3">
         <label className="block min-w-0 space-y-1.5">
           <span className="field-label">Booking link</span>
