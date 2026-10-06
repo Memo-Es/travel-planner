@@ -16,6 +16,7 @@ export default async function HomePage() {
         items: {
           orderBy: { order: "asc" },
           include: {
+            shares: { select: { userId: true } },
             attachments: {
               orderBy: { createdAt: "asc" },
               select: { id: true, name: true, size: true },
@@ -91,7 +92,10 @@ function toItem(i: {
   id: string;
   title: string;
   url: string;
+  location: string;
   costAmount: number | null;
+  paidById: string | null;
+  shares: { userId: string }[];
   date: Date | null;
   time: string | null;
   attachments: AttachmentData[];
@@ -100,7 +104,10 @@ function toItem(i: {
     id: i.id,
     t: i.title,
     url: i.url,
+    location: i.location,
     costAmount: i.costAmount,
+    paidById: i.paidById,
+    shareIds: i.shares.map((s) => s.userId),
     date: i.date ? i.date.toISOString().slice(0, 10) : null,
     time: i.time,
     attachments: i.attachments,

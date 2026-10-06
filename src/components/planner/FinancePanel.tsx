@@ -1,10 +1,16 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Paperclip, Plus, X } from "lucide-react";
+import { ArrowRight, Paperclip, Plus, X } from "lucide-react";
 import { AnimatedNumber } from "@/components/motion/primitives";
 import { Button } from "@/components/ui/button";
-import type { ItemData, ItemSectionKey, TripData } from "@/lib/types";
+import type {
+  ItemData,
+  ItemSectionKey,
+  MemberOption,
+  TripData,
+} from "@/lib/types";
+import { computeBalance } from "@/lib/balance";
 import { SECTION_DEFS, sectionTotal } from "@/lib/tripSections";
 import { formatTotal } from "@/lib/currency";
 
@@ -28,6 +34,8 @@ export default function FinancePanel({
   isMobile,
   tabs,
   trips,
+  members,
+  currentUserId,
   currency,
   total,
   onOpenItem,
@@ -42,6 +50,8 @@ export default function FinancePanel({
   /** Tabs switching between the right column's views. */
   tabs?: ReactNode;
   trips: TripData[];
+  members: MemberOption[];
+  currentUserId: string;
   currency: string;
   total: number;
   onOpenItem: (trip: TripData, key: ItemSectionKey, itemId: string) => void;
@@ -69,6 +79,13 @@ export default function FinancePanel({
       share: total > 0 ? Math.round((sum / total) * 100) : 0,
     };
   });
+  const balance = computeBalance(trips, members);
+  const nameOf = (id: string) =>
+    members.find((m) => m.id === id)?.name ?? "A former teammate";
+  // Each person only sees the settle-ups that involve them.
+  const myTransfers = balance.transfers.filter(
+    (t) => t.from === currentUserId || t.to === currentUserId,
+  );
   const bookings = groups.reduce((n, g) => n + g.rows.length, 0);
   const uncosted = groups.reduce(
     (n, g) => n + g.rows.filter((r) => r.item.costAmount === null).length,
@@ -101,6 +118,75 @@ export default function FinancePanel({
           </Button>
         )}
       </header>
+
+      {balance.total > 0 && (
+        <section
+          aria-labelledby="my-balance"
+          className="mt-5 shrink-0 rounded-xl border border-line bg-secondary/60 p-3"
+        >
+          <h3 id="my-balance" className="section-label">
+            Your balance
+          </h3>
+          <dl className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted">
+            <div>
+              <dt>Your share</dt>
+              <dd className="mt-0.5 text-sm font-semibold tabular-nums text-ink">
+                {money(balance.spent.get(currentUserId) ?? 0)}
+              </dd>
+            </div>
+            <div>
+              <dt>You paid</dt>
+              <dd className="mt-0.5 text-sm font-semibold tabular-nums text-ink">
+                {money(balance.paid.get(currentUserId) ?? 0)}
+              </dd>
+            </div>
+          </dl>
+          <ul className="mt-3 space-y-1.5 border-t border-line-soft pt-3 text-sm">
+            {myTransfers.length === 0 ? (
+              <li className="text-ink-soft">You&apos;re all settled up.</li>
+            ) : (
+              myTransfers.map((t) => (
+                <li
+                  key={`${t.from}-${t.to}`}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <span className="flex min-w-0 items-center gap-1.5 text-ink-soft">
+                    {t.from === currentUserId ? (
+                      <>
+                        You
+                        <ArrowRight className="size-3.5 shrink-0 text-muted" aria-label="owe" />
+                        <span className="truncate">{nameOf(t.to)}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="truncate">{nameOf(t.from)}</span>
+                        <ArrowRight className="size-3.5 shrink-0 text-muted" aria-label="owes" />
+                        you
+                      </>
+                    )}
+                  </span>
+                  <span
+                    className={
+                      "shrink-0 font-semibold tabular-nums " +
+                      (t.from === currentUserId ? "text-ink" : "text-task-green-ink")
+                    }
+                  >
+                    {money(t.amount)}
+                  </span>
+                </li>
+              ))
+            )}
+          </ul>
+          {balance.unpaidCount > 0 && (
+            <p className="mt-2 text-pretty text-xs text-muted">
+              {balance.unpaidCount}{" "}
+              {balance.unpaidCount === 1 ? "cost has" : "costs have"} no payer
+              yet, so {balance.unpaidCount === 1 ? "it isn't" : "they aren't"}{" "}
+              in the settle-up.
+            </p>
+          )}
+        </section>
+      )}
 
       {total > 0 && (
         <div className="mt-5 shrink-0">

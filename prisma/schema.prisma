@@ -29,6 +29,8 @@ model User {
   createdAt    DateTime     @default(now())
   memberships  Membership[]
   invitesSent  Invite[]     @relation("InviteCreatedBy")
+  paidItems    TripItem[]   @relation("ItemPaidBy")
+  itemShares   ItemShare[]
 }
 
 model Team {
@@ -88,7 +90,14 @@ model TripItem {
   section     ItemSection
   title       String
   url         String       @default("")
+  // Where it happens: a Google Maps link or a plain address.
+  location    String       @default("")
+  // Total paid for the booking, and who paid it. Its cost is split equally
+  // between `shares`; with no shares it's split between the whole team.
   costAmount  Float?
+  paidBy      User?        @relation("ItemPaidBy", fields: [paidById], references: [id], onDelete: SetNull)
+  paidById    String?
+  shares      ItemShare[]
   // When a plan happens: a calendar day at the destination, plus an optional
   // local "HH:mm" time. Kept as wall-clock values so they never shift.
   date        DateTime?    @db.Date
@@ -102,6 +111,17 @@ model TripItem {
 /// A PDF (ticket, confirmation, receipt) attached to a booking. Bytes live in
 /// Vercel Blob when BLOB_READ_WRITE_TOKEN is configured (blobUrl), otherwise
 /// in Postgres (data). Always served through /api/attachments/[id].
+model ItemShare {
+  id     String   @id @default(cuid())
+  item   TripItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  @@unique([itemId, userId])
+  @@index([userId])
+}
+
 model Attachment {
   id          String   @id @default(cuid())
   item        TripItem @relation(fields: [itemId], references: [id], onDelete: Cascade)

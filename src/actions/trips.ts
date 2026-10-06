@@ -106,17 +106,38 @@ const itemSchema = z.object({
     .string()
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time")
     .nullable(),
+  location: z.string().trim().max(500),
+  paidById: z.string().nullable(),
+  shareIds: z.array(z.string()).max(100),
 });
 
 type ItemInput = z.input<typeof itemSchema>;
 
-/** A time only makes sense on a day, so a time without a date is dropped. */
-function toItemData(input: ItemInput) {
-  const { date, time, ...rest } = itemSchema.parse(input);
+/** Validates a booking and checks that whoever paid it, and everyone it's
+ * split with, belongs to the team. A time without a date is dropped. */
+async function toItemData(teamId: string, input: ItemInput) {
+  const { date, time, paidById, shareIds, ...rest } = itemSchema.parse(input);
+  const wanted = [...new Set([...shareIds, ...(paidById ? [paidById] : [])])];
+  const members = new Set(
+    wanted.length
+      ? (
+          await prisma.membership.findMany({
+            where: { teamId, userId: { in: wanted } },
+            select: { userId: true },
+          })
+        ).map((m) => m.userId)
+      : [],
+  );
+  if (paidById && !members.has(paidById))
+    throw new Error("The payer must be on this team");
   return {
-    ...rest,
-    date: date ? new Date(date) : null,
-    time: date ? time : null,
+    data: {
+      ...rest,
+      date: date ? new Date(date) : null,
+      time: date ? time : null,
+      paidById,
+    },
+    shareIds: shareIds.filter((id) => members.has(id)),
   };
 }
 
@@ -125,11 +146,17 @@ export async function addItem(
   section: "STAY" | "TRANSPORT" | "ACTIVITIES",
   input: ItemInput,
 ) {
-  await requireTripAccess(tripId);
-  const parsed = toItemData(input);
+  const trip = await requireTripAccess(tripId);
+  const { data, shareIds } = await toItemData(trip.teamId, input);
   const count = await prisma.tripItem.count({ where: { tripId, section } });
   const item = await prisma.tripItem.create({
-    data: { tripId, section, order: count, ...parsed },
+    data: {
+      tripId,
+      section,
+      order: count,
+      ...data,
+      shares: { create: shareIds.map((userId) => ({ userId })) },
+    },
     select: { id: true },
   });
   revalidatePath("/");
@@ -137,9 +164,18 @@ export async function addItem(
 }
 
 export async function updateItem(itemId: string, input: ItemInput) {
-  await requireItemAccess(itemId);
-  const parsed = toItemData(input);
-  await prisma.tripItem.update({ where: { id: itemId }, data: parsed });
+  const item = await requireItemAccess(itemId);
+  const { data, shareIds } = await toItemData(item.trip.teamId, input);
+  await prisma.tripItem.update({
+    where: { id: itemId },
+    data: {
+      ...data,
+      shares: {
+        deleteMany: {},
+        create: shareIds.map((userId) => ({ userId })),
+      },
+    },
+  });
   revalidatePath("/");
 }
 

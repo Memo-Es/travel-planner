@@ -61,7 +61,8 @@ import ExpenseDialog, {
   type ExpenseFormState,
 } from "@/components/planner/ExpenseDialog";
 import {
-  EMPTY_BOOKING_FORM,
+  bookingFormFrom,
+  emptyBookingForm,
   type BookingFormState,
 } from "@/components/planner/BookingForm";
 import RightRail from "@/components/planner/RightRail";
@@ -90,6 +91,8 @@ function validateBooking(f: BookingFormState): string | null {
   if (f.cost.trim() && cost === null)
     return "Cost must be a number, like 120 or 89.50.";
   if (cost !== null && cost < 0) return "Cost can't be negative.";
+  if (cost !== null && f.shareIds.length === 0)
+    return "Choose at least one person to split the cost with.";
   return null;
 }
 
@@ -150,7 +153,8 @@ export default function Planner({
     null,
   );
   const [editing, setEditing] = useState<Editing>(null);
-  const [form, setForm] = useState<FormState>(EMPTY_BOOKING_FORM);
+  const blankForm = () => emptyBookingForm(members, currentUserId);
+  const [form, setForm] = useState<FormState>(blankForm);
   const [formError, setFormError] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("calendar");
   const [saving, setSaving] = useState(false);
@@ -257,8 +261,8 @@ export default function Planner({
         start: override ? dragging!.curStart : t.start,
         end: override ? dragging!.curEnd : t.end,
         isNote: false,
-        hasStay: t.stay.some(isScheduled),
-        hasTransport: t.transport.some(isScheduled),
+        hasStay: t.stay.some((i) => isScheduled(i, "stay")),
+        hasTransport: t.transport.some((i) => isScheduled(i, "transport")),
         color: t.color,
       };
     });
@@ -344,7 +348,7 @@ export default function Planner({
 
   function startAdd(key: ItemSectionKey) {
     setEditing({ key, itemId: null });
-    setForm(EMPTY_BOOKING_FORM);
+    setForm(blankForm());
     setFormError(null);
   }
 
@@ -364,7 +368,11 @@ export default function Planner({
     const payload = {
       title: f.t.trim(),
       url: f.url.trim(),
+      location: f.location.trim(),
       costAmount: parseCost(f.cost),
+      // Nobody paid or split anything when there's no cost.
+      paidById: parseCost(f.cost) !== null && f.paidById ? f.paidById : null,
+      shareIds: parseCost(f.cost) !== null ? f.shareIds : [],
       date: f.date || null,
       time: f.date && f.time ? f.time : null,
     };
@@ -438,15 +446,7 @@ export default function Planner({
     const item = t[key].find((i) => i.id === itemId);
     if (!item) return;
     jumpToTrip(t);
-    startEdit(key, itemId, {
-      t: item.t,
-      url: item.url,
-      cost: item.costAmount === null ? "" : String(item.costAmount),
-      date: item.date ?? "",
-      time: item.time ?? "",
-      files: [],
-      removeIds: [],
-    });
+    startEdit(key, itemId, bookingFormFrom(item, members));
   }
 
   function openExpense(defaults: {
@@ -494,7 +494,7 @@ export default function Planner({
         keepFailedUploads(editing.key, itemId, form, failed, uploadError);
       else {
         setEditing(null);
-        setForm(EMPTY_BOOKING_FORM);
+        setForm(blankForm());
       }
     } catch {
       setFormError("The booking could not be saved. Please try again.");
@@ -870,6 +870,8 @@ export default function Planner({
           isMobile={isMobile}
           tabs={rightTabs}
           trips={trips}
+          members={members}
+          currentUserId={currentUserId}
           currency={teamCurrency}
           total={tripTotal}
           onOpenItem={openExpenseFromPanel}
@@ -895,6 +897,8 @@ export default function Planner({
             key={trip.id}
             trip={trip}
             currency={teamCurrency}
+            members={members}
+            currentUserId={currentUserId}
             isMobile={isMobile}
             editing={editing}
             form={form}
@@ -927,6 +931,8 @@ export default function Planner({
             }
             defaultKey={expenseDefaults.key}
             defaultDate={expenseDefaults.date}
+            members={members}
+            currentUserId={currentUserId}
             currency={teamCurrency}
             isMobile={isMobile}
             error={expenseError}

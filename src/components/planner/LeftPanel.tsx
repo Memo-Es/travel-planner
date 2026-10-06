@@ -161,10 +161,10 @@ export default function LeftPanel({
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs tabular-nums text-muted">
                   {fmtRange(t.start, t.end)}
-                  {t.stay.some(isScheduled) && (
+                  {t.stay.some((i) => isScheduled(i, "stay")) && (
                     <Hotel size={12} role="img" aria-label="Stay scheduled" />
                   )}
-                  {t.transport.some(isScheduled) && (
+                  {t.transport.some((i) => isScheduled(i, "transport")) && (
                     <Plane size={12} role="img" aria-label="Transport scheduled" />
                   )}
                 </span>
