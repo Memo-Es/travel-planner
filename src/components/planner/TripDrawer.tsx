@@ -17,13 +17,21 @@ import {
   FileText,
   Clock,
 } from "lucide-react";
-import type { TripData, ItemSectionKey, ItemData } from "@/lib/types";
+import type {
+  TripData,
+  ItemSectionKey,
+  ItemData,
+  MemberOption,
+} from "@/lib/types";
 import { fmtRange, nightsBetween } from "@/lib/dates";
 import {
   SECTION_DEFS,
   isScheduled,
   sectionTotal,
   hostFromUrl,
+  mapsHref,
+  locationLabel,
+  scheduleRequirements,
 } from "@/lib/tripSections";
 import { formatCost, formatTotal } from "@/lib/currency";
 import {
@@ -34,7 +42,10 @@ import {
   tripDays,
 } from "@/lib/itinerary";
 import { attachmentHref } from "@/lib/uploads";
-import BookingForm from "@/components/planner/BookingForm";
+import BookingForm, {
+  bookingFormFrom,
+} from "@/components/planner/BookingForm";
+import { sharersOf } from "@/lib/balance";
 import { STOP_COLORS, stopColor } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,21 +64,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Editing, FormState } from "@/components/Planner";
 
-function editState(item: ItemData): FormState {
-  return {
-    t: item.t,
-    url: item.url,
-    cost: item.costAmount === null ? "" : String(item.costAmount),
-    date: item.date ?? "",
-    time: item.time ?? "",
-    files: [],
-    removeIds: [],
-  };
-}
-
 export default function TripDrawer({
   trip,
   currency,
+  members,
+  currentUserId,
   isMobile,
   editing,
   form,
@@ -88,6 +89,8 @@ export default function TripDrawer({
 }: {
   trip: TripData;
   currency: string;
+  members: MemberOption[];
+  currentUserId: string;
   isMobile: boolean;
   editing: Editing;
   form: FormState;
@@ -110,6 +113,11 @@ export default function TripDrawer({
   onChangeColor: (tripId: string, color: string) => void;
   onDeleteTrip: (tripId: string, label: string) => void;
 }) {
+  const editState = (item: ItemData) => bookingFormFrom(item, members);
+  const personName = (id: string) =>
+    id === currentUserId
+      ? "You"
+      : (members.find((m) => m.id === id)?.name ?? "A former teammate");
   const tripTotal =
     sectionTotal(trip.stay) +
     sectionTotal(trip.transport) +
@@ -348,6 +356,9 @@ export default function TripDrawer({
                 days={
                   PLANNED_SECTIONS.includes(sec.key) ? tripDays(trip) : undefined
                 }
+                members={members}
+                currentUserId={currentUserId}
+                requirement={scheduleRequirements(sec.key)}
               />
             );
             const renderCard = (item: ItemData) => (
@@ -412,12 +423,40 @@ export default function TripDrawer({
                         : `${fmtDay(item.date)}${item.time ? ` · ${item.time}` : ""}`}
                     </p>
                   )}
+                  {item.location.trim() && (
+                    <a
+                      href={mapsHref(item.location)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1.5 flex min-w-0 items-start gap-1.5 rounded pr-2 text-xs text-ink-soft hover:underline"
+                    >
+                      <MapPin className="mt-px size-3.5 shrink-0 text-muted" />
+                      <span className="min-w-0 break-words">
+                        {locationLabel(item.location)}
+                      </span>
+                      <span className="sr-only"> (opens Google Maps)</span>
+                    </a>
+                  )}
+                  {item.costAmount !== null && item.costAmount > 0 && (
+                    <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                      {item.paidById
+                        ? `Paid by ${personName(item.paidById)}`
+                        : "Not paid yet"}
+                      {" · "}
+                      {(() => {
+                        const sharers = sharersOf(item, members);
+                        return sharers.length === 1
+                          ? `only ${personName(sharers[0]) === "You" ? "you" : personName(sharers[0])}`
+                          : `${formatTotal(item.costAmount / sharers.length, currency)} each, ${sharers.length} ways`;
+                      })()}
+                    </p>
+                  )}
                   <div className="mt-2 flex min-w-0 items-center gap-2 pr-2">
                     <Badge
-                      variant={isScheduled(item) ? "success" : "secondary"}
+                      variant={isScheduled(item, sec.key) ? "success" : "secondary"}
                     >
-                      {isScheduled(item) && <Check className="size-3" />}
-                      {isScheduled(item) ? "Scheduled" : "Incomplete"}
+                      {isScheduled(item, sec.key) && <Check className="size-3" />}
+                      {isScheduled(item, sec.key) ? "Scheduled" : "Incomplete"}
                     </Badge>
                     {item.url ? (
                       <a

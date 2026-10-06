@@ -11,11 +11,11 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import BookingForm, {
-  EMPTY_BOOKING_FORM,
+  emptyBookingForm,
   type BookingFormState,
 } from "@/components/planner/BookingForm";
-import type { ItemSectionKey, TripData } from "@/lib/types";
-import { SECTION_DEFS } from "@/lib/tripSections";
+import type { ItemSectionKey, MemberOption, TripData } from "@/lib/types";
+import { SECTION_DEFS, scheduleRequirements } from "@/lib/tripSections";
 import { fmtRange } from "@/lib/dates";
 import { PLANNED_SECTIONS, tripDays } from "@/lib/itinerary";
 
@@ -29,6 +29,8 @@ export default function ExpenseDialog({
   defaultTripId,
   defaultKey = "stay",
   defaultDate = "",
+  members,
+  currentUserId,
   currency,
   isMobile,
   error,
@@ -42,6 +44,8 @@ export default function ExpenseDialog({
   defaultKey?: ItemSectionKey;
   /** Pre-selects a day, e.g. when adding a plan from the itinerary. */
   defaultDate?: string;
+  members: MemberOption[];
+  currentUserId: string;
   currency: string;
   isMobile: boolean;
   error: string | null;
@@ -51,7 +55,7 @@ export default function ExpenseDialog({
   onClose: () => void;
 }) {
   const [form, setForm] = useState<ExpenseFormState>({
-    ...EMPTY_BOOKING_FORM,
+    ...emptyBookingForm(members, currentUserId),
     key: defaultKey,
     tripId: defaultTripId,
     date: defaultDate,
@@ -111,6 +115,9 @@ export default function ExpenseDialog({
             placeholder={section.placeholder}
             submitLabel={isPlan ? "Add plan" : "Add expense"}
             days={days}
+            members={members}
+            currentUserId={currentUserId}
+            requirement={scheduleRequirements(form.key)}
             autoFocus={false}
             framed={false}
             before={

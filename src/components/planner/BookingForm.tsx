@@ -1,12 +1,12 @@
 "use client";
 
 import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
-import { FileText, Paperclip, Undo2, X } from "lucide-react";
+import { Check, FileText, MapPin, Paperclip, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect } from "@/components/ui/input";
 import { fmtDay } from "@/lib/itinerary";
-import type { AttachmentData } from "@/lib/types";
-import { currencySymbol } from "@/lib/currency";
+import type { AttachmentData, ItemData, MemberOption } from "@/lib/types";
+import { currencySymbol, formatTotal } from "@/lib/currency";
 import {
   MAX_PDF_MB,
   attachmentHref,
@@ -17,7 +17,14 @@ import {
 export type BookingFormState = {
   t: string;
   url: string;
+  /** Google Maps link or address. */
+  location: string;
+  /** Total paid, as typed. */
   cost: string;
+  /** Who paid, or "" if nobody has yet. */
+  paidById: string;
+  /** Who splits the cost. */
+  shareIds: string[];
   /** "YYYY-MM-DD" or "" when the plan has no day yet. */
   date: string;
   /** "HH:mm" or "" for any time that day. */
@@ -28,15 +35,43 @@ export type BookingFormState = {
   removeIds: string[];
 };
 
-export const EMPTY_BOOKING_FORM: BookingFormState = {
-  t: "",
-  url: "",
-  cost: "",
-  date: "",
-  time: "",
-  files: [],
-  removeIds: [],
-};
+/** A blank booking: split between everyone, paid by whoever is adding it. */
+export function emptyBookingForm(
+  members: MemberOption[],
+  payerId: string,
+): BookingFormState {
+  return {
+    t: "",
+    url: "",
+    location: "",
+    cost: "",
+    paidById: payerId,
+    shareIds: members.map((m) => m.id),
+    date: "",
+    time: "",
+    files: [],
+    removeIds: [],
+  };
+}
+
+export function bookingFormFrom(
+  item: ItemData,
+  members: MemberOption[],
+): BookingFormState {
+  return {
+    t: item.t,
+    url: item.url,
+    location: item.location,
+    cost: item.costAmount === null ? "" : String(item.costAmount),
+    paidById: item.paidById ?? "",
+    // Bookings saved before splits existed are shared by the whole team.
+    shareIds: item.shareIds.length ? item.shareIds : members.map((m) => m.id),
+    date: item.date ?? "",
+    time: item.time ?? "",
+    files: [],
+    removeIds: [],
+  };
+}
 
 export default function BookingForm({
   form,
@@ -54,6 +89,9 @@ export default function BookingForm({
   framed = true,
   before,
   days,
+  members,
+  currentUserId,
+  requirement,
 }: {
   form: BookingFormState;
   onChange: (f: BookingFormState) => void;
@@ -73,7 +111,27 @@ export default function BookingForm({
   before?: ReactNode;
   /** The stop's days; when given, the plan can be placed on a day and time. */
   days?: string[];
+  members: MemberOption[];
+  currentUserId: string;
+  /** What marks this booking complete, e.g. "a name and a location". */
+  requirement: string;
 }) {
+  const costValue = Number(form.cost.trim().replace(",", "."));
+  const hasCost = form.cost.trim() !== "" && Number.isFinite(costValue);
+  const memberName = (m: MemberOption) =>
+    m.id === currentUserId ? "You" : m.name;
+  const nameOf = (memberId: string) => {
+    const m = members.find((x) => x.id === memberId);
+    return m ? memberName(m) : "A former teammate";
+  };
+  function toggleSharer(memberId: string) {
+    onChange({
+      ...form,
+      shareIds: form.shareIds.includes(memberId)
+        ? form.shareIds.filter((x) => x !== memberId)
+        : [...form.shareIds, memberId],
+    });
+  }
   const id = useId();
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
@@ -135,6 +193,20 @@ export default function BookingForm({
           aria-describedby={error ? errorId : undefined}
         />
       </label>
+      <label className="block space-y-1.5">
+        <span className="field-label">Location</span>
+        <div className="relative">
+          <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+          <Input
+            value={form.location}
+            onChange={(e) => onChange({ ...form, location: e.target.value })}
+            onKeyDown={handleKeyDown}
+            placeholder="Google Maps link or address"
+            className="pl-9"
+            autoComplete="off"
+          />
+        </div>
+      </label>
       {days && (
         <div className="grid grid-cols-[minmax(0,1fr)_8rem] gap-3">
           <label className="block min-w-0 space-y-1.5">
@@ -180,21 +252,23 @@ export default function BookingForm({
           </label>
         </div>
       )}
-      <div className="grid grid-cols-[minmax(0,1fr)_8rem] gap-3">
-        <label className="block min-w-0 space-y-1.5">
-          <span className="field-label">Booking link</span>
-          <Input
-            value={form.url}
-            onChange={(e) => onChange({ ...form, url: e.target.value })}
-            onKeyDown={handleKeyDown}
-            placeholder="https://…"
-            inputMode="url"
-            aria-invalid={!!error?.startsWith("Link") || undefined}
-            aria-describedby={error ? errorId : undefined}
-          />
-        </label>
+      <label className="block min-w-0 space-y-1.5">
+        <span className="field-label">Booking link</span>
+        <Input
+          value={form.url}
+          onChange={(e) => onChange({ ...form, url: e.target.value })}
+          onKeyDown={handleKeyDown}
+          placeholder="https://…"
+          inputMode="url"
+          aria-invalid={!!error?.startsWith("Link") || undefined}
+          aria-describedby={error ? errorId : undefined}
+        />
+      </label>
+      <div className="grid grid-cols-[8rem_minmax(0,1fr)] gap-3">
         <label className="block space-y-1.5">
-          <span className="field-label">Cost ({currencySymbol(currency)})</span>
+          <span className="field-label">
+            Total paid ({currencySymbol(currency)})
+          </span>
           <Input
             value={form.cost}
             onChange={(e) => onChange({ ...form, cost: e.target.value })}
@@ -206,7 +280,51 @@ export default function BookingForm({
             aria-describedby={error ? errorId : hintId}
           />
         </label>
+        <label className="block min-w-0 space-y-1.5">
+          <span className="field-label">Paid by</span>
+          <NativeSelect
+            value={form.paidById}
+            disabled={!hasCost}
+            onChange={(e) => onChange({ ...form, paidById: e.target.value })}
+          >
+            <option value="">Not paid yet</option>
+            {members.map((m) => (
+              <option key={m.id} value={m.id}>
+                {memberName(m)}
+              </option>
+            ))}
+          </NativeSelect>
+        </label>
       </div>
+      {hasCost && members.length > 1 && (
+        <fieldset className="min-w-0 space-y-1.5">
+          <legend className="field-label mb-1.5">Split between</legend>
+          <div className="flex flex-wrap gap-1.5">
+            {members.map((m) => {
+              const on = form.shareIds.includes(m.id);
+              return (
+                <Button
+                  key={m.id}
+                  size="sm"
+                  variant={on ? "default" : "outline"}
+                  aria-pressed={on}
+                  onClick={() => toggleSharer(m.id)}
+                >
+                  {on && <Check />}
+                  {memberName(m)}
+                </Button>
+              );
+            })}
+          </div>
+          {form.shareIds.length > 0 && (
+            <p className="text-xs tabular-nums text-muted">
+              {form.shareIds.length === 1
+                ? `${nameOf(form.shareIds[0])} covers it all`
+                : `${formatTotal(costValue / form.shareIds.length, currency)} each, ${form.shareIds.length} ways`}
+            </p>
+          )}
+        </fieldset>
+      )}
 
       <div className="space-y-1.5">
         <span className="field-label" id={`${id}-files`}>
@@ -312,8 +430,8 @@ export default function BookingForm({
           id={hintId}
           className="text-pretty text-xs leading-relaxed text-muted"
         >
-          Add a name, link and cost to mark this booking as scheduled. PDFs up
-          to {MAX_PDF_MB} MB.
+          Add {requirement} to mark this booking as scheduled. Leave the cost
+          empty if there&apos;s nothing to split. PDFs up to {MAX_PDF_MB} MB.
         </p>
       )}
       <div className="flex justify-end gap-2 pt-1">
