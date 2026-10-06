@@ -27,6 +27,7 @@ import {
   createTrip,
   addItem,
   updateItem,
+  setItemDay,
   deleteItem,
   deleteTrip,
   updateStopDates,
@@ -853,6 +854,10 @@ export default function Planner({
           onAddPlan={(tripId, date) =>
             openExpense({ tripId, key: "activities", date: date ?? "" })
           }
+          onMoveItem={async (itemId, date) => {
+            await setItemDay(itemId, date);
+            refresh();
+          }}
           onClose={closeOverlay}
           showClose={!!activeOverlay}
         />

@@ -143,6 +143,18 @@ export async function updateItem(itemId: string, input: ItemInput) {
   revalidatePath("/");
 }
 
+/** Moves a plan to another day of its stop, keeping its time. Moving it to
+ * no day clears the time too, since a time only makes sense on a day. */
+export async function setItemDay(itemId: string, date: string | null) {
+  await requireItemAccess(itemId);
+  const day = dateStringSchema.nullable().parse(date);
+  await prisma.tripItem.update({
+    where: { id: itemId },
+    data: day ? { date: new Date(day) } : { date: null, time: null },
+  });
+  revalidatePath("/");
+}
+
 export async function deleteItem(itemId: string) {
   await requireItemAccess(itemId);
   const files = await prisma.attachment.findMany({
