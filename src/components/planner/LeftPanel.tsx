@@ -48,6 +48,7 @@ export default function LeftPanel({
   onSwitchTeam,
   onOpenSettings,
   onSelectTrip,
+  onEditTrip,
   onAddTrip,
   addingTrip,
   onDeleteTrip,
@@ -73,7 +74,10 @@ export default function LeftPanel({
   userName: string;
   onSwitchTeam: (id: string) => void;
   onOpenSettings: () => void;
+  /** Picks a stop: opens its days here and moves the calendar to it. */
   onSelectTrip: (t: TripData) => void;
+  /** Opens the stop's drawer to edit it. */
+  onEditTrip: (t: TripData) => void;
   onAddTrip: () => void;
   addingTrip: boolean;
   onDeleteTrip: (id: string, label: string) => void;
@@ -200,7 +204,7 @@ export default function LeftPanel({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                <DropdownMenuItem onSelect={() => onSelectTrip(t)}>
+                <DropdownMenuItem onSelect={() => onEditTrip(t)}>
                   <Pencil />
                   Edit stop
                 </DropdownMenuItem>

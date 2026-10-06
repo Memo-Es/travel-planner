@@ -282,6 +282,16 @@ export default function Planner({
     if (isMobile) setMobileTab("calendar");
   }
 
+  // Picking a stop in the left panel opens its days there and moves the
+  // calendar to it. It doesn't open the drawer, which covers the right
+  // column; that is what "Edit stop", the calendar bar and a plan are for.
+  function selectStop(t: TripData) {
+    const [y, m] = t.start.split("-").map(Number);
+    setCursor({ y, m: m - 1 });
+    setItineraryTripId(t.id);
+    if (openTripId && openTripId !== t.id) setOpenTripId(null);
+  }
+
   async function handleAddTrip() {
     if (addingTripRef.current) return;
     addingTripRef.current = true;
@@ -733,7 +743,7 @@ export default function Planner({
           overlay={activeOverlay === "links"}
           isMobile={isMobile}
           trips={trips}
-          selectedTripId={openTripId}
+          selectedTripId={itineraryTrip}
           daysTripId={itineraryTrip}
           currency={teamCurrency}
           todayDate={toDateInput(todayMs)}
@@ -751,7 +761,8 @@ export default function Planner({
           userName={userName}
           onSwitchTeam={onSwitchTeam}
           onOpenSettings={openSettings}
-          onSelectTrip={(t) => jumpToTrip(t)}
+          onSelectTrip={selectStop}
+          onEditTrip={(t) => jumpToTrip(t)}
           onAddTrip={handleAddTrip}
           addingTrip={addingTrip}
           onDeleteTrip={handleDeleteTrip}
