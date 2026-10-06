@@ -55,8 +55,6 @@ import {
 import LeftPanel from "@/components/planner/LeftPanel";
 import LeftRail from "@/components/planner/LeftRail";
 import FinancePanel from "@/components/planner/FinancePanel";
-import ItineraryPanel from "@/components/planner/ItineraryPanel";
-import RightTabs, { type RightView } from "@/components/planner/RightTabs";
 import ExpenseDialog, {
   type ExpenseFormState,
 } from "@/components/planner/ExpenseDialog";
@@ -74,7 +72,7 @@ import Toast from "@/components/planner/Toast";
 export type Editing = { key: ItemSectionKey; itemId: string | null } | null;
 export type FormState = BookingFormState;
 export type Overlay = "links" | "finances" | null;
-export type MobileTab = "links" | "calendar" | "itinerary" | "finances";
+export type MobileTab = "links" | "calendar" | "finances";
 
 const SECTION_ENUM = {
   stay: "STAY",
@@ -170,7 +168,6 @@ export default function Planner({
     key: ItemSectionKey;
     date: string;
   }>({ tripId: null, key: "stay", date: "" });
-  const [rightView, setRightView] = useState<RightView>("itinerary");
   const [itineraryTripId, setItineraryTripId] = useState<string | null>(null);
   const [expenseError, setExpenseError] = useState<string | null>(null);
   const [expenseSaving, setExpenseSaving] = useState(false);
@@ -226,7 +223,7 @@ export default function Planner({
   const width = mainWidth(vw, mode, LEFT_W, RIGHT_W, RAIL_W);
 
   const trip = trips.find((t) => t.id === openTripId) ?? null;
-  // The itinerary follows the last stop you opened, falling back to the stop
+  // The left panel opens the days of the last stop you opened, falling back to the stop
   // happening now (or next).
   const itineraryTrip = trips.some((t) => t.id === itineraryTripId)
     ? itineraryTripId
@@ -463,12 +460,6 @@ export default function Planner({
     setExpenseOpen(true);
   }
 
-  /** Opens whichever surface holds the right column at this width. */
-  function openRightView(view: RightView) {
-    setRightView(view);
-    if (isMobile) setMobileTab(view);
-    else if (isCompact) setOverlay("finances");
-  }
 
   function onFormChange(f: FormState) {
     setForm(f);
@@ -665,17 +656,8 @@ export default function Planner({
     ? mobileTab === "links"
     : mode === "full" || activeOverlay === "links";
   const showRightPanel = isMobile
-    ? mobileTab === "finances" || mobileTab === "itinerary"
+    ? mobileTab === "finances"
     : mode === "full" || activeOverlay === "finances";
-  const shownRightView: RightView = isMobile
-    ? mobileTab === "itinerary"
-      ? "itinerary"
-      : "finances"
-    : rightView;
-  // On mobile the bottom tab bar already switches between the two views.
-  const rightTabs = isMobile ? undefined : (
-    <RightTabs view={rightView} onChange={setRightView} />
-  );
   const showCalendar = isMobile ? mobileTab === "calendar" : true;
 
   const now = new Date();
@@ -752,6 +734,17 @@ export default function Planner({
           isMobile={isMobile}
           trips={trips}
           selectedTripId={openTripId}
+          daysTripId={itineraryTrip}
+          currency={teamCurrency}
+          todayDate={toDateInput(todayMs)}
+          onOpenItem={openExpenseFromPanel}
+          onAddPlan={(tripId, date) =>
+            openExpense({ tripId, key: "activities", date: date ?? "" })
+          }
+          onMoveItem={async (itemId, date) => {
+            await setItemDay(itemId, date);
+            refresh();
+          }}
           teams={teams}
           teamId={teamId}
           teamName={teamName}
@@ -835,40 +828,11 @@ export default function Planner({
         </main>
       )}
 
-      {showRightPanel && shownRightView === "itinerary" && (
-        <ItineraryPanel
-          card={CARD}
-          overlay={activeOverlay === "finances"}
-          isMobile={isMobile}
-          tabs={
-            rightTabs ?? (
-              <h2 className="panel-heading">Itinerary</h2>
-            )
-          }
-          trips={trips}
-          tripId={itineraryTrip}
-          currency={teamCurrency}
-          todayDate={toDateInput(todayMs)}
-          onSelectTrip={setItineraryTripId}
-          onOpenItem={openExpenseFromPanel}
-          onAddPlan={(tripId, date) =>
-            openExpense({ tripId, key: "activities", date: date ?? "" })
-          }
-          onMoveItem={async (itemId, date) => {
-            await setItemDay(itemId, date);
-            refresh();
-          }}
-          onClose={closeOverlay}
-          showClose={!!activeOverlay}
-        />
-      )}
-
-      {showRightPanel && shownRightView === "finances" && (
+      {showRightPanel && (
         <FinancePanel
           card={CARD}
           overlay={activeOverlay === "finances"}
           isMobile={isMobile}
-          tabs={rightTabs}
           trips={trips}
           currency={teamCurrency}
           total={tripTotal}
@@ -884,8 +848,7 @@ export default function Planner({
         <RightRail
           total={tripTotal}
           currency={teamCurrency}
-          onOpenFinances={() => openRightView("finances")}
-          onOpenItinerary={() => openRightView("itinerary")}
+          onOpenFinances={() => setOverlay("finances")}
         />
       )}
 

@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { Paperclip, Plus, X } from "lucide-react";
 import { AnimatedNumber } from "@/components/motion/primitives";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,6 @@ export default function FinancePanel({
   card,
   overlay,
   isMobile,
-  tabs,
   trips,
   currency,
   total,
@@ -39,8 +37,6 @@ export default function FinancePanel({
   card: string;
   overlay: boolean;
   isMobile: boolean;
-  /** Tabs switching between the right column's views. */
-  tabs?: ReactNode;
   trips: TripData[];
   currency: string;
   total: number;
@@ -77,7 +73,6 @@ export default function FinancePanel({
 
   return (
     <aside aria-label="Finances" className={card + " p-5 " + positionClass}>
-      {tabs && <div className="mb-5 shrink-0">{tabs}</div>}
       <header className="flex shrink-0 items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="section-label">Finances</p>
@@ -134,7 +129,7 @@ export default function FinancePanel({
         </div>
       )}
 
-      <div className="-mx-2 mt-5 min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain border-t border-line-soft px-2 pb-2 pt-5">
+      <div className="scroll-stable -mx-2 mt-5 min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain border-t border-line-soft px-2 pb-2 pt-5">
         {groups.map((g) => (
           <section key={g.key} aria-labelledby={`finance-${g.key}`}>
             <div className="flex items-baseline justify-between gap-3">

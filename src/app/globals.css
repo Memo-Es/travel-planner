@@ -79,6 +79,11 @@
 @layer components {
   /* Full-width list row (trip stops, finance lines). Its focus ring is drawn
      inside so scroll containers never clip it. */
+  /* Keeps room for the scrollbar whether or not one is showing, so content
+     doesn't shift sideways when a list grows or shrinks past its height. */
+  .scroll-stable {
+    scrollbar-gutter: stable;
+  }
   .list-row {
     @apply rounded-lg transition-colors duration-150 hover:bg-hover;
   }

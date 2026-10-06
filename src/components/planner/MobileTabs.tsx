@@ -8,7 +8,6 @@ import type { MobileTab } from "@/components/Planner";
 const TABS: { id: MobileTab; label: string; dot: string }[] = [
   { id: "links", label: "Trips", dot: "bg-accent" },
   { id: "calendar", label: "Calendar", dot: "bg-accent" },
-  { id: "itinerary", label: "Itinerary", dot: "bg-accent" },
   { id: "finances", label: "Finances", dot: "bg-task-green" },
 ];
 
@@ -23,7 +22,7 @@ export default function MobileTabs({
   return (
     <nav
       aria-label="Planner views"
-      className="grid flex-none grid-cols-4 gap-1 rounded-card border border-line bg-white p-1.5"
+      className="grid flex-none grid-cols-3 gap-1.5 rounded-card border border-line bg-white p-1.5"
     >
       {TABS.map((tab) => {
         const isActive = active === tab.id;
@@ -34,7 +33,7 @@ export default function MobileTabs({
             aria-current={isActive ? "page" : undefined}
             onClick={() => onChange(tab.id)}
             className={cn(
-              "ui-button relative isolate flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-lg px-1 text-[13px] font-medium transition-colors duration-150",
+              "ui-button relative isolate flex min-h-11 items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition-colors duration-150",
               isActive ? "text-ink" : "text-muted hover:text-ink",
             )}
           >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { Fragment, useId } from "react";
 import { AnimatedBackground } from "@/components/motion/primitives";
 import {
   Hotel,
@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import StopDays from "@/components/planner/StopDays";
 import { NativeSelect } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -22,7 +23,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import type { TripData, TeamOption } from "@/lib/types";
+import type { ItemSectionKey, TripData, TeamOption } from "@/lib/types";
 import { fmtRange } from "@/lib/dates";
 import { isScheduled } from "@/lib/tripSections";
 import { logout } from "@/actions/team";
@@ -34,6 +35,12 @@ export default function LeftPanel({
   isMobile,
   trips,
   selectedTripId,
+  daysTripId,
+  currency,
+  todayDate,
+  onOpenItem,
+  onAddPlan,
+  onMoveItem,
   teams,
   teamId,
   teamName,
@@ -53,6 +60,13 @@ export default function LeftPanel({
   isMobile: boolean;
   trips: TripData[];
   selectedTripId: string | null;
+  /** The stop whose days are open under it. */
+  daysTripId: string | null;
+  currency: string;
+  todayDate: string;
+  onOpenItem: (trip: TripData, key: ItemSectionKey, itemId: string) => void;
+  onAddPlan: (tripId: string, date: string | null) => void;
+  onMoveItem: (itemId: string, date: string | null) => Promise<void>;
   teams: TeamOption[];
   teamId: string;
   teamName: string;
@@ -116,11 +130,12 @@ export default function LeftPanel({
       )}
       <nav
         aria-label="Trip stops"
-        className="-mx-2 mt-5 min-h-0 space-y-0.5 overflow-y-auto overscroll-contain"
+        data-drag-scroll
+        className="scroll-stable -mx-2 mt-5 min-h-0 space-y-0.5 overflow-y-auto overscroll-contain"
       >
         {trips.map((t) => (
+          <Fragment key={t.id}>
           <div
-            key={t.id}
             className={
               "list-row group relative isolate flex items-center gap-1 pr-1 " +
               (selectedTripId === t.id ? "hover:bg-transparent" : "")
@@ -199,6 +214,17 @@ export default function LeftPanel({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+          {t.id === daysTripId && (
+            <StopDays
+              stop={t}
+              currency={currency}
+              todayDate={todayDate}
+              onOpenItem={onOpenItem}
+              onAddPlan={onAddPlan}
+              onMoveItem={onMoveItem}
+            />
+          )}
+          </Fragment>
         ))}
         {trips.length === 0 && (
           <p className="text-pretty px-2 py-4 text-sm leading-relaxed text-muted">

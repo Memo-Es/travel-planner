@@ -1,18 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import {
-  CalendarPlus,
-  Check,
-  GripVertical,
-  Paperclip,
-  Plane,
-  MapPin,
-  Plus,
-  X,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, GripVertical, Paperclip, Plane, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NativeSelect } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { ItemData, ItemSectionKey, TripData } from "@/lib/types";
-import { fmtRange } from "@/lib/dates";
 import {
   fmtDay,
   freeParts,
@@ -30,43 +19,28 @@ import {
 } from "@/lib/itinerary";
 import { formatCost } from "@/lib/currency";
 
-export default function ItineraryPanel({
-  card,
-  overlay,
-  isMobile,
-  tabs,
-  trips,
-  tripId,
+/**
+ * A stop's days, shown under the stop in the left panel: its plans in time
+ * order, free days, plans with no day yet, and a grip on each plan to drag it
+ * onto another day (or tap for a "Move to" menu). The list that scrolls is the
+ * nearest ancestor marked data-drag-scroll, which a drag scrolls at its edges.
+ */
+export default function StopDays({
+  stop,
   currency,
   todayDate,
-  onSelectTrip,
   onOpenItem,
   onAddPlan,
   onMoveItem,
-  onClose,
-  showClose,
 }: {
-  card: string;
-  overlay: boolean;
-  isMobile: boolean;
-  /** Tabs switching between the right column's views. */
-  tabs: ReactNode;
-  trips: TripData[];
-  tripId: string | null;
+  stop: TripData;
   currency: string;
   todayDate: string;
-  onSelectTrip: (tripId: string) => void;
   onOpenItem: (trip: TripData, key: ItemSectionKey, itemId: string) => void;
   onAddPlan: (tripId: string, date: string | null) => void;
   /** Puts a plan on another day of its stop, or on no day (null). */
   onMoveItem: (itemId: string, date: string | null) => Promise<void>;
-  onClose: () => void;
-  showClose: boolean;
 }) {
-  const overlayBox =
-    "absolute bottom-3 right-[74px] top-3 z-panel w-[272px] shadow-overlay";
-  const positionClass = overlay ? overlayBox : isMobile ? "flex-1 min-h-0" : "";
-  const scrollRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [status, setStatus] = useState("");
@@ -79,25 +53,19 @@ export default function ItineraryPanel({
     setMoves((current) => {
       const next = { ...current };
       let changed = false;
-      for (const t of trips) {
-        for (const item of [...t.transport, ...t.activities]) {
-          if (item.id in next && next[item.id] === item.date) {
-            delete next[item.id];
-            changed = true;
-          }
+      for (const item of [...stop.transport, ...stop.activities]) {
+        if (item.id in next && next[item.id] === item.date) {
+          delete next[item.id];
+          changed = true;
         }
       }
       return changed ? next : current;
     });
-  }, [trips]);
+  }, [stop]);
 
-  const found = trips.find((t) => t.id === tripId) ?? null;
-  const trip = useMemo(
-    () => (found ? withMoves(found, moves) : null),
-    [found, moves],
-  );
-  const itinerary = trip ? itineraryFor(trip) : null;
-  const days = trip ? tripDays(trip) : [];
+  const trip = useMemo(() => withMoves(stop, moves), [stop, moves]);
+  const itinerary = itineraryFor(trip);
+  const days = tripDays(trip);
 
   async function move(plan: Plan, to: Target) {
     const date = to === UNDATED ? null : to;
@@ -129,6 +97,7 @@ export default function ItineraryPanel({
     // Radix opens the menu on press; it opens on release instead, if the
     // pointer didn't move.
     e.preventDefault();
+    const scroller = e.currentTarget.closest<HTMLElement>("[data-drag-scroll]");
     const row = e.currentTarget.closest("li")?.getBoundingClientRect();
     if (!row) return;
     const startX = e.clientX;
@@ -152,7 +121,7 @@ export default function ItineraryPanel({
     // Near the top or bottom edge of the list, scroll it, faster the closer
     // the pointer gets, so a plan can reach a day that is off screen.
     function scroll() {
-      const box = scrollRef.current;
+      const box = scroller;
       if (box) {
         const r = box.getBoundingClientRect();
         const edge = 48;
@@ -225,139 +194,86 @@ export default function ItineraryPanel({
     onMoveTo: move,
   });
   const dropClass = (target: Target) =>
-    "-mx-2 rounded-xl px-2 py-1.5 transition-colors duration-150 " +
+    "-mx-1.5 rounded-lg px-1.5 py-1 transition-colors duration-150 " +
     (drag && drag.over === target && drag.from !== target ? "bg-accent-soft" : "");
 
   return (
-    <aside aria-label="Itinerary" className={card + " p-5 " + positionClass}>
-      <div className="flex shrink-0 items-center gap-2">
-        <div className="min-w-0 flex-1">{tabs}</div>
-        {showClose && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="-mr-2"
-            onClick={onClose}
-            aria-label="Close itinerary"
-          >
-            <X />
-          </Button>
-        )}
-      </div>
-
+    <div className="mb-2 ml-2 mt-1 space-y-1 border-l border-line pl-2">
       <p className="sr-only" role="status" aria-live="polite">
         {status}
       </p>
       {error && (
-        <p role="alert" className="field-error mt-3 shrink-0">
+        <p role="alert" className="field-error">
           {error}
         </p>
       )}
 
-      {trips.length === 0 || !trip || !itinerary ? (
-        <p className="mt-6 text-pretty text-sm leading-relaxed text-muted">
-          Add a stop to start planning its days.
-        </p>
-      ) : (
-        <>
-          <label className="mt-5 block shrink-0 space-y-1.5">
-            <span className="field-label">Stop</span>
-            <NativeSelect
-              value={trip.id}
-              onChange={(e) => onSelectTrip(e.target.value)}
-            >
-              {trips.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label} · {fmtRange(t.start, t.end)}
-                </option>
-              ))}
-            </NativeSelect>
-          </label>
-
-          <div
-            ref={scrollRef}
-            className="-mx-2 mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain border-t border-line-soft px-2 pb-2 pt-3"
+      {itinerary.days.map(({ date, plans }) => {
+        const free = freeParts(plans);
+        return (
+          <section
+            key={date}
+            aria-labelledby={`day-${stop.id}-${date}`}
+            data-drop={date}
+            className={dropClass(date)}
           >
-            {itinerary.days.map(({ date, plans }) => {
-              const free = freeParts(plans);
-              const isToday = date === todayDate;
-              return (
-                <section
-                  key={date}
-                  aria-labelledby={`day-${date}`}
-                  data-drop={date}
-                  className={dropClass(date)}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <h3
-                      id={`day-${date}`}
-                      className="flex items-baseline gap-2 text-sm font-semibold text-ink"
-                    >
-                      {fmtDay(date)}
-                      {isToday && (
-                        <span className="text-xs font-medium text-accent-ink">
-                          Today
-                        </span>
-                      )}
-                    </h3>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="-mr-2 size-8"
-                      onClick={() => onAddPlan(trip.id, date)}
-                      aria-label={`Add a plan on ${fmtDay(date)}`}
-                      title="Add a plan"
-                    >
-                      <Plus />
-                    </Button>
-                  </div>
-                  {plans.length === 0 ? (
-                    <p className="mt-1 text-xs text-muted">
-                      Nothing planned — a free day.
-                    </p>
-                  ) : (
-                    <>
-                      <PlanList plans={plans} {...rowProps(date)} />
-                      {free && free.length > 0 && (
-                        <p className="mt-1.5 text-xs text-muted">
-                          Free {joinParts(free)}
-                        </p>
-                      )}
-                    </>
-                  )}
-                </section>
-              );
-            })}
-
-            {(itinerary.undated.length > 0 || drag) && (
-              <section
-                aria-labelledby="day-undated"
-                data-drop={UNDATED}
-                className={dropClass(UNDATED)}
+            <div className="flex items-center justify-between gap-2">
+              <h3
+                id={`day-${stop.id}-${date}`}
+                className="flex items-baseline gap-1.5 text-xs font-semibold tabular-nums text-ink"
               >
-                <h3
-                  id="day-undated"
-                  className="text-sm font-semibold text-ink"
-                >
-                  No day yet
-                </h3>
-                <p className="mt-0.5 text-xs text-muted">
-                  {itinerary.undated.length > 0
-                    ? "Drag these onto a day to see them on the calendar."
-                    : "Drop a plan here to take it off its day."}
-                </p>
-                <PlanList plans={itinerary.undated} {...rowProps(UNDATED)} />
-              </section>
+                {fmtDay(date)}
+                {date === todayDate && (
+                  <span className="font-medium text-accent-ink">Today</span>
+                )}
+                {plans.length === 0 && (
+                  <span className="font-normal text-muted">· Free</span>
+                )}
+              </h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="-mr-1.5"
+                onClick={() => onAddPlan(stop.id, date)}
+                aria-label={`Add a plan on ${fmtDay(date)}`}
+                title="Add a plan"
+              >
+                <Plus />
+              </Button>
+            </div>
+            {plans.length > 0 && (
+              <>
+                <PlanList plans={plans} {...rowProps(date)} />
+                {free && free.length > 0 && (
+                  <p className="pb-1 text-xs text-muted">
+                    Free {joinParts(free)}
+                  </p>
+                )}
+              </>
             )}
-          </div>
+          </section>
+        );
+      })}
 
-          <div className="shrink-0 border-t border-line-soft pt-4">
-            <Button className="w-full" onClick={() => onAddPlan(trip.id, null)}>
-              <CalendarPlus />
-              Add plan
-            </Button>
-          </div>
-        </>
+      {(itinerary.undated.length > 0 || drag) && (
+        <section
+          aria-labelledby={`day-${stop.id}-undated`}
+          data-drop={UNDATED}
+          className={dropClass(UNDATED)}
+        >
+          <h3
+            id={`day-${stop.id}-undated`}
+            className="pt-1 text-xs font-semibold text-ink"
+          >
+            No day yet
+          </h3>
+          <p className="mt-0.5 text-xs text-muted">
+            {itinerary.undated.length > 0
+              ? "Drag these onto a day."
+              : "Drop a plan here to take it off its day."}
+          </p>
+          <PlanList plans={itinerary.undated} {...rowProps(UNDATED)} />
+        </section>
       )}
 
       {drag && (
@@ -372,7 +288,7 @@ export default function ItineraryPanel({
           <span className="line-clamp-2 text-pretty">{drag.plan.item.t}</span>
         </div>
       )}
-    </aside>
+    </div>
   );
 }
 
@@ -423,10 +339,9 @@ function PlanList({
   onMoveTo: (plan: Plan, to: Target) => void;
 }) {
   return (
-    <ul className="-mx-2 mt-1">
+    <ul className="-mx-1.5">
       {plans.map((plan) => {
         const { item, key, trip } = plan;
-        const Icon = key === "transport" ? Plane : MapPin;
         return (
           <li
             key={item.id}
@@ -438,21 +353,30 @@ function PlanList({
             <button
               type="button"
               onClick={() => onOpenItem(trip, key, item.id)}
-              className="row-main flex min-w-0 flex-1 items-start gap-3 rounded-lg py-2 pl-2 text-left"
+              className="row-main flex min-w-0 flex-1 items-start rounded-lg py-1.5 pl-1.5 text-left"
             >
-              <span className="w-11 shrink-0 pt-px text-xs font-medium tabular-nums text-ink-soft">
-                {item.time ?? "—"}
-                <span className="sr-only">{item.time ? "" : "No time"}</span>
-              </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-pretty text-sm leading-5 text-ink-soft">
                   {item.t}
                 </span>
+                {(item.time ||
+                  key === "transport" ||
+                  item.costAmount !== null ||
+                  item.attachments.length > 0) && (
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
-                  <Icon className="size-3 shrink-0" aria-hidden="true" />
-                  {key === "transport" ? "Transport" : "Activity"}
-                  {item.costAmount !== null &&
-                    ` · ${formatCost(item.costAmount, currency)}`}
+                  {item.time && (
+                    <span className="font-medium tabular-nums text-ink-soft">
+                      {item.time}
+                    </span>
+                  )}
+                  {key === "transport" && (
+                    <Plane className="size-3 shrink-0" role="img" aria-label="Transport" />
+                  )}
+                  {item.costAmount !== null && (
+                    <span className="tabular-nums">
+                      {formatCost(item.costAmount, currency)}
+                    </span>
+                  )}
                   {item.attachments.length > 0 && (
                     <Paperclip
                       className="size-3 shrink-0"
@@ -461,6 +385,7 @@ function PlanList({
                     />
                   )}
                 </span>
+                )}
               </span>
             </button>
             <DropdownMenu
