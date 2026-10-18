@@ -892,6 +892,10 @@ export default function Planner({
             onRename={onRenameTrip}
             onChangeColor={onChangeTripColor}
             onDeleteTrip={handleDeleteTrip}
+            onMoveItem={async (itemId, date) => {
+              await setItemDay(itemId, date);
+              refresh();
+            }}
           />
         )}
 

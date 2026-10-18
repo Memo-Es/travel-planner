@@ -37,6 +37,7 @@ import { attachmentHref } from "@/lib/uploads";
 import BookingForm from "@/components/planner/BookingForm";
 import { STOP_COLORS, stopColor } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
+import { MoveHandle, UNDATED, useDayDrag } from "@/components/planner/useDayDrag";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -85,6 +86,7 @@ export default function TripDrawer({
   onRename,
   onChangeColor,
   onDeleteTrip,
+  onMoveItem,
 }: {
   trip: TripData;
   currency: string;
@@ -109,7 +111,11 @@ export default function TripDrawer({
   onRename: (tripId: string, label: string) => void;
   onChangeColor: (tripId: string, color: string) => void;
   onDeleteTrip: (tripId: string, label: string) => void;
+  /** Puts an activity on another day of the stop, or on no day (null). */
+  onMoveItem: (itemId: string, date: string | null) => Promise<void>;
 }) {
+  const dd = useDayDrag(trip, onMoveItem);
+  const stopDays = tripDays(trip);
   const tripTotal =
     sectionTotal(trip.stay) +
     sectionTotal(trip.transport) +
@@ -225,7 +231,10 @@ export default function TripDrawer({
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-1 py-5 -mx-1">
+        <div
+          data-drag-scroll
+          className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-1 py-5 -mx-1"
+        >
           {trip.photoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -350,10 +359,22 @@ export default function TripDrawer({
                 }
               />
             );
+            // An activity's day, as a drop target: its date, or no day yet.
+            const dayOf = (item: ItemData) =>
+              item.date && stopDays.includes(item.date) ? item.date : UNDATED;
+            const draggable = sec.key === "activities";
             const renderCard = (item: ItemData) => (
               <article
                   key={item.id}
-                  className="booking-card rounded-xl border border-line bg-white py-3 pl-4 pr-2 shadow-panel hover:border-input"
+                  data-drag-row={draggable || undefined}
+                  onPointerDown={
+                    draggable ? (e) => dd.start(e, item, dayOf(item), true) : undefined
+                  }
+                  className={
+                    "booking-card rounded-xl border border-line bg-white py-3 pl-4 pr-2 shadow-panel transition-opacity duration-150 hover:border-input " +
+                    (draggable ? "cursor-grab active:cursor-grabbing " : "") +
+                    (dd.dragging === item.id ? "opacity-40" : "")
+                  }
                 >
                   <div className="flex items-start gap-3">
                     <button
@@ -372,6 +393,15 @@ export default function TripDrawer({
                       <span className="shrink-0 text-sm font-medium leading-5 tabular-nums text-ink">
                         {formatCost(item.costAmount, currency)}
                       </span>
+                    )}
+                    {draggable && (
+                      <MoveHandle
+                        item={item}
+                        from={dayOf(item)}
+                        days={stopDays}
+                        dd={dd}
+                        className="-my-2 -mr-2 size-9"
+                      />
                     )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -467,7 +497,7 @@ export default function TripDrawer({
                 renderCard(item)
               );
             // Activities read as a day-by-day plan; other sections stay a list.
-            const byDay = sec.key === "activities" ? itineraryFor(trip) : null;
+            const byDay = sec.key === "activities" ? itineraryFor(dd.trip) : null;
             return (
               <section
                 key={sec.key}
@@ -490,6 +520,18 @@ export default function TripDrawer({
                     </span>
                   )}
                 </div>
+                {byDay && (
+                  <>
+                    <p className="sr-only" role="status" aria-live="polite">
+                      {dd.status}
+                    </p>
+                    {dd.error && (
+                      <p role="alert" className="field-error mt-2">
+                        {dd.error}
+                      </p>
+                    )}
+                  </>
+                )}
                 <div className="mt-3 space-y-2">
                   {byDay
                     ? items.length > 0 && (
@@ -500,7 +542,14 @@ export default function TripDrawer({
                             );
                             const free = freeParts(plans);
                             return (
-                              <div key={date} className="space-y-2">
+                              <div
+                                key={date}
+                                data-drop={date}
+                                className={
+                                  "-mx-2 space-y-2 rounded-xl px-2 py-1.5 transition-colors duration-150 " +
+                                  (dd.isOver(date) ? "bg-accent-soft" : "")
+                                }
+                              >
                                 <h4 className="flex items-baseline justify-between gap-2 text-xs font-medium text-ink-soft">
                                   {fmtDay(date)}
                                   {acts.length === 0 ? (
@@ -520,8 +569,15 @@ export default function TripDrawer({
                               </div>
                             );
                           })}
-                          {byDay.undated.some((p) => p.key === "activities") && (
-                            <div className="space-y-2">
+                          {(byDay.undated.some((p) => p.key === "activities") ||
+                            dd.dragActive) && (
+                            <div
+                              data-drop={UNDATED}
+                              className={
+                                "-mx-2 space-y-2 rounded-xl px-2 py-1.5 transition-colors duration-150 " +
+                                (dd.isOver(UNDATED) ? "bg-accent-soft" : "")
+                              }
+                            >
                               <h4 className="text-xs font-medium text-ink-soft">
                                 No day yet
                               </h4>
@@ -550,13 +606,14 @@ export default function TripDrawer({
                     onClick={() => onStartAdd(sec.key)}
                   >
                     <Plus />
-                    Add {sec.name.toLowerCase()}
+                    Add {sec.key === "activities" ? "activity" : sec.name.toLowerCase()}
                   </Button>
                 )}
               </section>
             );
           })}
         </div>
+        {dd.ghost}
         <footer className="flex shrink-0 items-center justify-between border-t border-line-soft pt-4">
           <span className="text-sm text-muted">Total planned</span>
           <span className="text-lg font-semibold tabular-nums">
