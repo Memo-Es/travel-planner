@@ -29,6 +29,8 @@ model User {
   createdAt    DateTime     @default(now())
   memberships  Membership[]
   invitesSent  Invite[]     @relation("InviteCreatedBy")
+  oauthCodes   OAuthCode[]
+  oauthGrants  OAuthGrant[]
 }
 
 model Team {
@@ -114,4 +116,56 @@ model Attachment {
   createdAt   DateTime @default(now())
 
   @@index([itemId])
+}
+
+/// An app that connects to the planner over MCP (Claude, ChatGPT and others),
+/// registered by the app itself through OAuth dynamic client registration.
+/// The id is the OAuth client_id.
+model OAuthClient {
+  id           String       @id
+  name         String
+  redirectUris String[]
+  /// Set for clients that authenticate with a secret, null for public ones.
+  secretHash   String?
+  createdAt    DateTime     @default(now())
+  codes        OAuthCode[]
+  grants       OAuthGrant[]
+}
+
+/// A one time authorization code, handed to the app after the person
+/// approves it and swapped for tokens within ten minutes. Only its hash is
+/// stored.
+model OAuthCode {
+  id            String      @id @default(cuid())
+  codeHash      String      @unique
+  client        OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId      String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  redirectUri   String
+  codeChallenge String
+  scope         String
+  resource      String?
+  expiresAt     DateTime
+  createdAt     DateTime    @default(now())
+}
+
+/// One app's access to one person's account. The access and refresh tokens
+/// are replaced on every refresh, and deleting the row disconnects the app.
+/// Only hashes are stored.
+model OAuthGrant {
+  id               String      @id @default(cuid())
+  client           OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId         String
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId           String
+  scope            String
+  accessHash       String      @unique
+  accessExpiresAt  DateTime
+  refreshHash      String      @unique
+  refreshExpiresAt DateTime
+  createdAt        DateTime    @default(now())
+  lastUsedAt       DateTime?
+
+  @@index([userId])
 }

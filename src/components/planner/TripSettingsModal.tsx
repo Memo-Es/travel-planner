@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import type { InviteData, MemberOption } from "@/lib/types";
 import { CURRENCIES } from "@/lib/currency";
+import AiConnections from "@/components/planner/AiConnections";
 
 export default function TripSettingsModal({
   teamName,
@@ -251,6 +252,7 @@ export default function TripSettingsModal({
               {copiedId ? "Invite link copied" : ""}
             </span>
           </section>
+          <AiConnections />
           {error && (
             <p className="field-error" role="alert">
               {error}

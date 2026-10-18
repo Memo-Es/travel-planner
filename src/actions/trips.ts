@@ -1,32 +1,32 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/team";
 import { lookupDestinationPhoto } from "@/lib/photo";
-import { STOP_COLORS } from "@/lib/theme";
 import { requireAttachmentAccess, requireItemAccess } from "@/lib/access";
 import { removeFile } from "@/lib/storage";
+import {
+  addItemToStop,
+  colorSchema,
+  dateStringSchema,
+  moveItemToDay,
+  stopAccess,
+  stopLabelSchema,
+  teamAccess,
+  toItemData,
+  type ItemInput,
+} from "@/lib/planner";
 
 async function requireTeamMembership(teamId: string) {
   const user = await requireUser();
-  const membership = await prisma.membership.findUnique({
-    where: { userId_teamId: { userId: user.id, teamId } },
-  });
-  if (!membership) throw new Error("Not a member of this team");
+  await teamAccess(user.id, teamId);
   return user;
 }
 
 async function requireTripAccess(tripId: string) {
   const user = await requireUser();
-  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
-  if (!trip) throw new Error("Trip not found");
-  const membership = await prisma.membership.findUnique({
-    where: { userId_teamId: { userId: user.id, teamId: trip.teamId } },
-  });
-  if (!membership) throw new Error("Not a member of this team");
-  return trip;
+  return stopAccess(user.id, tripId);
 }
 
 export async function createTrip(teamId: string) {
@@ -56,18 +56,13 @@ export async function deleteTrip(tripId: string) {
   revalidatePath("/");
 }
 
-const dateStringSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date");
-
 export async function updateTripLabel(tripId: string, label: string) {
   await requireTripAccess(tripId);
-  const trimmed = z.string().trim().min(1, "Name is required").max(80).parse(label);
+  const trimmed = stopLabelSchema.parse(label);
   const photoUrl = await lookupDestinationPhoto(trimmed);
   await prisma.trip.update({ where: { id: tripId }, data: { label: trimmed, photoUrl } });
   revalidatePath("/");
 }
-
-const colorIds = STOP_COLORS.map((c) => c.id) as [string, ...string[]];
-const colorSchema = z.enum(colorIds);
 
 export async function updateTripColor(tripId: string, color: string) {
   await requireTripAccess(tripId);
@@ -88,52 +83,15 @@ export async function updateStopDates(tripId: string, start: string, end: string
   revalidatePath("/");
 }
 
-const itemSchema = z.object({
-  title: z.string().trim().min(1, "Name is required").max(120),
-  url: z
-    .string()
-    .trim()
-    .max(500)
-    .refine((v) => v === "" || /^https?:\/\//i.test(v), "Link must start with http:// or https://"),
-  costAmount: z
-    .number()
-    .nonnegative("Cost can't be negative")
-    .finite()
-    .max(10_000_000)
-    .nullable(),
-  date: dateStringSchema.nullable(),
-  time: z
-    .string()
-    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time")
-    .nullable(),
-});
-
-type ItemInput = z.input<typeof itemSchema>;
-
-/** A time only makes sense on a day, so a time without a date is dropped. */
-function toItemData(input: ItemInput) {
-  const { date, time, ...rest } = itemSchema.parse(input);
-  return {
-    ...rest,
-    date: date ? new Date(date) : null,
-    time: date ? time : null,
-  };
-}
-
 export async function addItem(
   tripId: string,
   section: "STAY" | "TRANSPORT" | "ACTIVITIES",
   input: ItemInput,
 ) {
   await requireTripAccess(tripId);
-  const parsed = toItemData(input);
-  const count = await prisma.tripItem.count({ where: { tripId, section } });
-  const item = await prisma.tripItem.create({
-    data: { tripId, section, order: count, ...parsed },
-    select: { id: true },
-  });
+  const id = await addItemToStop(tripId, section, input);
   revalidatePath("/");
-  return item.id;
+  return id;
 }
 
 export async function updateItem(itemId: string, input: ItemInput) {
@@ -147,11 +105,7 @@ export async function updateItem(itemId: string, input: ItemInput) {
  * no day clears the time too, since a time only makes sense on a day. */
 export async function setItemDay(itemId: string, date: string | null) {
   await requireItemAccess(itemId);
-  const day = dateStringSchema.nullable().parse(date);
-  await prisma.tripItem.update({
-    where: { id: itemId },
-    data: day ? { date: new Date(day) } : { date: null, time: null },
-  });
+  await moveItemToDay(itemId, date);
   revalidatePath("/");
 }
 

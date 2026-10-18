@@ -39,6 +39,26 @@ prototype; this is the real, database-backed version of that design.
 - New accounts start with a demo itinerary (Barcelona → Copenhagen) seeded
   in, so the planner isn't empty on first login.
 
+## Planning with an AI assistant
+
+The planner is also an MCP server, so Claude, ChatGPT or any other app that
+supports MCP connectors can read and plan trips. In the app, open Trip settings
+and copy the address under AI assistants (`https://<your domain>/mcp`), add it
+as a custom connector in the AI app, and sign in with your planner account when
+it asks. The assistant then reaches every trip you're part of, and you can
+disconnect it from the same place.
+
+It can list trips, add and change stops, and add, change, move and delete
+plans, through the same checks the app uses. It can't delete stops or touch
+attachments, invites or settings.
+
+Sign in works the way the MCP authorization spec describes, which is what
+these apps implement: the app finds the server from
+`/.well-known/oauth-protected-resource`, registers itself at
+`/api/oauth/register`, sends you to `/oauth/authorize` to approve it, and swaps
+the code for tokens at `/api/oauth/token` using PKCE. Only hashes of the
+tokens are stored. The code is in `src/app/mcp/route.ts` and `src/lib/oauth.ts`.
+
 ## Local development
 
 Requirements: Node 20+, a PostgreSQL database.
