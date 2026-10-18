@@ -63,6 +63,15 @@ export default function ExpenseDialog({
       ? tripDays(selectedTrip)
       : undefined;
   const isPlan = defaultKey !== "stay" || !!defaultDate;
+  // Opened from the itinerary it is a plan, named after its category; opened
+  // from Finances it is an expense.
+  const title = !isPlan
+    ? "Add expense"
+    : form.key === "activities"
+      ? "Add activity"
+      : form.key === "transport"
+        ? "Add transport"
+        : "Add stay";
 
   return (
     <Dialog
@@ -77,7 +86,7 @@ export default function ExpenseDialog({
       >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line-soft pb-4">
           <div>
-            <DialogTitle>{isPlan ? "Add plan" : "Add expense"}</DialogTitle>
+            <DialogTitle>{title}</DialogTitle>
             <DialogDescription id="expense-description" className="mt-1">
               It&apos;s saved as a booking on the stop you choose.
             </DialogDescription>
@@ -109,7 +118,7 @@ export default function ExpenseDialog({
             onCancel={onClose}
             currency={currency}
             placeholder={section.placeholder}
-            submitLabel={isPlan ? "Add plan" : "Add expense"}
+            submitLabel={title}
             days={days}
             autoFocus={false}
             framed={false}

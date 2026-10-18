@@ -50,6 +50,7 @@ export default function LeftPanel({
   onSelectTrip,
   onEditTrip,
   onAddTrip,
+  onAddActivity,
   addingTrip,
   onDeleteTrip,
   onClose,
@@ -79,6 +80,8 @@ export default function LeftPanel({
   /** Opens the stop's drawer to edit it. */
   onEditTrip: (t: TripData) => void;
   onAddTrip: () => void;
+  /** Opens the add dialog on Activities, for the stop whose days are open. */
+  onAddActivity: () => void;
   addingTrip: boolean;
   onDeleteTrip: (id: string, label: string) => void;
   onClose: () => void;
@@ -245,7 +248,26 @@ export default function LeftPanel({
         {addingTrip ? <Loader2 className="animate-spin" /> : <Plus />}
         {addingTrip ? "Adding stop…" : "Add stop"}
       </Button>
-      <footer className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-line-soft pt-4">
+      <div className="mt-auto shrink-0 pb-4">
+        <Button
+          className="w-full"
+          onClick={onAddActivity}
+          disabled={trips.length === 0}
+          aria-describedby={trips.length === 0 ? "activity-needs-stop" : undefined}
+        >
+          <Plus />
+          Add activity
+        </Button>
+        {trips.length === 0 && (
+          <p
+            id="activity-needs-stop"
+            className="mt-2 text-pretty text-center text-xs text-muted"
+          >
+            Add a stop first, then plan its days here.
+          </p>
+        )}
+      </div>
+      <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-line-soft pt-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <span
             aria-hidden="true"
