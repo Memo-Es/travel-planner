@@ -15,7 +15,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import StopDays from "@/components/planner/StopDays";
 import { NativeSelect } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -23,7 +22,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import type { ItemSectionKey, TripData, TeamOption } from "@/lib/types";
+import type { TripData, TeamOption } from "@/lib/types";
 import { fmtRange } from "@/lib/dates";
 import { isScheduled } from "@/lib/tripSections";
 import { logout } from "@/actions/team";
@@ -35,11 +34,6 @@ export default function LeftPanel({
   isMobile,
   trips,
   selectedTripId,
-  daysTripId,
-  todayDate,
-  onOpenItem,
-  onAddPlan,
-  onMoveItem,
   teams,
   teamId,
   teamName,
@@ -60,19 +54,13 @@ export default function LeftPanel({
   isMobile: boolean;
   trips: TripData[];
   selectedTripId: string | null;
-  /** The stop whose days are open under it. */
-  daysTripId: string | null;
-  todayDate: string;
-  onOpenItem: (trip: TripData, key: ItemSectionKey, itemId: string) => void;
-  onAddPlan: (tripId: string, date: string | null) => void;
-  onMoveItem: (itemId: string, date: string | null) => Promise<void>;
   teams: TeamOption[];
   teamId: string;
   teamName: string;
   userName: string;
   onSwitchTeam: (id: string) => void;
   onOpenSettings: () => void;
-  /** Picks a stop: opens its days here and moves the calendar to it. */
+  /** Picks a stop and moves the calendar to it. */
   onSelectTrip: (t: TripData) => void;
   /** Opens the stop's drawer to edit it. */
   onEditTrip: (t: TripData) => void;
@@ -216,15 +204,6 @@ export default function LeftPanel({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          {t.id === daysTripId && (
-            <StopDays
-              stop={t}
-              todayDate={todayDate}
-              onOpenItem={onOpenItem}
-              onAddPlan={onAddPlan}
-              onMoveItem={onMoveItem}
-            />
-          )}
           </Fragment>
         ))}
         {trips.length === 0 && (

@@ -283,14 +283,16 @@ export default function Planner({
     if (isMobile) setMobileTab("calendar");
   }
 
-  // Picking a stop in the left panel opens its days there and moves the
-  // calendar to it. It doesn't open the drawer, which covers the right
-  // column; that is what "Edit stop", the calendar bar and a plan are for.
+  // Picking a stop in the left panel moves the calendar to it, which shows
+  // what's planned day by day; full detail is "Edit stop", opening the
+  // drawer. On mobile, where the calendar isn't already on screen, it also
+  // switches to it.
   function selectStop(t: TripData) {
     const [y, m] = t.start.split("-").map(Number);
     setCursor({ y, m: m - 1 });
     setItineraryTripId(t.id);
     if (openTripId && openTripId !== t.id) setOpenTripId(null);
+    if (isMobile) setMobileTab("calendar");
   }
 
   async function handleAddTrip() {
@@ -747,16 +749,6 @@ export default function Planner({
           isMobile={isMobile}
           trips={trips}
           selectedTripId={itineraryTrip}
-          daysTripId={itineraryTrip}
-          todayDate={toDateInput(todayMs)}
-          onOpenItem={openExpenseFromPanel}
-          onAddPlan={(tripId, date) =>
-            openExpense({ tripId, key: "activities", date: date ?? "" })
-          }
-          onMoveItem={async (itemId, date) => {
-            await setItemDay(itemId, date);
-            refresh();
-          }}
           teams={teams}
           teamId={teamId}
           teamName={teamName}
