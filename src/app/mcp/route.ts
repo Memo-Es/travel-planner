@@ -12,6 +12,7 @@ import {
   dateStringSchema,
   itemAccess,
   moveItemToDay,
+  setAttendance,
   stopAccess,
   stopLabelSchema,
   teamAccess,
@@ -28,7 +29,7 @@ export const dynamic = "force-dynamic";
 
 const INSTRUCTIONS = `Travel Planner holds trips that people plan together.
 
-A trip (for example "Europe 2026") has stops: a place with a first and last day, like "Barcelona, 10 to 13 Nov". Each stop has plans in three sections: stay (where they sleep), transport (flights, trains, transfers) and activities. A plan has a title and can have a day within its stop, a local start time, a cost in the trip's currency and a link.
+A trip (for example "Europe 2026") has stops: a place with a first and last day, like "Barcelona, 10 to 13 Nov". Each stop has plans in three sections: stay (where they sleep), transport (flights, trains, transfers) and activities. A plan has a title and can have a day within its stop, a local start time, a cost in the trip's currency and a link. People on the trip sign up for the plans they're going to, so a group can split up; set_going signs up the person you're helping, never anyone else.
 
 Start with get_trips to see what exists and get ids. When asked to plan something, add stops and plans rather than replacing what is there, keep a plan's day inside its stop's dates (change the stop's dates first if needed), and only delete a plan when the person asks for it. Dates are YYYY-MM-DD and times are 24 hour HH:mm, local to the place.`;
 
@@ -89,7 +90,7 @@ function buildServer(userId: string) {
     {
       title: "Get trips",
       description:
-        "Lists the trips this person is part of, each with its currency and its stops in order, and each stop's plans by section with their ids, days, times, costs and links. Pass trip_id to get one trip.",
+        "Lists the trips this person is part of, each with its currency, its people and its stops in order, and each stop's plans by section with their ids, days, times, costs, links and who's going. Pass trip_id to get one trip.",
       inputSchema: {
         trip_id: z.string().optional().describe("Only this trip"),
       },
@@ -102,12 +103,22 @@ function buildServer(userId: string) {
         include: {
           team: {
             include: {
+              memberships: {
+                orderBy: { createdAt: "asc" },
+                select: { user: { select: { id: true, name: true } } },
+              },
               trips: {
                 orderBy: { order: "asc" },
                 include: {
                   items: {
                     orderBy: { order: "asc" },
-                    include: { _count: { select: { attachments: true } } },
+                    include: {
+                      _count: { select: { attachments: true } },
+                      attendees: {
+                        orderBy: { createdAt: "asc" },
+                        select: { user: { select: { name: true } } },
+                      },
+                    },
                   },
                 },
               },
@@ -122,6 +133,9 @@ function buildServer(userId: string) {
         trip_id: team.id,
         name: team.name,
         currency: team.currency,
+        people: team.memberships.map((m) =>
+          m.user.id === userId ? `${m.user.name} (you)` : m.user.name,
+        ),
         stops: team.trips.map((stop) => ({
           stop_id: stop.id,
           name: stop.label,
@@ -137,6 +151,7 @@ function buildServer(userId: string) {
             cost: item.costAmount,
             link: item.url || null,
             attachments: item._count.attachments,
+            going: item.attendees.map((a) => a.user.name),
           })),
         })),
       }));
@@ -320,6 +335,26 @@ function buildServer(userId: string) {
       await moveItemToDay(item.id, date);
       revalidatePath("/");
       return result(`Moved ${item.title} to ${date ?? "no day"}`);
+    }),
+  );
+
+  server.registerTool(
+    "set_going",
+    {
+      title: "Sign up for a plan",
+      description:
+        "Signs this person up for a plan, so the group sees they're going, or takes them off it with going false. It only ever changes this person's own sign up.",
+      inputSchema: {
+        plan_id: z.string(),
+        going: z.boolean(),
+      },
+      annotations: { idempotentHint: true },
+    },
+    tool(async ({ plan_id, going }: { plan_id: string; going: boolean }) => {
+      const item = await itemAccess(userId, plan_id);
+      await setAttendance(userId, item.id, going);
+      revalidatePath("/");
+      return result(going ? `Going to ${item.title}` : `Not going to ${item.title}`);
     }),
   );
 

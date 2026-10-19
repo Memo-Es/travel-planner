@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireUser, requireActiveTeam, hasSignedInFlash } from "@/lib/team";
 import Planner from "@/components/Planner";
-import type { TripData, TeamOption, ItemData, InviteData, MemberOption, AttachmentData } from "@/lib/types";
+import type { TripData, TeamOption, ItemData, InviteData, MemberOption, AttachmentData, Person } from "@/lib/types";
 
 export default async function HomePage() {
   const user = await requireUser();
@@ -19,6 +19,10 @@ export default async function HomePage() {
             attachments: {
               orderBy: { createdAt: "asc" },
               select: { id: true, name: true, size: true },
+            },
+            attendees: {
+              orderBy: { createdAt: "asc" },
+              select: { user: { select: { id: true, name: true } } },
             },
           },
         },
@@ -95,6 +99,7 @@ function toItem(i: {
   date: Date | null;
   time: string | null;
   attachments: AttachmentData[];
+  attendees: { user: Person }[];
 }): ItemData {
   return {
     id: i.id,
@@ -104,5 +109,6 @@ function toItem(i: {
     date: i.date ? i.date.toISOString().slice(0, 10) : null,
     time: i.time,
     attachments: i.attachments,
+    going: i.attendees.map((a) => a.user),
   };
 }

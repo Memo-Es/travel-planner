@@ -17,7 +17,7 @@ import {
   FileText,
   Clock,
 } from "lucide-react";
-import type { TripData, ItemSectionKey, ItemData } from "@/lib/types";
+import type { TripData, ItemSectionKey, ItemData, Person } from "@/lib/types";
 import { fmtRange, nightsBetween } from "@/lib/dates";
 import {
   SECTION_DEFS,
@@ -38,6 +38,7 @@ import BookingForm from "@/components/planner/BookingForm";
 import { STOP_COLORS, stopColor } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 import { MoveHandle, UNDATED, useDayDrag } from "@/components/planner/useDayDrag";
+import { GoingControl } from "@/components/planner/Going";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -87,6 +88,8 @@ export default function TripDrawer({
   onChangeColor,
   onDeleteTrip,
   onMoveItem,
+  me,
+  onSetGoing,
 }: {
   trip: TripData;
   currency: string;
@@ -113,6 +116,9 @@ export default function TripDrawer({
   onDeleteTrip: (tripId: string, label: string) => void;
   /** Puts an activity on another day of the stop, or on no day (null). */
   onMoveItem: (itemId: string, date: string | null) => Promise<void>;
+  /** The signed in person, who can sign up for activities. */
+  me: Person;
+  onSetGoing: (itemId: string, going: boolean) => Promise<void>;
 }) {
   const dd = useDayDrag(trip, onMoveItem);
   const stopDays = tripDays(trip);
@@ -442,7 +448,7 @@ export default function TripDrawer({
                         : `${fmtDay(item.date)}${item.time ? ` · ${item.time}` : ""}`}
                     </p>
                   )}
-                  <div className="mt-2 flex min-w-0 items-center gap-2 pr-2">
+                  <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 pr-2">
                     <Badge
                       variant={isScheduled(item) ? "success" : "secondary"}
                     >
@@ -466,6 +472,17 @@ export default function TripDrawer({
                       <span className="truncate text-xs text-muted">
                         No booking link
                       </span>
+                    )}
+                    {sec.key === "activities" && (
+                      <div className="ml-auto">
+                        <GoingControl
+                          itemId={item.id}
+                          title={item.t}
+                          going={item.going}
+                          me={me}
+                          onSetGoing={onSetGoing}
+                        />
+                      </div>
                     )}
                   </div>
                   {item.attachments.length > 0 && (

@@ -14,7 +14,11 @@ export type ItemData = {
   /** Local start time, "HH:mm", if it has one. */
   time: string | null;
   attachments: AttachmentData[];
+  /** Who signed up to go, in the order they joined. */
+  going: Person[];
 };
+
+export type Person = { id: string; name: string };
 
 export type TripData = {
   id: string;

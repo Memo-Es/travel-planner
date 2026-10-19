@@ -11,6 +11,7 @@ import {
   colorSchema,
   dateStringSchema,
   moveItemToDay,
+  setAttendance,
   stopAccess,
   stopLabelSchema,
   teamAccess,
@@ -106,6 +107,14 @@ export async function updateItem(itemId: string, input: ItemInput) {
 export async function setItemDay(itemId: string, date: string | null) {
   await requireItemAccess(itemId);
   await moveItemToDay(itemId, date);
+  revalidatePath("/");
+}
+
+/** Signs the signed in person up for a plan, or takes them off it. */
+export async function setGoing(itemId: string, going: boolean) {
+  const user = await requireUser();
+  await requireItemAccess(itemId);
+  await setAttendance(user.id, itemId, going);
   revalidatePath("/");
 }
 

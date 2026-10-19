@@ -96,6 +96,23 @@ export async function addItemToStop(
   return item.id;
 }
 
+/** Signs a person up for a plan, or takes them off it. */
+export async function setAttendance(
+  userId: string,
+  itemId: string,
+  going: boolean,
+) {
+  if (going) {
+    await prisma.itemAttendee.upsert({
+      where: { itemId_userId: { itemId, userId } },
+      create: { itemId, userId },
+      update: {},
+    });
+  } else {
+    await prisma.itemAttendee.deleteMany({ where: { itemId, userId } });
+  }
+}
+
 /** Moves a plan to another day of its stop, keeping its time. Moving it to
  * no day clears the time too, since a time only makes sense on a day. */
 export async function moveItemToDay(itemId: string, date: string | null) {

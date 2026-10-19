@@ -4,6 +4,7 @@ import { Paperclip, Plane, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ItemSectionKey, TripData } from "@/lib/types";
 import { MoveHandle, UNDATED, useDayDrag, type Target } from "@/components/planner/useDayDrag";
+import { Avatars } from "@/components/planner/Going";
 import {
   fmtDay,
   freeParts,
@@ -167,7 +168,8 @@ function PlanList({
                 {(item.time ||
                   key === "transport" ||
                   item.costAmount !== null ||
-                  item.attachments.length > 0) && (
+                  item.attachments.length > 0 ||
+                  item.going.length > 0) && (
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
                   {item.time && (
                     <span className="font-medium tabular-nums text-ink-soft">
@@ -181,6 +183,9 @@ function PlanList({
                     <span className="tabular-nums">
                       {formatCost(item.costAmount, currency)}
                     </span>
+                  )}
+                  {item.going.length > 0 && (
+                    <Avatars people={item.going} size="sm" />
                   )}
                   {item.attachments.length > 0 && (
                     <Paperclip

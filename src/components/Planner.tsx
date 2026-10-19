@@ -28,6 +28,7 @@ import {
   addItem,
   updateItem,
   setItemDay,
+  setGoing,
   deleteItem,
   deleteTrip,
   updateStopDates,
@@ -891,6 +892,11 @@ export default function Planner({
             onDeleteTrip={handleDeleteTrip}
             onMoveItem={async (itemId, date) => {
               await setItemDay(itemId, date);
+              refresh();
+            }}
+            me={{ id: currentUserId, name: userName }}
+            onSetGoing={async (itemId, going) => {
+              await setGoing(itemId, going);
               refresh();
             }}
           />
