@@ -17,6 +17,7 @@ import {
   FileText,
   Clock,
   GripVertical,
+  Copy,
 } from "lucide-react";
 import type { TripData, ItemSectionKey, ItemData, Person } from "@/lib/types";
 import { fmtRange, nightsBetween } from "@/lib/dates";
@@ -29,10 +30,12 @@ import {
 import { formatCost, formatTotal } from "@/lib/currency";
 import {
   PLANNED_SECTIONS,
+  dayShareText,
   fmtDay,
   freeParts,
   itineraryFor,
   tripDays,
+  type Plan,
 } from "@/lib/itinerary";
 import { attachmentHref } from "@/lib/uploads";
 import BookingForm from "@/components/planner/BookingForm";
@@ -106,7 +109,7 @@ export default function TripDrawer({
   onFormChange: (f: FormState) => void;
   onFormError: (message: string | null) => void;
   onClose: () => void;
-  onStartAdd: (key: ItemSectionKey) => void;
+  onStartAdd: (key: ItemSectionKey, date?: string) => void;
   onStartEdit: (
     key: ItemSectionKey,
     itemId: string,
@@ -164,6 +167,22 @@ export default function TripDrawer({
       localStorage.setItem(DRAG_TIP_KEY, "1");
     } catch {
       // Nothing to persist to; it'll just show again next visit.
+    }
+  }
+
+  // Copies a day's plans (across sections) as plain text, the same as the
+  // left panel's copy button.
+  const [copiedDate, setCopiedDate] = useState<string | null>(null);
+  const copyTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(copyTimer.current), []);
+  async function copyDay(date: string, plans: Plan[]) {
+    try {
+      await navigator.clipboard.writeText(dayShareText(trip, date, plans));
+      setCopiedDate(date);
+      clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopiedDate(null), 2000);
+    } catch {
+      // Nothing visible on failure; the icon simply won't switch to Check.
     }
   }
 
@@ -672,21 +691,55 @@ export default function TripDrawer({
                                   (dd.isOver(date) ? "bg-accent-soft" : "")
                                 }
                               >
-                                <h4 className="flex items-baseline justify-between gap-2 text-xs font-medium text-ink-soft">
-                                  {fmtDay(date)}
-                                  {acts.length === 0 ? (
-                                    <span className="font-normal text-muted">
-                                      Free day
-                                    </span>
-                                  ) : (
-                                    free &&
-                                    free.length > 0 && (
+                                <div className="flex items-center justify-between gap-2">
+                                  <h4 className="flex items-baseline gap-1.5 text-xs font-medium text-ink-soft">
+                                    {fmtDay(date)}
+                                    {acts.length === 0 ? (
                                       <span className="font-normal text-muted">
-                                        Free {free.join(", ")}
+                                        Free day
                                       </span>
-                                    )
-                                  )}
-                                </h4>
+                                    ) : (
+                                      free &&
+                                      free.length > 0 && (
+                                        <span className="font-normal text-muted">
+                                          Free {free.join(", ")}
+                                        </span>
+                                      )
+                                    )}
+                                  </h4>
+                                  <div className="flex items-center gap-0.5">
+                                    {plans.length > 0 && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="size-7"
+                                        onClick={() => copyDay(date, plans)}
+                                        aria-label={
+                                          copiedDate === date
+                                            ? `${fmtDay(date)} copied`
+                                            : `Copy ${fmtDay(date)} as text`
+                                        }
+                                        title="Copy as text"
+                                      >
+                                        {copiedDate === date ? (
+                                          <Check className="size-3.5" />
+                                        ) : (
+                                          <Copy className="size-3.5" />
+                                        )}
+                                      </Button>
+                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="-mr-1.5 size-7"
+                                      onClick={() => onStartAdd("activities", date)}
+                                      aria-label={`Add an activity on ${fmtDay(date)}`}
+                                      title="Add an activity"
+                                    >
+                                      <Plus className="size-3.5" />
+                                    </Button>
+                                  </div>
+                                </div>
                                 {acts.map((p) => card$(p.item))}
                               </div>
                             );

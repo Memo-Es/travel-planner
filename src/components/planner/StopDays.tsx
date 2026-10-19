@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy, Paperclip, Plane, Plus } from "lucide-react";
+import { Check, Copy, Plane, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ItemSectionKey, TripData } from "@/lib/types";
 import { MoveHandle, UNDATED, useDayDrag, type Target } from "@/components/planner/useDayDrag";
-import { Avatars } from "@/components/planner/Going";
 import {
   dayShareText,
   fmtDay,
@@ -14,24 +13,23 @@ import {
   tripDays,
   type Plan,
 } from "@/lib/itinerary";
-import { formatCost } from "@/lib/currency";
 
 /**
- * A stop's days, shown under the stop in the left panel: its plans in time
+ * A stop's days, shown under the stop in the left panel: titles in time
  * order, free days, plans with no day yet, and a grip on each plan to drag it
- * onto another day (or tap for a "Move to" menu). The list that scrolls is the
- * nearest ancestor marked data-drag-scroll, which a drag scrolls at its edges.
+ * onto another day (or tap for a "Move to" menu). Each plan's own detail
+ * (cost, notes, who's going, attachments) is a tap away in its drawer rather
+ * than repeated here. The list that scrolls is the nearest ancestor marked
+ * data-drag-scroll, which a drag scrolls at its edges.
  */
 export default function StopDays({
   stop,
-  currency,
   todayDate,
   onOpenItem,
   onAddPlan,
   onMoveItem,
 }: {
   stop: TripData;
-  currency: string;
   todayDate: string;
   onOpenItem: (trip: TripData, key: ItemSectionKey, itemId: string) => void;
   onAddPlan: (tripId: string, date: string | null) => void;
@@ -41,7 +39,7 @@ export default function StopDays({
   const dd = useDayDrag(stop, onMoveItem);
   const itinerary = itineraryFor(dd.trip);
   const days = tripDays(dd.trip);
-  const rowProps = (from: Target) => ({ currency, onOpenItem, days, from, dd });
+  const rowProps = (from: Target) => ({ onOpenItem, days, from, dd });
   const dropClass = (target: Target) =>
     "-mx-1.5 rounded-lg px-1.5 py-1 transition-colors duration-150 " +
     (dd.isOver(target) ? "bg-accent-soft" : "");
@@ -169,14 +167,12 @@ export default function StopDays({
 
 function PlanList({
   plans,
-  currency,
   onOpenItem,
   days,
   from,
   dd,
 }: {
   plans: Plan[];
-  currency: string;
   onOpenItem: (trip: TripData, key: ItemSectionKey, itemId: string) => void;
   days: string[];
   from: Target;
@@ -204,11 +200,7 @@ function PlanList({
                 <span className="block text-pretty text-sm leading-5 text-ink-soft">
                   {item.t}
                 </span>
-                {(item.time ||
-                  key === "transport" ||
-                  item.costAmount !== null ||
-                  item.attachments.length > 0 ||
-                  item.going.length > 0) && (
+                {(item.time || key === "transport") && (
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
                   {item.time && (
                     <span className="font-medium tabular-nums text-ink-soft">
@@ -217,21 +209,6 @@ function PlanList({
                   )}
                   {key === "transport" && (
                     <Plane className="size-3 shrink-0" role="img" aria-label="Transport" />
-                  )}
-                  {item.costAmount !== null && (
-                    <span className="tabular-nums">
-                      {formatCost(item.costAmount, currency)}
-                    </span>
-                  )}
-                  {item.going.length > 0 && (
-                    <Avatars people={item.going} size="sm" />
-                  )}
-                  {item.attachments.length > 0 && (
-                    <Paperclip
-                      className="size-3 shrink-0"
-                      role="img"
-                      aria-label={`${item.attachments.length} ${item.attachments.length === 1 ? "PDF" : "PDFs"}`}
-                    />
                   )}
                 </span>
                 )}

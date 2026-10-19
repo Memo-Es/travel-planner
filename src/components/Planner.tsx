@@ -350,9 +350,9 @@ export default function Planner({
     setSettingsOpen(true);
   }
 
-  function startAdd(key: ItemSectionKey) {
+  function startAdd(key: ItemSectionKey, date?: string) {
     setEditing({ key, itemId: null });
-    setForm(EMPTY_BOOKING_FORM);
+    setForm({ ...EMPTY_BOOKING_FORM, date: date ?? "" });
     setFormError(null);
   }
 
@@ -748,7 +748,6 @@ export default function Planner({
           trips={trips}
           selectedTripId={itineraryTrip}
           daysTripId={itineraryTrip}
-          currency={teamCurrency}
           todayDate={toDateInput(todayMs)}
           onOpenItem={openExpenseFromPanel}
           onAddPlan={(tripId, date) =>

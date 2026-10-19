@@ -36,7 +36,6 @@ export default function LeftPanel({
   trips,
   selectedTripId,
   daysTripId,
-  currency,
   todayDate,
   onOpenItem,
   onAddPlan,
@@ -63,7 +62,6 @@ export default function LeftPanel({
   selectedTripId: string | null;
   /** The stop whose days are open under it. */
   daysTripId: string | null;
-  currency: string;
   todayDate: string;
   onOpenItem: (trip: TripData, key: ItemSectionKey, itemId: string) => void;
   onAddPlan: (tripId: string, date: string | null) => void;
@@ -221,7 +219,6 @@ export default function LeftPanel({
           {t.id === daysTripId && (
             <StopDays
               stop={t}
-              currency={currency}
               todayDate={todayDate}
               onOpenItem={onOpenItem}
               onAddPlan={onAddPlan}
