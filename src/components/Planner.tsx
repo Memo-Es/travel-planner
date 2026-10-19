@@ -751,9 +751,6 @@ export default function Planner({
           onAddPlan={(tripId, date) =>
             openExpense({ tripId, key: "activities", date: date ?? "" })
           }
-          onAddActivity={() =>
-            openExpense({ tripId: itineraryTrip, key: "activities" })
-          }
           onMoveItem={async (itemId, date) => {
             await setItemDay(itemId, date);
             refresh();
