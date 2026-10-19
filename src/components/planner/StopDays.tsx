@@ -1,11 +1,13 @@
 "use client";
 
-import { Paperclip, Plane, Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Copy, Paperclip, Plane, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ItemSectionKey, TripData } from "@/lib/types";
 import { MoveHandle, UNDATED, useDayDrag, type Target } from "@/components/planner/useDayDrag";
 import { Avatars } from "@/components/planner/Going";
 import {
+  dayShareText,
   fmtDay,
   freeParts,
   itineraryFor,
@@ -44,6 +46,23 @@ export default function StopDays({
     "-mx-1.5 rounded-lg px-1.5 py-1 transition-colors duration-150 " +
     (dd.isOver(target) ? "bg-accent-soft" : "");
 
+  const [copiedDate, setCopiedDate] = useState<string | null>(null);
+  const [copyStatus, setCopyStatus] = useState("");
+  const copyTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(copyTimer.current), []);
+
+  async function copyDay(date: string, plans: Plan[]) {
+    try {
+      await navigator.clipboard.writeText(dayShareText(dd.trip, date, plans));
+      setCopiedDate(date);
+      setCopyStatus(`${fmtDay(date)} copied`);
+      clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopiedDate(null), 2000);
+    } catch {
+      setCopyStatus("Couldn't copy. Try again.");
+    }
+  }
+
   return (
     <div className="mb-2 ml-2 mt-1 space-y-1 border-l border-line pl-2 pr-1.5">
       <p className="sr-only" role="status" aria-live="polite">
@@ -54,6 +73,9 @@ export default function StopDays({
           {dd.error}
         </p>
       )}
+      <p className="sr-only" role="status" aria-live="polite">
+        {copyStatus}
+      </p>
 
       {itinerary.days.map(({ date, plans }) => {
         const free = freeParts(plans);
@@ -77,16 +99,33 @@ export default function StopDays({
                   <span className="font-normal text-muted">· Free</span>
                 )}
               </h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="-mr-1.5"
-                onClick={() => onAddPlan(stop.id, date)}
-                aria-label={`Add a plan on ${fmtDay(date)}`}
-                title="Add a plan"
-              >
-                <Plus />
-              </Button>
+              <div className="flex items-center gap-0.5">
+                {plans.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => copyDay(date, plans)}
+                    aria-label={
+                      copiedDate === date
+                        ? `${fmtDay(date)} copied`
+                        : `Copy ${fmtDay(date)} as text`
+                    }
+                    title="Copy as text"
+                  >
+                    {copiedDate === date ? <Check /> : <Copy />}
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="-mr-1.5"
+                  onClick={() => onAddPlan(stop.id, date)}
+                  aria-label={`Add a plan on ${fmtDay(date)}`}
+                  title="Add a plan"
+                >
+                  <Plus />
+                </Button>
+              </div>
             </div>
             {plans.length > 0 && (
               <>

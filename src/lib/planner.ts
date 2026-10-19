@@ -42,6 +42,13 @@ export const itemSchema = z.object({
     .nullable(),
   date: dateStringSchema.nullable(),
   time: timeStringSchema.nullable(),
+  notes: z
+    .string()
+    .trim()
+    .max(2000, "Notes can't be longer than 2000 characters")
+    .nullable()
+    .optional()
+    .transform((v) => (v ? v : null)),
 });
 
 export type ItemInput = z.input<typeof itemSchema>;

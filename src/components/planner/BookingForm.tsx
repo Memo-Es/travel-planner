@@ -3,7 +3,7 @@
 import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 import { FileText, Paperclip, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input, NativeSelect } from "@/components/ui/input";
+import { Input, NativeSelect, Textarea } from "@/components/ui/input";
 import { fmtDay } from "@/lib/itinerary";
 import type { AttachmentData } from "@/lib/types";
 import { currencySymbol } from "@/lib/currency";
@@ -22,6 +22,8 @@ export type BookingFormState = {
   date: string;
   /** "HH:mm" or "" for any time that day. */
   time: string;
+  /** A short free-text note, "" for none. */
+  notes: string;
   /** New PDFs to upload on save. */
   files: File[];
   /** Existing attachments staged for removal on save. */
@@ -34,6 +36,7 @@ export const EMPTY_BOOKING_FORM: BookingFormState = {
   cost: "",
   date: "",
   time: "",
+  notes: "",
   files: [],
   removeIds: [],
 };
@@ -133,6 +136,21 @@ export default function BookingForm({
           autoFocus={autoFocus}
           aria-invalid={!!error?.startsWith("Name") || undefined}
           aria-describedby={error ? errorId : undefined}
+        />
+      </label>
+      <label className="block space-y-1.5">
+        <span className="field-label">Notes</span>
+        <Textarea
+          value={form.notes}
+          onChange={(e) => onChange({ ...form, notes: e.target.value })}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.stopPropagation();
+              onCancel();
+            }
+          }}
+          placeholder="Booking details, a reminder…"
+          rows={2}
         />
       </label>
       {days && (

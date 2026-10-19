@@ -96,6 +96,9 @@ model TripItem {
   // local "HH:mm" time. Kept as wall-clock values so they never shift.
   date        DateTime?      @db.Date
   time        String?
+  /// A short note on the plan — booking details, a reminder, anything that
+  /// doesn't belong in the title.
+  notes       String?
   order       Int            @default(0)
   attachments Attachment[]
   attendees   ItemAttendee[]

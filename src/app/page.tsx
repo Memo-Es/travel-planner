@@ -98,6 +98,7 @@ function toItem(i: {
   costAmount: number | null;
   date: Date | null;
   time: string | null;
+  notes: string | null;
   attachments: AttachmentData[];
   attendees: { user: Person }[];
 }): ItemData {
@@ -110,5 +111,6 @@ function toItem(i: {
     time: i.time,
     attachments: i.attachments,
     going: i.attendees.map((a) => a.user),
+    notes: i.notes,
   };
 }

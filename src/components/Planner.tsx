@@ -375,6 +375,7 @@ export default function Planner({
       costAmount: parseCost(f.cost),
       date: f.date || null,
       time: f.date && f.time ? f.time : null,
+      notes: f.notes.trim() || null,
     };
     let itemId = target.itemId;
     if (itemId === null)
@@ -452,6 +453,7 @@ export default function Planner({
       cost: item.costAmount === null ? "" : String(item.costAmount),
       date: item.date ?? "",
       time: item.time ?? "",
+      notes: item.notes ?? "",
       files: [],
       removeIds: [],
     });

@@ -61,6 +61,23 @@ export function itineraryFor(trip: TripData): {
   return { days, undated };
 }
 
+/** A day's plans as plain text, ready to paste into a chat. */
+export function dayShareText(
+  stop: Pick<TripData, "label">,
+  date: string,
+  plans: Plan[],
+): string {
+  const lines = [`${fmtDay(date)} · ${stop.label}`];
+  if (plans.length === 0) {
+    lines.push("Free day");
+  } else {
+    for (const { item } of plans) {
+      lines.push(item.time ? `${item.time} ${item.t}` : item.t);
+    }
+  }
+  return lines.join("\n");
+}
+
 /** Plans on each date across all stops, for the calendar's day previews. */
 export function plansByDate(trips: TripData[]): Map<string, Plan[]> {
   const map = new Map<string, Plan[]>();

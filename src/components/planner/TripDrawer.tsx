@@ -16,6 +16,7 @@ import {
   Check,
   FileText,
   Clock,
+  GripVertical,
 } from "lucide-react";
 import type { TripData, ItemSectionKey, ItemData, Person } from "@/lib/types";
 import { fmtRange, nightsBetween } from "@/lib/dates";
@@ -56,6 +57,7 @@ import {
 import type { Editing, FormState } from "@/components/Planner";
 
 const SECTION_ICONS = { stay: Hotel, transport: Plane, activities: MapPin } as const;
+const DRAG_TIP_KEY = "travel-planner:dragTipDismissed";
 
 function editState(item: ItemData): FormState {
   return {
@@ -64,6 +66,7 @@ function editState(item: ItemData): FormState {
     cost: item.costAmount === null ? "" : String(item.costAmount),
     date: item.date ?? "",
     time: item.time ?? "",
+    notes: item.notes ?? "",
     files: [],
     removeIds: [],
   };
@@ -142,6 +145,27 @@ export default function TripDrawer({
   }, [editing?.key]);
   const tabsId = useId();
   const tabsRef = useRef<HTMLDivElement>(null);
+
+  // A card can be dragged onto another day, which has no other hint it's
+  // possible. Shown once per browser, on the Activities tab where it applies.
+  const [dragTipDismissed, setDragTipDismissed] = useState(true);
+  useEffect(() => {
+    try {
+      setDragTipDismissed(localStorage.getItem(DRAG_TIP_KEY) === "1");
+    } catch {
+      // Private browsing or storage disabled: show it every time rather
+      // than never.
+      setDragTipDismissed(false);
+    }
+  }, []);
+  function dismissDragTip() {
+    setDragTipDismissed(true);
+    try {
+      localStorage.setItem(DRAG_TIP_KEY, "1");
+    } catch {
+      // Nothing to persist to; it'll just show again next visit.
+    }
+  }
 
   function onTabKey(e: React.KeyboardEvent) {
     const keys = SECTION_DEFS.map((s) => s.key);
@@ -512,6 +536,11 @@ export default function TripDrawer({
                         : `${fmtDay(item.date)}${item.time ? ` · ${item.time}` : ""}`}
                     </p>
                   )}
+                  {item.notes && (
+                    <p className="mt-1.5 text-pretty text-xs leading-relaxed text-ink-soft">
+                      {item.notes}
+                    </p>
+                  )}
                   <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-2 pr-2">
                     <Badge
                       variant={isScheduled(item) ? "success" : "secondary"}
@@ -604,6 +633,24 @@ export default function TripDrawer({
                       <p role="alert" className="field-error mt-2">
                         {dd.error}
                       </p>
+                    )}
+                    {items.length > 0 && !dragTipDismissed && (
+                      <div className="mt-3 flex items-start gap-2.5 rounded-xl bg-secondary/60 px-3 py-2.5 text-xs text-ink-soft">
+                        <GripVertical className="mt-0.5 size-3.5 shrink-0 text-muted" />
+                        <p className="flex-1 text-pretty leading-relaxed">
+                          Drag a card, or its grip, onto another day to move
+                          it.
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="-mr-1.5 -mt-1 size-7 shrink-0"
+                          onClick={dismissDragTip}
+                          aria-label="Dismiss this tip"
+                        >
+                          <X className="size-3.5" />
+                        </Button>
+                      </div>
                     )}
                   </>
                 )}

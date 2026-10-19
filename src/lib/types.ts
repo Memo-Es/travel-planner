@@ -16,6 +16,8 @@ export type ItemData = {
   attachments: AttachmentData[];
   /** Who signed up to go, in the order they joined. */
   going: Person[];
+  /** A short free-text note, if one was added. */
+  notes: string | null;
 };
 
 export type Person = { id: string; name: string };

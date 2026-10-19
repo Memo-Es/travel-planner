@@ -29,7 +29,7 @@ export const dynamic = "force-dynamic";
 
 const INSTRUCTIONS = `Travel Planner holds trips that people plan together.
 
-A trip (for example "Europe 2026") has stops: a place with a first and last day, like "Barcelona, 10 to 13 Nov". Each stop has plans in three sections: stay (where they sleep), transport (flights, trains, transfers) and activities. A plan has a title and can have a day within its stop, a local start time, a cost in the trip's currency and a link. People on the trip sign up for the plans they're going to, so a group can split up; set_going signs up the person you're helping, never anyone else.
+A trip (for example "Europe 2026") has stops: a place with a first and last day, like "Barcelona, 10 to 13 Nov". Each stop has plans in three sections: stay (where they sleep), transport (flights, trains, transfers) and activities. A plan has a title and can have a day within its stop, a local start time, a cost in the trip's currency, a link and a short note. People on the trip sign up for the plans they're going to, so a group can split up; set_going signs up the person you're helping, never anyone else.
 
 Start with get_trips to see what exists and get ids. When asked to plan something, add stops and plans rather than replacing what is there, keep a plan's day inside its stop's dates (change the stop's dates first if needed), and only delete a plan when the person asks for it. Dates are YYYY-MM-DD and times are 24 hour HH:mm, local to the place.`;
 
@@ -150,6 +150,7 @@ function buildServer(userId: string) {
             time: item.time,
             cost: item.costAmount,
             link: item.url || null,
+            notes: item.notes,
             attachments: item._count.attachments,
             going: item.attendees.map((a) => a.user.name),
           })),
@@ -249,6 +250,7 @@ function buildServer(userId: string) {
         time: z.string().optional().describe("Local start time, HH:mm, needs a date"),
         cost: z.number().optional().describe("In the trip's currency"),
         link: z.string().optional().describe("Booking or info page, http(s)"),
+        notes: z.string().optional().describe("A short note, e.g. booking details or a reminder"),
       },
     },
     tool(async (args: {
@@ -259,6 +261,7 @@ function buildServer(userId: string) {
       time?: string;
       cost?: number;
       link?: string;
+      notes?: string;
     }) => {
       const stop = await stopAccess(userId, args.stop_id);
       inStop(args.date ?? null, stop);
@@ -269,6 +272,7 @@ function buildServer(userId: string) {
         costAmount: args.cost ?? null,
         date: args.date ?? null,
         time: args.time ?? null,
+        notes: args.notes ?? null,
       });
       revalidatePath("/");
       return result(`Added ${args.title.trim()} to ${stop.label}`, { plan_id: id });
@@ -288,6 +292,7 @@ function buildServer(userId: string) {
         time: timeStringSchema.nullable().optional(),
         cost: z.number().nullable().optional(),
         link: z.string().nullable().optional(),
+        notes: z.string().nullable().optional().describe("Pass null to clear it"),
       },
       annotations: { idempotentHint: true },
     },
@@ -298,6 +303,7 @@ function buildServer(userId: string) {
       time?: string | null;
       cost?: number | null;
       link?: string | null;
+      notes?: string | null;
     }) => {
       const item = await itemAccess(userId, args.plan_id);
       const date = args.date === undefined ? (item.date ? day(item.date) : null) : args.date;
@@ -310,6 +316,7 @@ function buildServer(userId: string) {
         costAmount: args.cost === undefined ? item.costAmount : args.cost,
         date,
         time,
+        notes: args.notes === undefined ? item.notes : args.notes,
       });
       await prisma.tripItem.update({ where: { id: item.id }, data });
       revalidatePath("/");

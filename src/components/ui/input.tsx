@@ -28,3 +28,18 @@ export const NativeSelect = React.forwardRef<
   />
 ));
 NativeSelect.displayName = "NativeSelect";
+
+export const Textarea = React.forwardRef<
+  HTMLTextAreaElement,
+  React.TextareaHTMLAttributes<HTMLTextAreaElement>
+>(({ className, ...props }, ref) => (
+  <textarea
+    ref={ref}
+    className={cn(
+      "flex min-h-[4.5rem] w-full resize-none rounded-lg border border-input bg-white px-3 py-2 text-sm text-ink shadow-sm transition-colors duration-150 placeholder:text-muted-2 hover:border-stone-400 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/15 disabled:cursor-not-allowed disabled:bg-secondary disabled:opacity-60",
+      className,
+    )}
+    {...props}
+  />
+));
+Textarea.displayName = "Textarea";
