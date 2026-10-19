@@ -47,6 +47,29 @@ export function AnimatedBackground({
   );
 }
 
+/** The rule under the selected line tab, sliding to whichever tab is picked. */
+export function AnimatedUnderline({
+  layoutId,
+  className,
+}: {
+  layoutId: string;
+  className?: string;
+}) {
+  const reduce = useReducedMotion();
+  return (
+    <motion.span
+      aria-hidden="true"
+      layoutId={reduce ? undefined : layoutId}
+      initial={false}
+      transition={reduce ? { duration: 0 } : settle}
+      className={cn(
+        "pointer-events-none absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-ink",
+        className,
+      )}
+    />
+  );
+}
+
 const integer = (value: number) => String(Math.round(value));
 
 export function AnimatedNumber({

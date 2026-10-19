@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatedBackground, AnimatedNumber, Disclosure } from "@/components/motion/primitives";
+import { AnimatedNumber, AnimatedUnderline, Disclosure } from "@/components/motion/primitives";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   Plus,
@@ -54,6 +54,8 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import type { Editing, FormState } from "@/components/Planner";
+
+const SECTION_ICONS = { stay: Hotel, transport: Plane, activities: MapPin } as const;
 
 function editState(item: ItemData): FormState {
   return {
@@ -371,10 +373,11 @@ export default function TripDrawer({
             role="tablist"
             aria-label="Plans"
             onKeyDown={onTabKey}
-            className="grid grid-cols-3 gap-1 rounded-xl border border-line bg-white p-1"
+            className="flex border-b border-line"
           >
             {SECTION_DEFS.map((sec) => {
               const active = tab === sec.key;
+              const TabIcon = SECTION_ICONS[sec.key];
               return (
                 <button
                   key={sec.key}
@@ -387,20 +390,18 @@ export default function TripDrawer({
                   tabIndex={active ? 0 : -1}
                   onClick={() => setTab(sec.key)}
                   className={
-                    "ui-button relative isolate flex min-h-9 min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 text-sm font-medium transition-colors duration-150 " +
+                    "relative flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-t-lg px-2 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring " +
                     (active ? "text-ink" : "text-muted hover:text-ink")
                   }
                 >
-                  {active && (
-                    <AnimatedBackground
-                      layoutId={`${tabsId}-highlight`}
-                      className="bg-secondary shadow-sm"
-                    />
-                  )}
+                  <TabIcon className="size-4 shrink-0" aria-hidden="true" />
                   <span className="truncate">{sec.name}</span>
                   <span className="text-xs font-normal tabular-nums text-muted">
                     {trip[sec.key].length}
                   </span>
+                  {active && (
+                    <AnimatedUnderline layoutId={`${tabsId}-underline`} />
+                  )}
                 </button>
               );
             })}
@@ -410,12 +411,6 @@ export default function TripDrawer({
             const items: ItemData[] = trip[sec.key];
             const total = sectionTotal(items);
             const adding = editing?.key === sec.key && editing.itemId === null;
-            const Icon =
-              sec.key === "stay"
-                ? Hotel
-                : sec.key === "transport"
-                  ? Plane
-                  : MapPin;
             const form$ = (existing: ItemData["attachments"], label: string) => (
               <BookingForm
                 form={form}
@@ -594,10 +589,7 @@ export default function TripDrawer({
               >
                 {total > 0 && (
                   <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="flex items-center gap-2 text-muted">
-                      <Icon className="size-4" />
-                      {sec.name} total
-                    </span>
+                    <span className="text-muted">{sec.name} total</span>
                     <span className="font-medium tabular-nums text-ink-soft">
                       {formatTotal(total, currency)}
                     </span>
