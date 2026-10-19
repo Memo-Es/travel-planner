@@ -45,7 +45,7 @@ export default function StopDays({
     (dd.isOver(target) ? "bg-accent-soft" : "");
 
   return (
-    <div className="mb-2 ml-2 mt-1 space-y-1 border-l border-line pl-2">
+    <div className="mb-2 ml-2 mt-1 space-y-1 border-l border-line pl-2 pr-1.5">
       <p className="sr-only" role="status" aria-live="polite">
         {dd.status}
       </p>

@@ -1,7 +1,7 @@
 "use client";
 
-import { AnimatedNumber, Disclosure } from "@/components/motion/primitives";
-import { useState } from "react";
+import { AnimatedBackground, AnimatedNumber, Disclosure } from "@/components/motion/primitives";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   Plus,
   Trash2,
@@ -132,6 +132,35 @@ export default function TripDrawer({
   const [editingLabel, setEditingLabel] = useState(false);
   const [labelDraft, setLabelDraft] = useState(trip.label);
   const datesValid = !!startDraft && !!endDraft && endDraft >= startDraft;
+  // One section at a time. Editing a plan from elsewhere (the left panel,
+  // Finances) opens its section.
+  const [tab, setTab] = useState<ItemSectionKey>(editing?.key ?? "activities");
+  useEffect(() => {
+    if (editing?.key) setTab(editing.key);
+  }, [editing?.key]);
+  const tabsId = useId();
+  const tabsRef = useRef<HTMLDivElement>(null);
+
+  function onTabKey(e: React.KeyboardEvent) {
+    const keys = SECTION_DEFS.map((s) => s.key);
+    const i = keys.indexOf(tab);
+    const next =
+      e.key === "ArrowRight"
+        ? keys[(i + 1) % keys.length]
+        : e.key === "ArrowLeft"
+          ? keys[(i - 1 + keys.length) % keys.length]
+          : e.key === "Home"
+            ? keys[0]
+            : e.key === "End"
+              ? keys[keys.length - 1]
+              : null;
+    if (!next) return;
+    e.preventDefault();
+    setTab(next);
+    tabsRef.current
+      ?.querySelector<HTMLButtonElement>(`[data-tab="${next}"]`)
+      ?.focus();
+  }
 
   function saveLabel() {
     const trimmed = labelDraft.trim();
@@ -239,7 +268,7 @@ export default function TripDrawer({
 
         <div
           data-drag-scroll
-          className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-1 py-5 -mx-1"
+          className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-2 py-5 -mx-2"
         >
           {trip.photoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -337,7 +366,47 @@ export default function TripDrawer({
             </div>
           </fieldset>
 
-          {SECTION_DEFS.map((sec) => {
+          <div
+            ref={tabsRef}
+            role="tablist"
+            aria-label="Plans"
+            onKeyDown={onTabKey}
+            className="grid grid-cols-3 gap-1 rounded-xl border border-line bg-white p-1"
+          >
+            {SECTION_DEFS.map((sec) => {
+              const active = tab === sec.key;
+              return (
+                <button
+                  key={sec.key}
+                  type="button"
+                  role="tab"
+                  data-tab={sec.key}
+                  id={`${tabsId}-tab-${sec.key}`}
+                  aria-selected={active}
+                  aria-controls={`${tabsId}-panel-${sec.key}`}
+                  tabIndex={active ? 0 : -1}
+                  onClick={() => setTab(sec.key)}
+                  className={
+                    "ui-button relative isolate flex min-h-9 min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 text-sm font-medium transition-colors duration-150 " +
+                    (active ? "text-ink" : "text-muted hover:text-ink")
+                  }
+                >
+                  {active && (
+                    <AnimatedBackground
+                      layoutId={`${tabsId}-highlight`}
+                      className="bg-secondary shadow-sm"
+                    />
+                  )}
+                  <span className="truncate">{sec.name}</span>
+                  <span className="text-xs font-normal tabular-nums text-muted">
+                    {trip[sec.key].length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {SECTION_DEFS.filter((sec) => sec.key === tab).map((sec) => {
             const items: ItemData[] = trip[sec.key];
             const total = sectionTotal(items);
             const adding = editing?.key === sec.key && editing.itemId === null;
@@ -518,25 +587,22 @@ export default function TripDrawer({
             return (
               <section
                 key={sec.key}
-                aria-labelledby={`section-${sec.key}`}
+                role="tabpanel"
+                id={`${tabsId}-panel-${sec.key}`}
+                aria-labelledby={`${tabsId}-tab-${sec.key}`}
+                className="-mt-2"
               >
-                <div className="flex items-center justify-between gap-3">
-                  <h3
-                    id={`section-${sec.key}`}
-                    className="flex items-center gap-2 text-sm font-semibold text-ink"
-                  >
-                    <Icon className="size-4 text-muted" />
-                    {sec.name}
-                    <span className="text-xs font-normal tabular-nums text-muted">
-                      {items.length}
+                {total > 0 && (
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="flex items-center gap-2 text-muted">
+                      <Icon className="size-4" />
+                      {sec.name} total
                     </span>
-                  </h3>
-                  {total > 0 && (
-                    <span className="text-sm font-medium tabular-nums text-ink-soft">
+                    <span className="font-medium tabular-nums text-ink-soft">
                       {formatTotal(total, currency)}
                     </span>
-                  )}
-                </div>
+                  </div>
+                )}
                 {byDay && (
                   <>
                     <p className="sr-only" role="status" aria-live="polite">
