@@ -330,7 +330,7 @@ export default function BookingForm({
           id={hintId}
           className="text-pretty text-xs leading-relaxed text-muted"
         >
-          Add a name, link and cost to mark this booking as scheduled. PDFs up
+          Add a name and link to mark this booking as scheduled. PDFs up
           to {MAX_PDF_MB} MB.
         </p>
       )}

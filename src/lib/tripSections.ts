@@ -6,8 +6,11 @@ export const SECTION_DEFS: { key: ItemSectionKey; name: string; placeholder: str
   { key: "activities", name: "Activities", placeholder: "Activity or reservation" },
 ];
 
+/** A booking reads as confirmed once it has a name and a link to show for
+ * it. Cost isn't required: a restaurant reservation or a free museum slot is
+ * fully scheduled with nothing to pay. */
 export function isScheduled(item: ItemData): boolean {
-  return !!(item.t.trim() && item.url.trim() && item.costAmount !== null);
+  return !!(item.t.trim() && item.url.trim());
 }
 
 export function sectionTotal(items: ItemData[]): number {
