@@ -52,6 +52,15 @@ It can list trips, add and change stops, and add, change, move and delete
 plans, through the same checks the app uses. It can't delete stops or touch
 attachments, invites or settings.
 
+It can also look up a real place with `check_place` (hours, whether it's open
+right now, phone number, rating, and a hint on how to book it), so it's
+checking an actual fact rather than a guess before it holds a table or
+recommends somewhere. That needs a `GOOGLE_PLACES_API_KEY` set; without one it
+says so instead of making something up. It never books anything itself or
+sees a card number: for something free to reserve, like most restaurant
+tables, it's told to go ahead and hold it once it's confirmed available, and
+to stop and tell you instead the moment money would be involved.
+
 Sign in works the way the MCP authorization spec describes, which is what
 these apps implement: the app finds the server from
 `/.well-known/oauth-protected-resource`, registers itself at

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { lookupDestinationPhoto } from "@/lib/photo";
 import { removeFile } from "@/lib/storage";
 import { CORS_HEADERS, MCP_PATH, originOf, verifyAccessToken } from "@/lib/oauth";
+import { checkPlace } from "@/lib/places";
 import {
   addItemToStop,
   colorSchema,
@@ -33,7 +34,7 @@ A trip (for example "Europe 2026") has stops: a place with a first and last day,
 
 Start with get_trips to see what exists and get ids. When asked to plan something, add stops and plans rather than replacing what is there, keep a plan's day inside its stop's dates (change the stop's dates first if needed), and only delete a plan when the person asks for it. Dates are YYYY-MM-DD and times are 24 hour HH:mm, local to the place.
 
-This server only ever touches the plan, never the real world: it can't check whether a table or a slot is actually free, and it can't book anything. If you have your own way to look that up or act on it (browsing, a connector), use it rather than guessing, and the usual rule changes by whether it costs money. For something free to hold - a restaurant table, a museum slot, anything with no deposit or card required - go ahead and secure it once you've confirmed it's actually available, then record it here with add_plan or update_plan (title, the real time, its link, and a note with the confirmation or what it needs); a popular table can be gone by the time you'd ask, so confirming and holding it is the useful thing to do, not a question to raise first. The moment payment is involved - a deposit, a card on file, a non-refundable fare - stop and tell the person what you found instead of completing it, and recording an option you haven't booked as a note on the plan is often the more honest result than marking it Scheduled.`;
+check_place looks up a real place by name (include the city, e.g. "Disfrutar, Barcelona") and returns whether it's actually open, its phone number, rating and a booking hint - real facts, not a guess, so use it before holding or recommending somewhere rather than trusting what you already think you know about it. This server still can't check a specific table or time slot, or book anything itself. If you have your own way to do that (browsing, a connector), use it, and the usual rule changes by whether it costs money. For something free to hold - a restaurant table, a museum slot, anything with no deposit or card required - go ahead and secure it once you've confirmed it's actually available, then record it here with add_plan or update_plan (title, the real time, its link, and a note with the confirmation or what it needs); a popular table can be gone by the time you'd ask, so confirming and holding it is the useful thing to do, not a question to raise first. The moment payment is involved - a deposit, a card on file, a non-refundable fare - stop and tell the person what you found instead of completing it, and recording an option you haven't booked as a note on the plan is often the more honest result than marking it Scheduled.`;
 
 const SECTIONS = {
   stay: "STAY",
@@ -364,6 +365,35 @@ function buildServer(userId: string) {
       await setAttendance(userId, item.id, going);
       revalidatePath("/");
       return result(going ? `Going to ${item.title}` : `Not going to ${item.title}`);
+    }),
+  );
+
+  server.registerTool(
+    "check_place",
+    {
+      title: "Check a real place",
+      description:
+        "Looks up a real place by name (put the city or area in the query, e.g. \"Disfrutar, Barcelona\") and returns up to 3 matches, each with whether it's open right now, its hours, phone number, rating, price level and a hint on how to book it. Use this before telling someone a place is open, holding a reservation, or recommending somewhere, rather than relying on what you already know about it, since that can be wrong or out of date. Needs a Google Places API key configured on the server; if it isn't, says so plainly instead of guessing.",
+      inputSchema: {
+        query: z.string().describe('The place and its city or area, e.g. "Disfrutar, Barcelona"'),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    tool(async ({ query }: { query: string }) => {
+      const places = await checkPlace(query);
+      if (places === null) {
+        return {
+          ...result(
+            "This server has no Google Places API key configured, so it can't look up real places. Say so rather than guessing.",
+          ),
+          isError: true,
+        };
+      }
+      if (places.length === 0) return result(`No match found for "${query}"`);
+      return result(
+        places.length === 1 ? "1 match" : `${places.length} matches`,
+        places,
+      );
     }),
   );
 
