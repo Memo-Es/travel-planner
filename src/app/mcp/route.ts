@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { lookupDestinationPhoto } from "@/lib/photo";
 import { removeFile } from "@/lib/storage";
 import { CORS_HEADERS, MCP_PATH, originOf, verifyAccessToken } from "@/lib/oauth";
-import { checkPlace } from "@/lib/places";
+import { checkPlace, resolvePlacesKey } from "@/lib/places";
 import {
   addItemToStop,
   colorSchema,
@@ -373,18 +373,21 @@ function buildServer(userId: string) {
     {
       title: "Check a real place",
       description:
-        "Looks up a real place by name (put the city or area in the query, e.g. \"Disfrutar, Barcelona\") and returns up to 3 matches, each with whether it's open right now, its hours, phone number, rating, price level and a hint on how to book it. Use this before telling someone a place is open, holding a reservation, or recommending somewhere, rather than relying on what you already know about it, since that can be wrong or out of date. Needs a Google Places API key configured on the server; if it isn't, says so plainly instead of guessing.",
+        "Looks up a real place by name (put the city or area in the query, e.g. \"Disfrutar, Barcelona\") and returns up to 3 matches, each with whether it's open right now, its hours, phone number, rating, price level and a hint on how to book it. Use this before telling someone a place is open, holding a reservation, or recommending somewhere, rather than relying on what you already know about it, since that can be wrong or out of date. Pass trip_id so the trip's own Places key is used if it has one, which is also how its usage is billed to the right place rather than the server's shared default. Needs a Google Places API key configured, on the trip or the server; if neither is, says so plainly instead of guessing.",
       inputSchema: {
         query: z.string().describe('The place and its city or area, e.g. "Disfrutar, Barcelona"'),
+        trip_id: z.string().optional().describe("Uses this trip's own Places key if it has set one"),
       },
       annotations: { readOnlyHint: true },
     },
-    tool(async ({ query }: { query: string }) => {
-      const places = await checkPlace(query);
+    tool(async ({ query, trip_id }: { query: string; trip_id?: string }) => {
+      const team = trip_id ? await teamAccess(userId, trip_id) : null;
+      const apiKey = resolvePlacesKey(team, process.env.GOOGLE_PLACES_API_KEY);
+      const places = await checkPlace(query, apiKey);
       if (places === null) {
         return {
           ...result(
-            "This server has no Google Places API key configured, so it can't look up real places. Say so rather than guessing.",
+            "No Google Places API key is configured, on this trip or the server, so real places can't be looked up. Say so rather than guessing.",
           ),
           isError: true,
         };

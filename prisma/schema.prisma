@@ -35,13 +35,18 @@ model User {
 }
 
 model Team {
-  id          String       @id @default(cuid())
-  name        String
-  currency    String       @default("EUR")
-  createdAt   DateTime     @default(now())
-  memberships Membership[]
-  trips       Trip[]
-  invites     Invite[]
+  id           String       @id @default(cuid())
+  name         String
+  currency     String       @default("EUR")
+  /// A Google Places API key this team supplies for the MCP server's
+  /// check_place tool, used instead of the deployment's shared
+  /// GOOGLE_PLACES_API_KEY when set. Plain text: this app has no secrets
+  /// encryption, the same trade a team accepts by setting it at all.
+  placesApiKey String?
+  createdAt    DateTime     @default(now())
+  memberships  Membership[]
+  trips        Trip[]
+  invites      Invite[]
 }
 
 model Membership {

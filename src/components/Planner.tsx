@@ -41,6 +41,7 @@ import {
   switchTeam,
   updateTeamName,
   updateTeamCurrency,
+  updateTeamPlacesKey,
   createInvite,
   dismissSignedInToast,
 } from "@/actions/team";
@@ -113,6 +114,7 @@ export default function Planner({
   teamId,
   teamName,
   teamCurrency,
+  placesKeySet,
   teams,
   invites,
   members,
@@ -124,6 +126,7 @@ export default function Planner({
   teamId: string;
   teamName: string;
   teamCurrency: string;
+  placesKeySet: boolean;
   teams: TeamOption[];
   invites: InviteData[];
   members: MemberOption[];
@@ -534,6 +537,11 @@ export default function Planner({
     refresh();
   }
 
+  async function onChangeTeamPlacesKey(key: string | null) {
+    await updateTeamPlacesKey(teamId, key);
+    refresh();
+  }
+
   async function handleCreateInvite() {
     const token = await createInvite(teamId);
     refresh();
@@ -927,6 +935,8 @@ export default function Planner({
             onClose={() => setSettingsOpen(false)}
             onRename={onRenameTeam}
             onChangeCurrency={onChangeTeamCurrency}
+            placesKeySet={placesKeySet}
+            onChangePlacesKey={onChangeTeamPlacesKey}
             onCreateInvite={handleCreateInvite}
           />
         )}

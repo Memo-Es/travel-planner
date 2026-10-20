@@ -80,6 +80,7 @@ export default async function HomePage() {
       teamId={team.id}
       teamName={team.name}
       teamCurrency={team.currency}
+      placesKeySet={!!team.placesApiKey}
       teams={teamOptions}
       invites={inviteData}
       members={memberOptions}

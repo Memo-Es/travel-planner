@@ -4,9 +4,10 @@
 // mandatory X-Goog-FieldMask header, and pageSize (not maxResultCount) for
 // how many results to ask for.
 //
-// Needs GOOGLE_PLACES_API_KEY (a Places API (New) key from Google Cloud).
-// Without it, checkPlace returns null and callers say so plainly rather
-// than guessing.
+// Takes the API key as a parameter rather than reading an env var itself,
+// since the caller resolves it per team: a team's own key if it's set one,
+// otherwise the deployment's shared GOOGLE_PLACES_API_KEY. Without either,
+// checkPlace returns null and callers say so plainly rather than guessing.
 
 const FIELD_MASK = [
   "places.id",
@@ -35,6 +36,15 @@ const STATUSES: Record<string, string> = {
   CLOSED_TEMPORARILY: "closed temporarily",
   CLOSED_PERMANENTLY: "closed permanently",
 };
+
+/** A team's own key wins when it has set one; otherwise the deployment's
+ * shared key, if any. */
+export function resolvePlacesKey(
+  team: { placesApiKey: string | null } | null,
+  sharedKey: string | undefined,
+): string | undefined {
+  return team?.placesApiKey ?? sharedKey;
+}
 
 export type PlaceResult = {
   name: string;
@@ -86,9 +96,11 @@ function hintFor(p: ApiPlace): string {
 }
 
 /** Up to 3 candidates for a text query like "Disfrutar, Barcelona". Returns
- * null if GOOGLE_PLACES_API_KEY isn't set, rather than failing oddly. */
-export async function checkPlace(query: string): Promise<PlaceResult[] | null> {
-  const key = process.env.GOOGLE_PLACES_API_KEY;
+ * null if no key was resolved, rather than failing oddly. */
+export async function checkPlace(
+  query: string,
+  key: string | undefined,
+): Promise<PlaceResult[] | null> {
   if (!key) return null;
 
   const res = await fetch("https://places.googleapis.com/v1/places:searchText", {

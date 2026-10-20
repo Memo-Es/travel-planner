@@ -14,6 +14,7 @@ import {
 import type { InviteData, MemberOption } from "@/lib/types";
 import { CURRENCIES } from "@/lib/currency";
 import AiConnections from "@/components/planner/AiConnections";
+import PlacesKeySetting from "@/components/planner/PlacesKeySetting";
 
 export default function TripSettingsModal({
   teamName,
@@ -21,20 +22,24 @@ export default function TripSettingsModal({
   members,
   currentUserId,
   invites,
+  placesKeySet,
   onClose,
   onRename,
   onChangeCurrency,
   onCreateInvite,
+  onChangePlacesKey,
 }: {
   teamName: string;
   currency: string;
   members: MemberOption[];
   currentUserId: string;
   invites: InviteData[];
+  placesKeySet: boolean;
   onClose: () => void;
   onRename: (name: string) => Promise<void>;
   onChangeCurrency: (currency: string) => Promise<void>;
   onCreateInvite: () => Promise<string>;
+  onChangePlacesKey: (key: string | null) => Promise<void>;
 }) {
   const [name, setName] = useState(teamName);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -253,6 +258,7 @@ export default function TripSettingsModal({
             </span>
           </section>
           <AiConnections />
+          <PlacesKeySetting configured={placesKeySet} onSave={onChangePlacesKey} />
           {error && (
             <p className="field-error" role="alert">
               {error}
