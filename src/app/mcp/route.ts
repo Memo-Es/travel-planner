@@ -373,21 +373,21 @@ function buildServer(userId: string) {
     {
       title: "Check a real place",
       description:
-        "Looks up a real place by name (put the city or area in the query, e.g. \"Disfrutar, Barcelona\") and returns up to 3 matches, each with whether it's open right now, its hours, phone number, rating, price level and a hint on how to book it. Use this before telling someone a place is open, holding a reservation, or recommending somewhere, rather than relying on what you already know about it, since that can be wrong or out of date. Pass trip_id so the trip's own Places key is used if it has one, which is also how its usage is billed to the right place rather than the server's shared default. Needs a Google Places API key configured, on the trip or the server; if neither is, says so plainly instead of guessing.",
+        "Looks up a real place by name (put the city or area in the query, e.g. \"Disfrutar, Barcelona\") and returns up to 3 matches, each with whether it's open right now, its hours, phone number, rating, price level and a hint on how to book it. Use this before telling someone a place is open, holding a reservation, or recommending somewhere, rather than relying on what you already know about it, since that can be wrong or out of date. Needs trip_id, so it can use that trip's own Places key - there's no shared one. If the trip hasn't set one (Trip settings has a Place lookups section for it), says so plainly instead of guessing.",
       inputSchema: {
         query: z.string().describe('The place and its city or area, e.g. "Disfrutar, Barcelona"'),
-        trip_id: z.string().optional().describe("Uses this trip's own Places key if it has set one"),
+        trip_id: z.string().describe("The trip whose own Places key to use"),
       },
       annotations: { readOnlyHint: true },
     },
-    tool(async ({ query, trip_id }: { query: string; trip_id?: string }) => {
-      const team = trip_id ? await teamAccess(userId, trip_id) : null;
-      const apiKey = resolvePlacesKey(team, process.env.GOOGLE_PLACES_API_KEY);
+    tool(async ({ query, trip_id }: { query: string; trip_id: string }) => {
+      const team = await teamAccess(userId, trip_id);
+      const apiKey = resolvePlacesKey(team);
       const places = await checkPlace(query, apiKey);
       if (places === null) {
         return {
           ...result(
-            "No Google Places API key is configured, on this trip or the server, so real places can't be looked up. Say so rather than guessing.",
+            "This trip hasn't set a Google Places API key, so real places can't be looked up for it yet. There's no shared default - add one in Trip settings under Place lookups. Say so rather than guessing.",
           ),
           isError: true,
         };

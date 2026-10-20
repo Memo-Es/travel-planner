@@ -67,8 +67,9 @@ export default function PlacesKeySetting({
       <p className="text-pretty text-xs leading-relaxed text-muted">
         A Google Places API key this trip&apos;s check_place tool uses to
         confirm a place is real and open before holding or recommending it.
-        Without one, it falls back to this app&apos;s shared key, if it has
-        one. Billed to whoever&apos;s Google Cloud project the key belongs to.
+        Required: there&apos;s no shared key to fall back to, so check_place
+        can&apos;t be used here until this trip has its own. Billed to
+        whoever&apos;s Google Cloud project the key belongs to.
       </p>
       {configured ? (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-line py-2.5 pl-4 pr-2">

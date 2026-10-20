@@ -4,10 +4,10 @@
 // mandatory X-Goog-FieldMask header, and pageSize (not maxResultCount) for
 // how many results to ask for.
 //
-// Takes the API key as a parameter rather than reading an env var itself,
-// since the caller resolves it per team: a team's own key if it's set one,
-// otherwise the deployment's shared GOOGLE_PLACES_API_KEY. Without either,
-// checkPlace returns null and callers say so plainly rather than guessing.
+// Takes the API key as a parameter rather than reading an env var itself:
+// each team supplies its own, from Trip settings, and there's no shared
+// deployment-wide key to fall back to. Without one, checkPlace returns null
+// and callers say so plainly rather than guessing.
 
 const FIELD_MASK = [
   "places.id",
@@ -37,13 +37,12 @@ const STATUSES: Record<string, string> = {
   CLOSED_PERMANENTLY: "closed permanently",
 };
 
-/** A team's own key wins when it has set one; otherwise the deployment's
- * shared key, if any. */
+/** A team's own key, if it's set one. There's no shared fallback: a team
+ * that hasn't added a key simply can't use check_place yet. */
 export function resolvePlacesKey(
   team: { placesApiKey: string | null } | null,
-  sharedKey: string | undefined,
 ): string | undefined {
-  return team?.placesApiKey ?? sharedKey;
+  return team?.placesApiKey ?? undefined;
 }
 
 export type PlaceResult = {
