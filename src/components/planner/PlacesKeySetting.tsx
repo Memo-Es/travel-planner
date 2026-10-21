@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Disclosure } from "@/components/motion/primitives";
 
 const ENABLE_API_URL =
-  "https://console.cloud.google.com/apis/library/places-backend.googleapis.com?project=_";
+  "https://console.cloud.google.com/apis/library/places.googleapis.com?project=_";
 const CREDENTIALS_URL = "https://console.cloud.google.com/apis/credentials";
 
 /**
@@ -109,11 +109,13 @@ export default function PlacesKeySetting({
               rel="noreferrer"
               className="inline-flex items-center gap-1 font-medium text-accent-ink hover:underline"
             >
-              Enable the Places API
+              Enable Places API (New)
               <ExternalLink className="size-3" />
             </a>
             , sign in, and create a project if it asks you to. Click{" "}
-            <strong className="font-semibold">Enable</strong>.
+            <strong className="font-semibold">Enable</strong>. Google also
+            lists a &quot;Places API (Legacy)&quot; &mdash; that&apos;s a
+            different, older product; this link skips straight past it.
           </li>
           <li>
             Open{" "}

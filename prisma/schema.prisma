@@ -39,9 +39,10 @@ model Team {
   name         String
   currency     String       @default("EUR")
   /// A Google Places API key this team supplies for the MCP server's
-  /// check_place tool, used instead of the deployment's shared
-  /// GOOGLE_PLACES_API_KEY when set. Plain text: this app has no secrets
-  /// encryption, the same trade a team accepts by setting it at all.
+  /// check_place tool. There's no shared deployment-wide key: without one
+  /// set here, check_place can't be used for this team at all. Plain text:
+  /// this app has no secrets encryption, the same trade a team accepts by
+  /// setting it at all.
   placesApiKey String?
   createdAt    DateTime     @default(now())
   memberships  Membership[]
