@@ -48,6 +48,7 @@ model Team {
   memberships  Membership[]
   trips        Trip[]
   invites      Invite[]
+  placesCalls  PlacesCall[]
 }
 
 model Membership {
@@ -141,6 +142,21 @@ model Attachment {
   createdAt   DateTime @default(now())
 
   @@index([itemId])
+}
+
+/// One real check_place call made to Google's Places API, for a team.
+/// Append only - a row is never updated, only counted. Two things read it:
+/// the monthly count against Google's free tier (see lib/places-usage.ts),
+/// and the planner UI polling for "the agent just checked X" to toast while
+/// someone has the team's trips open.
+model PlacesCall {
+  id        String   @id @default(cuid())
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  query     String
+  createdAt DateTime @default(now())
+
+  @@index([teamId, createdAt])
 }
 
 /// An app that connects to the planner over MCP (Claude, ChatGPT and others),

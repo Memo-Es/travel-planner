@@ -13,6 +13,18 @@ export async function requireUser() {
   return session.user;
 }
 
+/** Confirms the signed-in user belongs to a team, or throws. Shared by
+ * anything that reads or writes team-scoped data outside a page's own
+ * server component - the Places usage poller, for one. */
+export async function requireTeamMembership(teamId: string) {
+  const user = await requireUser();
+  const membership = await prisma.membership.findUnique({
+    where: { userId_teamId: { userId: user.id, teamId } },
+  });
+  if (!membership) throw new Error("Not a member of this team");
+  return user;
+}
+
 export async function listMemberships(userId: string) {
   return prisma.membership.findMany({
     where: { userId },

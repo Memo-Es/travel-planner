@@ -43,9 +43,9 @@ export async function updateTeamCurrency(teamId: string, currency: string) {
   revalidatePath("/");
 }
 
-/** Sets or clears the team's own Google Places API key, used by check_place
- * instead of the server's shared one when present. null clears it, falling
- * back to the shared key (if the deployment has set one). */
+/** Sets or clears the team's own Google Places API key, which check_place
+ * needs to work at all - there's no shared deployment-wide key to fall
+ * back to. null clears it. */
 export async function updateTeamPlacesKey(teamId: string, key: string | null) {
   await requireTeamMembership(teamId);
   const trimmed = key?.trim() || null;

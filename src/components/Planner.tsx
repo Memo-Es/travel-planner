@@ -45,6 +45,7 @@ import {
   createInvite,
   dismissSignedInToast,
 } from "@/actions/team";
+import { pollPlacesActivity } from "@/actions/places";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -182,6 +183,7 @@ export default function Planner({
   // A ref is mutated immediately, so it closes that race.
   const addingTripRef = useRef(false);
   const [showSignedInToast, setShowSignedInToast] = useState(justSignedIn);
+  const [placesToast, setPlacesToast] = useState<string | null>(null);
 
   useEffect(() => {
     if (!justSignedIn) return;
@@ -192,6 +194,58 @@ export default function Planner({
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    // Lets a human watching this team's trips see the moment an agent
+    // over MCP checks a real place, and a one-time nudge once the team is
+    // close to its free monthly Places lookups. Only worth polling for if
+    // the team can actually make those calls at all.
+    if (!placesKeySet) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    let cursor: string | null = null;
+    let warned = false;
+
+    async function poll() {
+      if (!cancelled && document.visibilityState === "visible") {
+        try {
+          const res = await pollPlacesActivity(teamId, cursor);
+          cursor = res.cursor;
+          if (res.calls.length > 0) {
+            const activity =
+              res.calls.length === 1
+                ? `Agent checked "${res.calls[0].query}" via Google Places`
+                : `Agent checked ${res.calls.length} places via Google Places`;
+            setPlacesToast(
+              res.usage.warn
+                ? `${activity} — ${res.usage.count} of ${res.usage.limit} free lookups used this month`
+                : activity,
+            );
+          } else if (res.usage.warn && !warned) {
+            warned = true;
+            setPlacesToast(
+              `${res.usage.count} of ${res.usage.limit} free Google Places lookups used this month for this team — getting close to the limit, after which Google starts billing.`,
+            );
+          }
+        } catch {
+          // Best effort: a transient failure just waits for the next tick.
+        }
+      }
+      if (!cancelled) timer = setTimeout(poll, 15000);
+    }
+    poll();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [teamId, placesKeySet]);
+
+  useEffect(() => {
+    if (!placesToast) return;
+    const t = setTimeout(() => setPlacesToast(null), 4500);
+    return () => clearTimeout(t);
+  }, [placesToast]);
 
   useEffect(() => {
     // A plain `resize` listener can miss the real viewport width on first
@@ -688,12 +742,13 @@ export default function Planner({
 
   return (
     <div className={shellClass} style={shellStyle}>
-      {showSignedInToast && !notification && (
+      {showSignedInToast && !notification && !placesToast && (
         <Toast message={`Signed in as ${userName}`} />
       )}
       {notification && (
         <Toast message={notification} onDismiss={() => setNotification(null)} />
       )}
+      {!notification && placesToast && <Toast message={placesToast} />}
       <AlertDialog
         open={!!deleteTarget}
         onOpenChange={(open) => {

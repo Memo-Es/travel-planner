@@ -7,6 +7,7 @@ import { lookupDestinationPhoto } from "@/lib/photo";
 import { removeFile } from "@/lib/storage";
 import { CORS_HEADERS, MCP_PATH, originOf, verifyAccessToken } from "@/lib/oauth";
 import { checkPlace, resolvePlacesKey } from "@/lib/places";
+import { recordCheckPlace } from "@/lib/places-usage";
 import {
   addItemToStop,
   colorSchema,
@@ -373,7 +374,7 @@ function buildServer(userId: string) {
     {
       title: "Check a real place",
       description:
-        "Looks up a real place by name (put the city or area in the query, e.g. \"Disfrutar, Barcelona\") and returns up to 3 matches, each with whether it's open right now, its hours, phone number, rating, price level and a hint on how to book it. Use this before telling someone a place is open, holding a reservation, or recommending somewhere, rather than relying on what you already know about it, since that can be wrong or out of date. Needs trip_id, so it can use that trip's own Places key - there's no shared one. If the trip hasn't set one (Trip settings has a Place lookups section for it), says so plainly instead of guessing.",
+        "Looks up a real place by name (put the city or area in the query, e.g. \"Disfrutar, Barcelona\") and returns up to 3 matches, each with whether it's open right now, its hours, phone number, rating, price level and a hint on how to book it. Use this before telling someone a place is open, holding a reservation, or recommending somewhere, rather than relying on what you already know about it, since that can be wrong or out of date. Needs trip_id, so it can use that trip's own Places key - there's no shared one. If the trip hasn't set one (Trip settings has a Place lookups section for it), says so plainly instead of guessing. Each trip gets 1,000 free lookups a month from Google; once a response says it's getting close to that, mention it to the person rather than keep calling quietly.",
       inputSchema: {
         query: z.string().describe('The place and its city or area, e.g. "Disfrutar, Barcelona"'),
         trip_id: z.string().describe("The trip whose own Places key to use"),
@@ -392,11 +393,8 @@ function buildServer(userId: string) {
           isError: true,
         };
       }
-      if (places.length === 0) return result(`No match found for "${query}"`);
-      return result(
-        places.length === 1 ? "1 match" : `${places.length} matches`,
-        places,
-      );
+      const { message, data } = await recordCheckPlace(team.id, query, places);
+      return result(message, data);
     }),
   );
 
