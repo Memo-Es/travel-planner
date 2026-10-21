@@ -14,7 +14,7 @@ import BookingForm, {
   EMPTY_BOOKING_FORM,
   type BookingFormState,
 } from "@/components/planner/BookingForm";
-import type { ItemSectionKey, TripData } from "@/lib/types";
+import type { ItemSectionKey, MemberOption, TripData } from "@/lib/types";
 import { SECTION_DEFS } from "@/lib/tripSections";
 import { fmtRange } from "@/lib/dates";
 import { PLANNED_SECTIONS, tripDays } from "@/lib/itinerary";
@@ -36,6 +36,7 @@ export default function ExpenseDialog({
   saving,
   onSave,
   onClose,
+  members,
 }: {
   trips: TripData[];
   defaultTripId: string;
@@ -49,6 +50,7 @@ export default function ExpenseDialog({
   saving: boolean;
   onSave: (f: ExpenseFormState) => void;
   onClose: () => void;
+  members: MemberOption[];
 }) {
   const [form, setForm] = useState<ExpenseFormState>({
     ...EMPTY_BOOKING_FORM,
@@ -120,6 +122,7 @@ export default function ExpenseDialog({
             placeholder={section.placeholder}
             submitLabel={title}
             days={days}
+            members={members}
             autoFocus={false}
             framed={false}
             before={

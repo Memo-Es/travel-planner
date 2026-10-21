@@ -3,9 +3,11 @@
 import { Paperclip, Plus, X } from "lucide-react";
 import { AnimatedNumber } from "@/components/motion/primitives";
 import { Button } from "@/components/ui/button";
-import type { ItemData, ItemSectionKey, TripData } from "@/lib/types";
+import type { ItemData, ItemSectionKey, MemberOption, TripData } from "@/lib/types";
 import { SECTION_DEFS, sectionTotal } from "@/lib/tripSections";
 import { formatTotal } from "@/lib/currency";
+import { computeBalances, hasPaidExpenses, settlements as settleUp } from "@/lib/balances";
+import Balances from "@/components/planner/Balances";
 
 // One hue, three strengths: the breakdown bar stays a single accent.
 const SECTION_SWATCH = {
@@ -33,6 +35,7 @@ export default function FinancePanel({
   canAddExpense,
   onClose,
   showClose,
+  members,
 }: {
   card: string;
   overlay: boolean;
@@ -45,6 +48,7 @@ export default function FinancePanel({
   canAddExpense: boolean;
   onClose: () => void;
   showClose: boolean;
+  members: MemberOption[];
 }) {
   const overlayBox =
     "absolute bottom-3 right-[74px] top-3 z-panel w-[272px] shadow-overlay";
@@ -70,6 +74,9 @@ export default function FinancePanel({
     (n, g) => n + g.rows.filter((r) => r.item.costAmount === null).length,
     0,
   );
+  const showBalances = hasPaidExpenses(trips);
+  const balances = showBalances ? computeBalances(trips, members) : [];
+  const owed = showBalances ? settleUp(balances) : [];
 
   return (
     <aside aria-label="Finances" className={card + " p-5 " + positionClass}>
@@ -126,6 +133,12 @@ export default function FinancePanel({
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {showBalances && (
+        <div className="mt-5">
+          <Balances balances={balances} settlements={owed} currency={currency} />
         </div>
       )}
 

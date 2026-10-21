@@ -19,7 +19,7 @@ import {
   GripVertical,
   Copy,
 } from "lucide-react";
-import type { TripData, ItemSectionKey, ItemData, Person } from "@/lib/types";
+import type { TripData, ItemSectionKey, ItemData, MemberOption, Person } from "@/lib/types";
 import { fmtRange, nightsBetween } from "@/lib/dates";
 import {
   SECTION_DEFS,
@@ -70,6 +70,7 @@ function editState(item: ItemData): FormState {
     date: item.date ?? "",
     time: item.time ?? "",
     notes: item.notes ?? "",
+    paidBy: item.paidBy?.id ?? "",
     files: [],
     removeIds: [],
   };
@@ -98,6 +99,7 @@ export default function TripDrawer({
   onMoveItem,
   me,
   onSetGoing,
+  members,
 }: {
   trip: TripData;
   currency: string;
@@ -127,6 +129,7 @@ export default function TripDrawer({
   /** The signed in person, who can sign up for activities. */
   me: Person;
   onSetGoing: (itemId: string, going: boolean) => Promise<void>;
+  members: MemberOption[];
 }) {
   const dd = useDayDrag(trip, onMoveItem);
   const stopDays = tripDays(trip);
@@ -470,6 +473,7 @@ export default function TripDrawer({
                 days={
                   PLANNED_SECTIONS.includes(sec.key) ? tripDays(trip) : undefined
                 }
+                members={members}
               />
             );
             // An activity's day, as a drop target: its date, or no day yet.

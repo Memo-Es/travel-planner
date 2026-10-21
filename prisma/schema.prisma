@@ -32,6 +32,7 @@ model User {
   oauthCodes   OAuthCode[]
   oauthGrants  OAuthGrant[]
   attending    ItemAttendee[]
+  paidItems    TripItem[]     @relation("TripItemPaidBy")
 }
 
 model Team {
@@ -106,6 +107,11 @@ model TripItem {
   /// A short note on the plan — booking details, a reminder, anything that
   /// doesn't belong in the title.
   notes       String?
+  /// Who fronted the money for this booking, for splitting costs - see
+  /// lib/balances.ts. SetNull rather than Cascade: losing track of who
+  /// paid shouldn't delete the booking or its cost.
+  paidBy      User?          @relation("TripItemPaidBy", fields: [paidById], references: [id], onDelete: SetNull)
+  paidById    String?
   order       Int            @default(0)
   attachments Attachment[]
   attendees   ItemAttendee[]

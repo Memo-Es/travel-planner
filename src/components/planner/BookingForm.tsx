@@ -5,7 +5,7 @@ import { FileText, Paperclip, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect, Textarea } from "@/components/ui/input";
 import { fmtDay } from "@/lib/itinerary";
-import type { AttachmentData } from "@/lib/types";
+import type { AttachmentData, MemberOption } from "@/lib/types";
 import { currencySymbol } from "@/lib/currency";
 import {
   MAX_PDF_MB,
@@ -24,6 +24,8 @@ export type BookingFormState = {
   time: string;
   /** A short free-text note, "" for none. */
   notes: string;
+  /** Who fronted the money - a member's user id, or "" for nobody yet. */
+  paidBy: string;
   /** New PDFs to upload on save. */
   files: File[];
   /** Existing attachments staged for removal on save. */
@@ -37,6 +39,7 @@ export const EMPTY_BOOKING_FORM: BookingFormState = {
   date: "",
   time: "",
   notes: "",
+  paidBy: "",
   files: [],
   removeIds: [],
 };
@@ -57,6 +60,7 @@ export default function BookingForm({
   framed = true,
   before,
   days,
+  members,
 }: {
   form: BookingFormState;
   onChange: (f: BookingFormState) => void;
@@ -76,6 +80,8 @@ export default function BookingForm({
   before?: ReactNode;
   /** The stop's days; when given, the plan can be placed on a day and time. */
   days?: string[];
+  /** Who can be picked as having paid for this booking. */
+  members: MemberOption[];
 }) {
   const id = useId();
   const errorId = `${id}-error`;
@@ -225,6 +231,21 @@ export default function BookingForm({
           />
         </label>
       </div>
+
+      <label className="block space-y-1.5">
+        <span className="field-label">Paid by</span>
+        <NativeSelect
+          value={form.paidBy}
+          onChange={(e) => onChange({ ...form, paidBy: e.target.value })}
+        >
+          <option value="">Nobody yet</option>
+          {members.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </NativeSelect>
+      </label>
 
       <div className="space-y-1.5">
         <span className="field-label" id={`${id}-files`}>

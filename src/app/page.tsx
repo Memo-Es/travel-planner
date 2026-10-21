@@ -24,6 +24,7 @@ export default async function HomePage() {
               orderBy: { createdAt: "asc" },
               select: { user: { select: { id: true, name: true } } },
             },
+            paidBy: { select: { id: true, name: true } },
           },
         },
       },
@@ -102,6 +103,7 @@ function toItem(i: {
   notes: string | null;
   attachments: AttachmentData[];
   attendees: { user: Person }[];
+  paidBy: Person | null;
 }): ItemData {
   return {
     id: i.id,
@@ -113,5 +115,6 @@ function toItem(i: {
     attachments: i.attachments,
     going: i.attendees.map((a) => a.user),
     notes: i.notes,
+    paidBy: i.paidBy,
   };
 }

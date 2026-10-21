@@ -18,6 +18,8 @@ export type ItemData = {
   going: Person[];
   /** A short free-text note, if one was added. */
   notes: string | null;
+  /** Who fronted the money, for splitting costs - see lib/balances.ts. */
+  paidBy: Person | null;
 };
 
 export type Person = { id: string; name: string };

@@ -49,6 +49,10 @@ export const itemSchema = z.object({
     .nullable()
     .optional()
     .transform((v) => (v ? v : null)),
+  /** Who fronted the money, for splitting costs. Optional and left out
+   * entirely by the MCP tools, which never set or change it - this is a
+   * human-bookkeeping field, not something an agent decides. */
+  paidById: z.string().nullable().optional(),
 });
 
 export type ItemInput = z.input<typeof itemSchema>;

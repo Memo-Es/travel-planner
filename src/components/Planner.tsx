@@ -435,6 +435,7 @@ export default function Planner({
       date: f.date || null,
       time: f.date && f.time ? f.time : null,
       notes: f.notes.trim() || null,
+      paidById: f.paidBy || null,
     };
     let itemId = target.itemId;
     if (itemId === null)
@@ -513,6 +514,7 @@ export default function Planner({
       date: item.date ?? "",
       time: item.time ?? "",
       notes: item.notes ?? "",
+      paidBy: item.paidBy?.id ?? "",
       files: [],
       removeIds: [],
     });
@@ -909,6 +911,7 @@ export default function Planner({
           canAddExpense={trips.length > 0}
           onClose={closeOverlay}
           showClose={!!activeOverlay}
+          members={members}
         />
       )}
 
@@ -955,6 +958,7 @@ export default function Planner({
               await setGoing(itemId, going);
               refresh();
             }}
+            members={members}
           />
         )}
 
@@ -967,6 +971,7 @@ export default function Planner({
             }
             defaultKey={expenseDefaults.key}
             defaultDate={expenseDefaults.date}
+            members={members}
             currency={teamCurrency}
             isMobile={isMobile}
             error={expenseError}
