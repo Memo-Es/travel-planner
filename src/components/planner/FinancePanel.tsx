@@ -1,30 +1,17 @@
 "use client";
 
 import { useId, useState } from "react";
-import {
-  BedDouble,
-  Paperclip,
-  Plus,
-  Ticket,
-  TrainFront,
-  Wallet,
-  X,
-} from "lucide-react";
+import { Plus, X } from "lucide-react";
 import {
   AnimatedBackground,
   AnimatedNumber,
+  Disclosure,
 } from "@/components/motion/primitives";
 import { Button } from "@/components/ui/button";
-import BalanceCard from "@/components/planner/BalanceCard";
-import type {
-  ItemData,
-  ItemSectionKey,
-  MemberOption,
-  TripData,
-} from "@/lib/types";
+import { SettleUpList } from "@/components/planner/SettleUpList";
+import type { ItemData, ItemSectionKey, MemberOption, TripData } from "@/lib/types";
 import { SECTION_DEFS } from "@/lib/tripSections";
 import { formatTotal } from "@/lib/currency";
-import { firstName } from "@/lib/people";
 import {
   computeBalances,
   hasPaidExpenses,
@@ -32,10 +19,10 @@ import {
 } from "@/lib/balances";
 import { cn } from "@/lib/utils";
 
-const ICON = { stay: BedDouble, transport: TrainFront, activities: Ticket };
-
 type Filter = "all" | ItemSectionKey;
-type Line = { key: ItemSectionKey; item: ItemData };
+type Section = "stops" | "balance";
+
+const EPS = 0.005;
 
 export default function FinancePanel({
   card,
@@ -44,7 +31,7 @@ export default function FinancePanel({
   trips,
   currency,
   total,
-  onOpenItem,
+  onOpenStop,
   onAddExpense,
   canAddExpense,
   onClose,
@@ -58,7 +45,7 @@ export default function FinancePanel({
   trips: TripData[];
   currency: string;
   total: number;
-  onOpenItem: (trip: TripData, key: ItemSectionKey, itemId: string) => void;
+  onOpenStop: (trip: TripData) => void;
   onAddExpense: () => void;
   canAddExpense: boolean;
   onClose: () => void;
@@ -67,211 +54,234 @@ export default function FinancePanel({
   currentUserId: string;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
-  const segmentId = useId();
+  const [open, setOpen] = useState<Section>("stops");
+  const ids = useId();
   const overlayBox =
     "absolute bottom-3 right-[74px] top-3 z-panel w-[320px] shadow-overlay";
   const positionClass = overlay ? overlayBox : isMobile ? "flex-1 min-h-0" : "";
   const money = (value: number) => formatTotal(value, currency);
 
   const costed = (item: ItemData) => item.costAmount !== null;
+  const sum = (items: ItemData[]) =>
+    items.reduce((n, i) => n + (i.costAmount ?? 0), 0);
   const categories = SECTION_DEFS.map((sec) => {
     const items = trips.flatMap((t) => t[sec.key]).filter(costed);
-    const sum = items.reduce((n, i) => n + (i.costAmount ?? 0), 0);
+    const value = sum(items);
     return {
       ...sec,
       count: items.length,
-      total: sum,
-      share: total > 0 ? Math.round((sum / total) * 100) : 0,
+      total: value,
+      share: total > 0 ? Math.round((value / total) * 100) : 0,
     };
   });
-  const expenseCount = categories.reduce((n, c) => n + c.count, 0);
   const active =
     filter === "all" ? null : categories.find((c) => c.key === filter)!;
-
-  // Expenses grouped by stop, in itinerary order.
   const keys: ItemSectionKey[] = active
     ? [active.key]
     : ["stay", "transport", "activities"];
-  const groups = trips
-    .map((trip) => {
-      const lines: Line[] = keys.flatMap((key) =>
-        trip[key].filter(costed).map((item) => ({ key, item })),
-      );
-      const subtotal = lines.reduce((n, l) => n + (l.item.costAmount ?? 0), 0);
-      return { trip, lines, subtotal };
-    })
-    .filter((g) => g.lines.length > 0);
+  const stops = trips
+    .map((trip) => ({
+      trip,
+      subtotal: sum(keys.flatMap((k) => trip[k]).filter(costed)),
+    }))
+    .filter((s) => s.subtotal > 0);
 
   const showBalances = hasPaidExpenses(trips);
   const balances = showBalances ? computeBalances(trips, members) : [];
   const owed = showBalances ? settleUp(balances) : [];
-  const meta = (key: ItemSectionKey, item: ItemData) => {
-    // The icon already names the category; the payer is the useful detail.
-    if (!item.paidBy) return SECTION_DEFS.find((s) => s.key === key)!.name;
-    const by =
-      item.paidBy.id === currentUserId ? "you" : firstName(item.paidBy.name);
-    return `Paid by ${by}`;
-  };
+  const mine = balances.find((b) => b.person.id === currentUserId)?.net ?? 0;
+  const [balanceLabel, balanceTone] =
+    mine > EPS
+      ? ["You're owed", "text-task-green-ink"]
+      : mine < -EPS
+        ? ["You owe", "text-destructive"]
+        : ["You're settled up", "text-ink"];
+  // With nothing to settle there's no second card, so stops stay open.
+  const section: Section = showBalances ? open : "stops";
 
   return (
     <aside aria-label="Finances" className={card + " p-5 " + positionClass}>
-      <div className="scroll-stable -mx-2 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2">
-        <header className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h2 className="text-sm font-medium text-ink">
-              {active ? `${active.name} spend` : "Total spent"}
-            </h2>
-            <p
-              className={cn(
-                "mt-1 font-semibold tabular-nums text-ink",
-                // Long currency strings step down so the figure never wraps.
-                money(active ? active.total : total).length > 11
-                  ? "text-3xl"
-                  : "text-4xl",
-              )}
-            >
-              <AnimatedNumber
-                value={active ? active.total : total}
-                format={money}
-              />
-            </p>
-            <p className="mt-2 text-pretty text-xs leading-relaxed tabular-nums text-muted">
-              {active
-                ? `${active.count} ${active.count === 1 ? "expense" : "expenses"} · ${active.share}% of ${money(total)}`
-                : total > 0
-                  ? categories
-                      .filter((c) => c.total > 0)
-                      .map((c) => `${c.name} ${c.share}%`)
-                      .join(" · ")
-                  : `${expenseCount} expenses`}
-            </p>
+      <div className="scroll-stable -mx-2 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
+        <div className="flex items-start justify-between gap-2">
+          <div
+            role="group"
+            aria-label="Filter by category"
+            className="no-scrollbar -mx-1 flex min-w-0 gap-0.5 overflow-x-auto px-1"
+          >
+            {(["all", ...SECTION_DEFS.map((s) => s.key)] as Filter[]).map(
+              (f) => {
+                const selected = filter === f;
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setFilter(f)}
+                    className={cn(
+                      "relative isolate h-8 shrink-0 whitespace-nowrap rounded-full px-2.5 text-sm font-medium transition-colors duration-150",
+                      selected ? "text-ink" : "text-muted-2 hover:text-ink",
+                    )}
+                  >
+                    {selected && (
+                      <AnimatedBackground
+                        layoutId={`${ids}-filter`}
+                        className="bg-secondary"
+                      />
+                    )}
+                    {f === "all"
+                      ? "All"
+                      : SECTION_DEFS.find((s) => s.key === f)!.name}
+                  </button>
+                );
+              },
+            )}
           </div>
           {showClose && (
             <Button
               variant="ghost"
               size="icon"
-              className="-mr-2 -mt-2"
+              className="-mr-2"
               onClick={onClose}
               aria-label="Close finances"
             >
               <X />
             </Button>
           )}
-        </header>
-
-        {showBalances && (
-          <div className="mt-6">
-            <BalanceCard
-              balances={balances}
-              settlements={owed}
-              currency={currency}
-              currentUserId={currentUserId}
-            />
-          </div>
-        )}
-
-        <div
-          role="group"
-          aria-label="Filter expenses by category"
-          className="no-scrollbar -mx-1 mt-6 flex gap-0.5 overflow-x-auto px-1"
-        >
-          {(["all", ...SECTION_DEFS.map((s) => s.key)] as Filter[]).map((f) => {
-            const selected = filter === f;
-            return (
-              <button
-                key={f}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => setFilter(f)}
-                className={cn(
-                  "relative isolate h-8 shrink-0 whitespace-nowrap rounded-full px-2.5 text-sm font-medium transition-colors duration-150",
-                  selected ? "text-ink" : "text-muted-2 hover:text-ink",
-                )}
-              >
-                {selected && (
-                  <AnimatedBackground
-                    layoutId={segmentId}
-                    className="bg-secondary"
-                  />
-                )}
-                {f === "all"
-                  ? "All"
-                  : SECTION_DEFS.find((s) => s.key === f)!.name}
-              </button>
-            );
-          })}
         </div>
 
-        {groups.length === 0 ? (
-          <div className="flex flex-col items-center px-4 py-12 text-center">
-            <span className="flex size-11 items-center justify-center rounded-2xl bg-secondary text-muted">
-              <Wallet className="size-5" />
-            </span>
-            <p className="mt-3 text-sm font-medium text-ink">
-              {active
-                ? `No ${active.name.toLowerCase()} costs yet`
+        <header className="mt-6">
+          <h2 className="text-sm font-medium text-ink">
+            {active ? `${active.name} spend` : "Total spent"}
+          </h2>
+          <p
+            className={cn(
+              "mt-1 font-semibold tabular-nums text-ink",
+              money(active ? active.total : total).length > 11
+                ? "text-3xl"
+                : "text-4xl",
+            )}
+          >
+            <AnimatedNumber
+              value={active ? active.total : total}
+              format={money}
+            />
+          </p>
+          <p className="mt-2 text-pretty text-xs leading-relaxed tabular-nums text-muted-2">
+            {active
+              ? `${active.count} ${active.count === 1 ? "expense" : "expenses"} · ${active.share}% of ${money(total)}`
+              : total > 0
+                ? categories
+                    .filter((c) => c.total > 0)
+                    .map((c) => `${c.name} ${c.share}%`)
+                    .join(" · ")
                 : "No expenses yet"}
-            </p>
-            <p className="mt-1 text-pretty text-xs leading-relaxed text-muted">
-              Costs on stays, transport and activities add up here.
-            </p>
-          </div>
-        ) : (
-          <div className="mt-4 space-y-6 pb-2">
-            {groups.map(({ trip, lines, subtotal }) => (
-              <section key={trip.id} aria-labelledby={`spend-${trip.id}`}>
-                <div className="flex items-baseline justify-between gap-3">
-                  <h3
-                    id={`spend-${trip.id}`}
-                    className="min-w-0 truncate text-sm font-semibold text-ink"
-                  >
-                    {trip.label}
-                  </h3>
-                  <span className="shrink-0 text-sm tabular-nums text-muted-2">
-                    {money(subtotal)}
-                  </span>
-                </div>
-                <ul className="mt-1 divide-y divide-dotted divide-stone-300">
-                  {lines.map(({ key, item }) => {
-                    const Icon = ICON[key];
-                    return (
-                      <li key={item.id}>
+          </p>
+        </header>
+
+        <div className="mt-6 space-y-3">
+          {/* Expenses by stop */}
+          <section
+            className={cn(
+              "bg-secondary transition-[border-radius] duration-200",
+              section === "stops" ? "rounded-2xl" : "rounded-3xl",
+            )}
+          >
+            <h3>
+              <button
+                type="button"
+                id={`${ids}-stops-head`}
+                aria-expanded={section === "stops"}
+                aria-controls={`${ids}-stops`}
+                onClick={() => setOpen("stops")}
+                className="flex min-h-14 w-full items-center justify-between gap-3 rounded-[inherit] px-4 text-left text-sm font-medium text-muted transition-colors duration-150 hover:text-ink"
+              >
+                Expenses by stop
+              </button>
+            </h3>
+            <Disclosure open={section === "stops"}>
+              <div
+                id={`${ids}-stops`}
+                role="region"
+                aria-labelledby={`${ids}-stops-head`}
+                className="px-4 pb-2"
+              >
+                {stops.length === 0 ? (
+                  <p className="border-t border-dotted border-stone-300 py-4 text-pretty text-xs leading-relaxed text-muted">
+                    {active
+                      ? `No ${active.name.toLowerCase()} costs yet.`
+                      : "Costs on stays, transport and activities add up here."}
+                  </p>
+                ) : (
+                  <ul className="border-t border-dotted border-stone-300">
+                    {stops.map(({ trip, subtotal }) => (
+                      <li
+                        key={trip.id}
+                        className="border-b border-dotted border-stone-300 last:border-b-0"
+                      >
                         <button
                           type="button"
-                          onClick={() => onOpenItem(trip, key, item.id)}
-                          className="list-row -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 px-2 py-3 text-left"
+                          onClick={() => onOpenStop(trip)}
+                          className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-lg px-2 py-3.5 text-left transition-colors duration-150 hover:bg-hover-2/60"
                         >
-                          <Icon className="size-4 shrink-0 text-muted-2" />
-                          <span className="min-w-0 flex-1">
-                            <span
-                              className="block truncate text-sm font-medium text-ink"
-                              title={item.t}
-                            >
-                              {item.t}
-                            </span>
-                            <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-2">
-                              <span className="truncate">{meta(key, item)}</span>
-                              {item.attachments.length > 0 && (
-                                <Paperclip
-                                  className="size-3 shrink-0"
-                                  role="img"
-                                  aria-label={`${item.attachments.length} ${item.attachments.length === 1 ? "PDF" : "PDFs"}`}
-                                />
-                              )}
-                            </span>
+                          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
+                            {trip.label}
                           </span>
-                          <span className="shrink-0 text-sm font-medium tabular-nums text-ink">
-                            {money(item.costAmount!)}
+                          <span className="shrink-0 text-sm tabular-nums text-muted-2">
+                            {money(subtotal)}
                           </span>
                         </button>
                       </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            ))}
-          </div>
-        )}
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </Disclosure>
+          </section>
+
+          {/* Who owes who, from the signed-in person's side */}
+          {showBalances && (
+            <section className="rounded-2xl bg-secondary">
+              <h3>
+                <button
+                  type="button"
+                  id={`${ids}-balance-head`}
+                  aria-expanded={section === "balance"}
+                  aria-controls={`${ids}-balance`}
+                  onClick={() => setOpen("balance")}
+                  className="w-full rounded-[inherit] px-4 py-4 text-left"
+                >
+                  <span className="block text-sm font-medium text-muted">
+                    {balanceLabel}
+                  </span>
+                  {Math.abs(mine) > EPS && (
+                    <span
+                      className={cn(
+                        "mt-1 block text-2xl font-semibold tabular-nums",
+                        balanceTone,
+                      )}
+                    >
+                      {money(Math.abs(mine))}
+                    </span>
+                  )}
+                </button>
+              </h3>
+              <Disclosure open={section === "balance"}>
+                <div
+                  id={`${ids}-balance`}
+                  role="region"
+                  aria-labelledby={`${ids}-balance-head`}
+                  className="px-4 pb-1"
+                >
+                  <SettleUpList
+                    settlements={owed}
+                    currency={currency}
+                    currentUserId={currentUserId}
+                  />
+                </div>
+              </Disclosure>
+            </section>
+          )}
+        </div>
       </div>
 
       <div className="shrink-0 pt-4">
