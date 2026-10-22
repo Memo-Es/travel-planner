@@ -5,11 +5,19 @@ import { Plus, X } from "lucide-react";
 import {
   AnimatedBackground,
   AnimatedNumber,
-  Disclosure,
+  AccordionBody,
+  TransitionText,
+  accordionSpring,
 } from "@/components/motion/primitives";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { SettleUpList } from "@/components/planner/SettleUpList";
-import type { ItemData, ItemSectionKey, MemberOption, TripData } from "@/lib/types";
+import type {
+  ItemData,
+  ItemSectionKey,
+  MemberOption,
+  TripData,
+} from "@/lib/types";
 import { SECTION_DEFS } from "@/lib/tripSections";
 import { formatTotal } from "@/lib/currency";
 import {
@@ -55,6 +63,20 @@ export default function FinancePanel({
 }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [open, setOpen] = useState<Section>("stops");
+  const reduce = !!useReducedMotion();
+  const spring = reduce ? { duration: 0 } : accordionSpring;
+  // Stop rows enter and leave like accordion bodies when the filter changes.
+  const rowMotion = {
+    initial: { height: 0, opacity: 0 },
+    animate: { height: "auto", opacity: 1 },
+    exit: { height: 0, opacity: 0 },
+    transition: reduce
+      ? { duration: 0 }
+      : {
+          height: accordionSpring,
+          opacity: { duration: 0.2, ease: "easeOut" as const },
+        },
+  };
   const ids = useId();
   const overlayBox =
     "absolute bottom-3 right-[74px] top-3 z-panel w-[320px] shadow-overlay";
@@ -151,7 +173,9 @@ export default function FinancePanel({
 
         <header className="mt-6">
           <h2 className="text-sm font-medium text-ink">
-            {active ? `${active.name} spend` : "Total spent"}
+            <TransitionText value={filter}>
+              {active ? `${active.name} spend` : "Total spent"}
+            </TransitionText>
           </h2>
           <p
             className={cn(
@@ -167,24 +191,26 @@ export default function FinancePanel({
             />
           </p>
           <p className="mt-2 text-pretty text-xs leading-relaxed tabular-nums text-muted-2">
-            {active
-              ? `${active.count} ${active.count === 1 ? "expense" : "expenses"} · ${active.share}% of ${money(total)}`
-              : total > 0
-                ? categories
-                    .filter((c) => c.total > 0)
-                    .map((c) => `${c.name} ${c.share}%`)
-                    .join(" · ")
-                : "No expenses yet"}
+            <TransitionText value={filter}>
+              {active
+                ? `${active.count} ${active.count === 1 ? "expense" : "expenses"} · ${active.share}% of ${money(total)}`
+                : total > 0
+                  ? categories
+                      .filter((c) => c.total > 0)
+                      .map((c) => `${c.name} ${c.share}%`)
+                      .join(" · ")
+                  : "No expenses yet"}
+            </TransitionText>
           </p>
         </header>
 
         <div className="mt-6 space-y-3">
           {/* Expenses by stop */}
-          <section
-            className={cn(
-              "bg-secondary transition-[border-radius] duration-200",
-              section === "stops" ? "rounded-2xl" : "rounded-3xl",
-            )}
+          <motion.section
+            initial={false}
+            animate={{ borderRadius: section === "stops" ? 16 : 28 }}
+            transition={spring}
+            className="bg-secondary"
           >
             <h3>
               <button
@@ -198,26 +224,21 @@ export default function FinancePanel({
                 Expenses by stop
               </button>
             </h3>
-            <Disclosure open={section === "stops"}>
-              <div
-                id={`${ids}-stops`}
-                role="region"
-                aria-labelledby={`${ids}-stops-head`}
-                className="px-4 pb-2"
-              >
-                {stops.length === 0 ? (
-                  <p className="border-t border-dotted border-stone-300 py-4 text-pretty text-xs leading-relaxed text-muted">
-                    {active
-                      ? `No ${active.name.toLowerCase()} costs yet.`
-                      : "Costs on stays, transport and activities add up here."}
-                  </p>
-                ) : (
-                  <ul className="border-t border-dotted border-stone-300">
-                    {stops.map(({ trip, subtotal }) => (
-                      <li
-                        key={trip.id}
-                        className="border-b border-dotted border-stone-300 last:border-b-0"
-                      >
+            <AccordionBody
+              open={section === "stops"}
+              id={`${ids}-stops`}
+              labelledBy={`${ids}-stops-head`}
+              className="px-4 pb-2"
+            >
+              <ul className="border-t border-dotted border-stone-300">
+                <AnimatePresence initial={false}>
+                  {stops.map(({ trip, subtotal }) => (
+                    <motion.li
+                      key={trip.id}
+                      {...rowMotion}
+                      className="-mx-2 overflow-hidden [&:last-child>div]:border-b-0"
+                    >
+                      <div className="mx-2 border-b border-dotted border-stone-300">
                         <button
                           type="button"
                           onClick={() => onOpenStop(trip)}
@@ -226,17 +247,32 @@ export default function FinancePanel({
                           <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
                             {trip.label}
                           </span>
-                          <span className="shrink-0 text-sm tabular-nums text-muted-2">
-                            {money(subtotal)}
-                          </span>
+                          <AnimatedNumber
+                            value={subtotal}
+                            format={money}
+                            className="shrink-0 text-sm text-muted-2"
+                          />
                         </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </Disclosure>
-          </section>
+                      </div>
+                    </motion.li>
+                  ))}
+                  {stops.length === 0 && (
+                    <motion.li
+                      key="empty"
+                      {...rowMotion}
+                      className="overflow-hidden"
+                    >
+                      <p className="py-4 text-pretty text-xs leading-relaxed text-muted">
+                        {active
+                          ? `No ${active.name.toLowerCase()} costs yet.`
+                          : "Costs on stays, transport and activities add up here."}
+                      </p>
+                    </motion.li>
+                  )}
+                </AnimatePresence>
+              </ul>
+            </AccordionBody>
+          </motion.section>
 
           {/* Who owes who, from the signed-in person's side */}
           {showBalances && (
@@ -265,20 +301,18 @@ export default function FinancePanel({
                   )}
                 </button>
               </h3>
-              <Disclosure open={section === "balance"}>
-                <div
-                  id={`${ids}-balance`}
-                  role="region"
-                  aria-labelledby={`${ids}-balance-head`}
-                  className="px-4 pb-1"
-                >
-                  <SettleUpList
-                    settlements={owed}
-                    currency={currency}
-                    currentUserId={currentUserId}
-                  />
-                </div>
-              </Disclosure>
+              <AccordionBody
+                open={section === "balance"}
+                id={`${ids}-balance`}
+                labelledBy={`${ids}-balance-head`}
+                className="px-4 pb-1"
+              >
+                <SettleUpList
+                  settlements={owed}
+                  currency={currency}
+                  currentUserId={currentUserId}
+                />
+              </AccordionBody>
             </section>
           )}
         </div>

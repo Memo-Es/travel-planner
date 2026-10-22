@@ -97,11 +97,18 @@ They use Motion for React alongside the existing Radix accessibility behavior.
 - Sliding selection highlights use a short, damped spring, scoped to each list.
 - Inline forms fade and nudge in (opacity/transform only; never height). Exiting
   fields become inert so keyboard users cannot tab into content that is disappearing.
+- Accordions (Finances' stop list and balance card) follow Motion Primitives'
+  Accordion: `AccordionBody` animates height and opacity together on a no-bounce
+  spring (~350ms), so one card closing while the other opens trades space instead
+  of jumping. Card corners animate through Motion, and list rows that enter or
+  leave with a filter use the same motion. Height animation is allowed only on
+  these small, isolated surfaces.
 - Drawers/dialogs enter in 200ms and exit in 150ms; focus returns after dismissal.
   Keep conditional dialogs inside AnimatePresence so exit motion can complete.
 - Month labels crossfade with a small vertical shift; do not animate the calendar
   grid or drag coordinates, which must stay aligned with pointer movement.
-- Counts and totals settle toward the latest value. Screen readers receive the
+- Counts and totals tween to the latest value in 450ms with ease-out (a fixed
+  duration, not a spring, so large jumps never creep). Screen readers receive the
   exact current value; currency totals retain cents and respond to currency changes.
 - Cards lift 2px on hover-capable devices. Button presses compress by 3%. There
   are no continuous decorative loops.
