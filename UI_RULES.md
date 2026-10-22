@@ -49,7 +49,10 @@ inventing new ones.
 - Status chip: a full-width `rounded-full bg-secondary` pill with one line of
   centered status ("Starts in 25 days", "Day 3 of 19").
 - Add rows: the last row of a list is a dashed-square placeholder ("Add stop") in
-  gray, not a separate outlined button.
+  gray, not a separate outlined button (`AddRow`).
+- Lists have no dividers: rows are borderless, separated by spacing, with a soft
+  hover fill. Plans show schedule only (time, notes, who's going); costs and
+  booking links stay out of the schedule.
 - Mobile bottom sheets show a grab handle.
 
 - Soft cards: `rounded-2xl bg-secondary`, no border, 16px padding; title left,
@@ -76,11 +79,12 @@ inventing new ones.
   that prevent duplicate submissions. Preserve drafts when saving fails.
 - Booking links are separate from edit buttons; never nest interactive controls.
 - Dialogs trap focus, close on Escape and return focus to the opening control.
-  The trip details surface is a right sheet on desktop and a bottom sheet on mobile.
+  An open stop replaces the Trips list in a wider left panel (its schedule) and
+  narrows Finances on the right to that stop's costs; there is no stop drawer.
 - Control feedback uses 150ms transitions; overlays use 200ms. Honor reduced motion.
   Animate only `transform` and `opacity`, with the standard `easeOut` curve.
 - Keep frequent actions immediate. Do not add decorative or looping animations.
-- Support short screens with scrolling content and persistent drawer totals.
+- Support short screens with scrolling panel content.
   Use dynamic viewport heights and safe-area padding on mobile.
 
 ## Baseline
