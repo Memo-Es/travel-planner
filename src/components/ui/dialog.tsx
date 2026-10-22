@@ -122,6 +122,12 @@ export const DialogContent = React.forwardRef<
               placement === "center" ? { translate: "-50% -50%" } : undefined
             }
           >
+            {placement === "bottom" && (
+              <div
+                aria-hidden="true"
+                className="mx-auto -mt-2 mb-3 h-1 w-10 shrink-0 rounded-full bg-stone-300"
+              />
+            )}
             {children}
           </motion.div>
         </DialogPrimitive.Content>

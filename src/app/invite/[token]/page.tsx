@@ -20,7 +20,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     return (
       <Shell>
         <p className="text-pretty text-sm leading-relaxed text-ink-soft">This invite link is invalid or has expired.</p>
-        <Link href="/" className={buttonVariants({ variant: "outline", className: "mt-4" })}>
+        <Link href="/" className={buttonVariants({ variant: "secondary", className: "mt-4" })}>
           Go to Travel Planner
         </Link>
       </Shell>
@@ -44,7 +44,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
           </Link>
           <Link
             href={`/login?next=${encodeURIComponent(next)}`}
-            className={buttonVariants({ variant: "outline", className: "hover:text-ink-soft" })}
+            className={buttonVariants({ variant: "secondary", className: "hover:text-ink-soft" })}
           >
             Sign in
           </Link>

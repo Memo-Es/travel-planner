@@ -127,7 +127,7 @@ export default function BookingForm({
     <div
       className={
         "space-y-4 " +
-        (framed ? "rounded-xl border border-line bg-secondary/60 p-4" : "")
+        (framed ? "rounded-2xl border border-line bg-white p-4" : "")
       }
       aria-busy={saving}
     >
@@ -332,7 +332,7 @@ export default function BookingForm({
           }}
         />
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           disabled={saving}
           onClick={() => fileInput.current?.click()}
@@ -356,7 +356,7 @@ export default function BookingForm({
         </p>
       )}
       <div className="flex justify-end gap-2 pt-1">
-        <Button variant="outline" size="sm" disabled={saving} onClick={onCancel}>
+        <Button variant="secondary" size="sm" disabled={saving} onClick={onCancel}>
           Cancel
         </Button>
         <Button size="sm" disabled={saving} onClick={onSave}>

@@ -327,7 +327,7 @@ export default function TripDrawer({
             />
           )}
           <Disclosure open={editingDates}>
-            <div className="space-y-4 rounded-xl border border-line bg-secondary/60 p-4">
+            <div className="space-y-4 rounded-2xl border border-line bg-white p-4">
               <div className="grid grid-cols-2 gap-3">
                 <label className="block min-w-0 space-y-1.5">
                   <span className="field-label">Arrival</span>
@@ -356,7 +356,7 @@ export default function TripDrawer({
               )}
               <div className="flex justify-end gap-2">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => setEditingDates(false)}
                 >
@@ -440,7 +440,7 @@ export default function TripDrawer({
                     (active ? "text-ink" : "text-muted hover:text-ink")
                   }
                 >
-                  <TabIcon className="size-4 shrink-0" aria-hidden="true" />
+                  <TabIcon className="size-4 shrink-0 max-[480px]:hidden" aria-hidden="true" />
                   <span className="truncate">{sec.name}</span>
                   <span className="text-xs font-normal tabular-nums text-muted">
                     {trip[sec.key].length}

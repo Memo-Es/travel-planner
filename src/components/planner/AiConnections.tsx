@@ -77,7 +77,7 @@ export default function AiConnections() {
           onFocus={(e) => e.target.select()}
         />
         <Button
-          variant="outline"
+          variant="secondary"
           size="icon"
           aria-label="Copy MCP server address"
           onClick={copy}

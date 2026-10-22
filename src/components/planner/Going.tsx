@@ -108,7 +108,7 @@ export function GoingControl({
     <div className="flex shrink-0 items-center gap-2">
       <Avatars people={people} />
       <Button
-        variant={mine ? "secondary" : "outline"}
+        variant={mine ? "accent" : "secondary"}
         size="sm"
         aria-label={mine ? `Going to ${title}. Leave` : `Join ${title}`}
         title={failed ? "Couldn't save. Try again." : undefined}

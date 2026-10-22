@@ -10,9 +10,12 @@ export const buttonVariants = cva(
       variant: {
         default:
           "bg-primary text-primary-foreground shadow-sm hover:bg-stone-800",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-hover-2",
-        outline:
-          "border border-input bg-white text-ink-soft shadow-sm hover:bg-hover",
+        // Soft fill, no outline: the default for every secondary action.
+        secondary: "bg-secondary text-ink hover:bg-hover-2",
+        // Selected / on state for toggles like "Going".
+        accent: "bg-accent-soft text-accent-ink hover:bg-accent-soft/80",
+        "soft-destructive":
+          "bg-destructive/10 text-destructive hover:bg-destructive/15",
         ghost: "text-muted hover:bg-hover hover:text-ink",
         destructive:
           "bg-destructive text-white shadow-sm hover:bg-destructive/90",
