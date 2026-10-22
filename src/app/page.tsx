@@ -11,7 +11,10 @@ export default async function HomePage() {
   const [trips, invites, teamMembers] = await Promise.all([
     prisma.trip.findMany({
       where: { teamId: team.id },
-      orderBy: { order: "asc" },
+      // Chronological, not creation order - a stop added out of sequence
+      // (or a date later moved) shouldn't leave the itinerary out of order.
+      // `order` only breaks the tie between stops starting the same day.
+      orderBy: [{ start: "asc" }, { order: "asc" }],
       include: {
         items: {
           orderBy: { order: "asc" },
