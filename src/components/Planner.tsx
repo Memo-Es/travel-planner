@@ -67,7 +67,7 @@ import {
 } from "@/components/planner/BookingForm";
 import RightRail from "@/components/planner/RightRail";
 import CalendarView from "@/components/planner/CalendarView";
-import StopPanel, { editState } from "@/components/planner/StopPanel";
+import { StopSchedule, editState } from "@/components/planner/StopPanel";
 import TripSettingsModal from "@/components/planner/TripSettingsModal";
 import MobileTabs from "@/components/planner/MobileTabs";
 import Toast from "@/components/planner/Toast";
@@ -279,9 +279,7 @@ export default function Planner({
   const activeOverlay = isCompact ? overlay : null;
 
   const trip = trips.find((t) => t.id === openTripId) ?? null;
-  // An open stop widens the left panel to fit its schedule.
-  const leftW = trip ? STOP_W : LEFT_W;
-  const width = mainWidth(vw, mode, leftW, RIGHT_W, RAIL_W);
+  const width = mainWidth(vw, mode, LEFT_W, RIGHT_W, RAIL_W);
   // The left panel opens the days of the last stop you opened, falling back to the stop
   // happening now (or next).
   const itineraryTrip = trips.some((t) => t.id === itineraryTripId)
@@ -344,18 +342,6 @@ export default function Planner({
       if (isCompact) setOverlay("links");
     }
     if (isMobile) setMobileTab(openDrawer ? "links" : "calendar");
-  }
-
-  // Picking a stop in the left panel moves the calendar to it, which shows
-  // what's planned day by day; full detail is "Edit stop", opening the
-  // drawer. On mobile, where the calendar isn't already on screen, it also
-  // switches to it.
-  function selectStop(t: TripData) {
-    const [y, m] = t.start.split("-").map(Number);
-    setCursor({ y, m: m - 1 });
-    setItineraryTripId(t.id);
-    if (openTripId && openTripId !== t.id) setOpenTripId(null);
-    if (isMobile) setMobileTab("calendar");
   }
 
   async function handleAddTrip() {
@@ -714,7 +700,7 @@ export default function Planner({
     : {
         gridTemplateColumns: isCompact
           ? `${RAIL_W}px minmax(0,1fr) ${RAIL_W}px`
-          : `${leftW}px minmax(0,1fr) ${RIGHT_W}px`,
+          : `${LEFT_W}px minmax(${MIN_MAIN}px,1fr) ${RIGHT_W}px`,
       };
 
   const showBackdrop = !!activeOverlay;
@@ -727,6 +713,54 @@ export default function Planner({
     ? mobileTab === "finances"
     : mode === "full" || activeOverlay === "finances";
   const showCalendar = isMobile ? mobileTab === "calendar" : true;
+  // An open stop's itinerary sits beside the stops list, which grows over
+  // the calendar to fit it, stopping short of Finances. On mobile it takes
+  // the Trips tab instead.
+  const stopLeft = isCompact ? RAIL_W + 20 : 12;
+  const stopWidth = Math.max(
+    LEFT_W,
+    Math.min(
+      STOP_W,
+      vw - stopLeft - (isCompact ? RAIL_W + 24 : RIGHT_W + 24),
+    ),
+  );
+  const stopSchedule = (t: TripData, inline: boolean) => (
+    <StopSchedule
+      key={t.id}
+      inline={inline}
+          trip={t}
+      currency={teamCurrency}
+      editing={editing}
+      form={form}
+      formError={formError}
+      saving={saving}
+      onFormChange={onFormChange}
+      onFormError={setFormError}
+      onClose={closeDrawer}
+      onStartAdd={startAdd}
+      onStartEdit={startEdit}
+      onCancelForm={() => {
+        setEditing(null);
+        setFormError(null);
+      }}
+      onSaveForm={saveForm}
+      onDeleteItem={removeItem}
+      onUpdateDates={onUpdateStopDates}
+      onRename={onRenameTrip}
+      onChangeColor={onChangeTripColor}
+      onDeleteTrip={handleDeleteTrip}
+      onMoveItem={async (itemId, date) => {
+        await setItemDay(itemId, date);
+        refresh();
+      }}
+      me={{ id: currentUserId, name: userName }}
+      onSetGoing={async (itemId, going) => {
+        await setGoing(itemId, going);
+        refresh();
+      }}
+      members={members}
+    />
+  );
 
   const now = new Date();
   const todayLabel = `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][now.getDay()]} ${now.getDate()} ${MONTHS_LONG[now.getMonth()].slice(0, 3)}`;
@@ -796,46 +830,12 @@ export default function Planner({
         />
       )}
 
-      {showLeftPanel && trip && (
-        <StopPanel
-          key={trip.id}
-          card={CARD}
-          overlay={activeOverlay === "links"}
-          trip={trip}
-          currency={teamCurrency}
-          isMobile={isMobile}
-          editing={editing}
-          form={form}
-          formError={formError}
-          saving={saving}
-          onFormChange={onFormChange}
-          onFormError={setFormError}
-          onClose={closeDrawer}
-          onStartAdd={startAdd}
-          onStartEdit={startEdit}
-          onCancelForm={() => {
-            setEditing(null);
-            setFormError(null);
-          }}
-          onSaveForm={saveForm}
-          onDeleteItem={removeItem}
-          onUpdateDates={onUpdateStopDates}
-          onRename={onRenameTrip}
-          onChangeColor={onChangeTripColor}
-          onDeleteTrip={handleDeleteTrip}
-          onMoveItem={async (itemId, date) => {
-            await setItemDay(itemId, date);
-            refresh();
-          }}
-          me={{ id: currentUserId, name: userName }}
-          onSetGoing={async (itemId, going) => {
-            await setGoing(itemId, going);
-            refresh();
-          }}
-          members={members}
-        />
+      {showLeftPanel && isMobile && trip && (
+        <aside aria-label={trip.label} className={CARD + " flex-1 min-h-0 p-5"}>
+          {stopSchedule(trip, false)}
+        </aside>
       )}
-      {showLeftPanel && !trip && (
+      {showLeftPanel && !(isMobile && trip) && (
         <LeftPanel
           card={CARD}
           overlay={activeOverlay === "links"}
@@ -848,8 +848,11 @@ export default function Planner({
           userName={userName}
           onSwitchTeam={onSwitchTeam}
           onOpenSettings={openSettings}
-          onSelectTrip={selectStop}
-          onEditTrip={(t) => jumpToTrip(t)}
+          onSelectTrip={(t) =>
+            t.id === openTripId ? closeDrawer() : jumpToTrip(t)
+          }
+          detail={trip && !isMobile ? stopSchedule(trip, true) : null}
+          width={stopWidth}
           onAddTrip={handleAddTrip}
           addingTrip={addingTrip}
           onClose={closeOverlay}
