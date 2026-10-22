@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Plus, X, Copy, Check, Users, Loader2, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
 import { Input, NativeSelect } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -183,15 +184,14 @@ export default function TripSettingsModal({
               </h3>
               <span className="text-xs tabular-nums text-muted">{members.length} {members.length === 1 ? "person" : "people"}</span>
             </div>
-            <ul aria-labelledby="teammates-heading" className="divide-y divide-line-soft rounded-xl border border-line px-4">
+            <ul aria-labelledby="teammates-heading" className="divide-y divide-dotted divide-stone-300 rounded-2xl bg-secondary px-4">
               {members.map((member) => {
                 const isCurrentUser = member.id === currentUserId;
-                const initials = member.name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
                 return (
                   <li key={member.id} className="flex items-center gap-3 py-2.5">
-                    <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-ink">{initials}</span>
+                    <Avatar name={member.name} />
                     <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{member.name}</span>
-                    {isCurrentUser ? <Badge>You</Badge> : member.role === "OWNER" ? <Badge><Crown className="size-3" />Owner</Badge> : <Badge variant="secondary">Member</Badge>}
+                    <span className="flex shrink-0 items-center gap-1 text-xs text-muted-2">{isCurrentUser ? "You" : member.role === "OWNER" ? <><Crown className="size-3" />Owner</> : "Member"}</span>
                   </li>
                 );
               })}
@@ -225,7 +225,7 @@ export default function TripSettingsModal({
               </div>
             ))}
             <Button
-              variant="outline"
+              variant="secondary"
               className="w-full"
               onClick={generateInvite}
               disabled={pending}

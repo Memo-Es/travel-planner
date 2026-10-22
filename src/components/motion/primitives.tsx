@@ -8,10 +8,11 @@ import {
 } from "react";
 import {
   AnimatePresence,
+  animate,
   motion,
   useIsPresent,
+  useMotionValue,
   useReducedMotion,
-  useSpring,
   useTransform,
 } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -82,12 +83,22 @@ export function AnimatedNumber({
   className?: string;
 }) {
   const reduce = useReducedMotion();
-  const spring = useSpring(value, { stiffness: 220, damping: 30 });
-  const display = useTransform(spring, (current) => format(current));
+  // A fixed-length tween rather than a spring: a spring's exponential tail
+  // makes big jumps (MX$70,000 → 0) creep for a second, while this lands in
+  // 0.45s whatever the distance, together with the accordion motion.
+  const current = useMotionValue(value);
+  const display = useTransform(current, (n) => format(n));
   useEffect(() => {
-    if (reduce) spring.jump(value);
-    else spring.set(value);
-  }, [value, reduce, spring]);
+    if (reduce) {
+      current.jump(value);
+      return;
+    }
+    const controls = animate(current, value, {
+      duration: 0.45,
+      ease: "easeOut",
+    });
+    return () => controls.stop();
+  }, [value, reduce, current]);
   return (
     <span className={cn("inline-block tabular-nums", className)}>
       <span className="sr-only">{format(value)}</span>
@@ -194,5 +205,86 @@ export function TransitionText({
         </motion.span>
       </AnimatePresence>
     </span>
+  );
+}
+
+/** Spring used for accordion height: no overshoot, settles in ~350ms. */
+export const accordionSpring = {
+  type: "spring" as const,
+  bounce: 0,
+  duration: 0.35,
+};
+
+function AccordionBodyInner({
+  children,
+  className,
+  id,
+  labelledBy,
+  reduce,
+}: {
+  children: ReactNode;
+  className?: string;
+  id?: string;
+  labelledBy?: string;
+  reduce: boolean;
+}) {
+  const present = useIsPresent();
+  return (
+    <motion.div
+      ref={(node) => {
+        if (node) node.inert = !present;
+      }}
+      id={id}
+      role="region"
+      aria-labelledby={labelledBy}
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={
+        reduce
+          ? { duration: 0 }
+          : {
+              height: accordionSpring,
+              opacity: { duration: present ? 0.25 : 0.15, ease: "easeOut" },
+            }
+      }
+      className="overflow-hidden"
+    >
+      <div className={className}>{children}</div>
+    </motion.div>
+  );
+}
+
+/** Motion Primitives-style accordion content: height and opacity animate
+ * together, so one card closing while another opens trades space smoothly
+ * instead of jumping. Small, isolated surfaces only (see UI_RULES). */
+export function AccordionBody({
+  open,
+  children,
+  className,
+  id,
+  labelledBy,
+}: {
+  open: boolean;
+  children: ReactNode;
+  className?: string;
+  id?: string;
+  labelledBy?: string;
+}) {
+  const reduce = !!useReducedMotion();
+  return (
+    <AnimatePresence initial={false}>
+      {open && (
+        <AccordionBodyInner
+          key="body"
+          id={id}
+          labelledBy={labelledBy}
+          className={className}
+          reduce={reduce}
+        >
+          {children}
+        </AccordionBodyInner>
+      )}
+    </AnimatePresence>
   );
 }

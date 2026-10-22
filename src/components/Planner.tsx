@@ -22,7 +22,7 @@ import { MONTHS_LONG, DAY, ms, toDateInput } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
 import { isScheduled, sectionTotal } from "@/lib/tripSections";
 import { defaultTripId, plansByDate } from "@/lib/itinerary";
-import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
+import { LEFT_W, STOP_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
 import {
   createTrip,
   addItem,
@@ -67,7 +67,7 @@ import {
 } from "@/components/planner/BookingForm";
 import RightRail from "@/components/planner/RightRail";
 import CalendarView from "@/components/planner/CalendarView";
-import TripDrawer from "@/components/planner/TripDrawer";
+import { StopSchedule, editState } from "@/components/planner/StopPanel";
 import TripSettingsModal from "@/components/planner/TripSettingsModal";
 import MobileTabs from "@/components/planner/MobileTabs";
 import Toast from "@/components/planner/Toast";
@@ -278,9 +278,8 @@ export default function Planner({
   const isCompact = mode === "compact";
   const activeOverlay = isCompact ? overlay : null;
 
-  const width = mainWidth(vw, mode, LEFT_W, RIGHT_W, RAIL_W);
-
   const trip = trips.find((t) => t.id === openTripId) ?? null;
+  const width = mainWidth(vw, mode, LEFT_W, RIGHT_W, RAIL_W);
   // The left panel opens the days of the last stop you opened, falling back to the stop
   // happening now (or next).
   const itineraryTrip = trips.some((t) => t.id === itineraryTripId)
@@ -291,6 +290,8 @@ export default function Planner({
   function openTrip(tripId: string) {
     setOpenTripId(tripId);
     setItineraryTripId(tripId);
+    if (isCompact) setOverlay("links");
+    if (isMobile) setMobileTab("links");
   }
 
   const events: CalendarEvent[] = useMemo(() => {
@@ -336,20 +337,11 @@ export default function Planner({
     setCursor({ y, m: m - 1 });
     setOverlay(null);
     setItineraryTripId(t.id);
-    if (openDrawer) setOpenTripId(t.id);
-    if (isMobile) setMobileTab("calendar");
-  }
-
-  // Picking a stop in the left panel moves the calendar to it, which shows
-  // what's planned day by day; full detail is "Edit stop", opening the
-  // drawer. On mobile, where the calendar isn't already on screen, it also
-  // switches to it.
-  function selectStop(t: TripData) {
-    const [y, m] = t.start.split("-").map(Number);
-    setCursor({ y, m: m - 1 });
-    setItineraryTripId(t.id);
-    if (openTripId && openTripId !== t.id) setOpenTripId(null);
-    if (isMobile) setMobileTab("calendar");
+    if (openDrawer) {
+      setOpenTripId(t.id);
+      if (isCompact) setOverlay("links");
+    }
+    if (isMobile) setMobileTab(openDrawer ? "links" : "calendar");
   }
 
   async function handleAddTrip() {
@@ -501,23 +493,6 @@ export default function Planner({
       savingRef.current = false;
       setExpenseSaving(false);
     }
-  }
-
-  function openExpenseFromPanel(t: TripData, key: ItemSectionKey, itemId: string) {
-    const item = t[key].find((i) => i.id === itemId);
-    if (!item) return;
-    jumpToTrip(t);
-    startEdit(key, itemId, {
-      t: item.t,
-      url: item.url,
-      cost: item.costAmount === null ? "" : String(item.costAmount),
-      date: item.date ?? "",
-      time: item.time ?? "",
-      notes: item.notes ?? "",
-      paidBy: item.paidBy?.id ?? "",
-      files: [],
-      removeIds: [],
-    });
   }
 
   function openExpense(defaults: {
@@ -738,6 +713,54 @@ export default function Planner({
     ? mobileTab === "finances"
     : mode === "full" || activeOverlay === "finances";
   const showCalendar = isMobile ? mobileTab === "calendar" : true;
+  // An open stop's itinerary sits beside the stops list, which grows over
+  // the calendar to fit it, stopping short of Finances. On mobile it takes
+  // the Trips tab instead.
+  const stopLeft = isCompact ? RAIL_W + 20 : 12;
+  const stopWidth = Math.max(
+    LEFT_W,
+    Math.min(
+      STOP_W,
+      vw - stopLeft - (isCompact ? RAIL_W + 24 : RIGHT_W + 24),
+    ),
+  );
+  const stopSchedule = (t: TripData, inline: boolean) => (
+    <StopSchedule
+      key={t.id}
+      inline={inline}
+          trip={t}
+      currency={teamCurrency}
+      editing={editing}
+      form={form}
+      formError={formError}
+      saving={saving}
+      onFormChange={onFormChange}
+      onFormError={setFormError}
+      onClose={closeDrawer}
+      onStartAdd={startAdd}
+      onStartEdit={startEdit}
+      onCancelForm={() => {
+        setEditing(null);
+        setFormError(null);
+      }}
+      onSaveForm={saveForm}
+      onDeleteItem={removeItem}
+      onUpdateDates={onUpdateStopDates}
+      onRename={onRenameTrip}
+      onChangeColor={onChangeTripColor}
+      onDeleteTrip={handleDeleteTrip}
+      onMoveItem={async (itemId, date) => {
+        await setItemDay(itemId, date);
+        refresh();
+      }}
+      me={{ id: currentUserId, name: userName }}
+      onSetGoing={async (itemId, going) => {
+        await setGoing(itemId, going);
+        refresh();
+      }}
+      members={members}
+    />
+  );
 
   const now = new Date();
   const todayLabel = `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][now.getDay()]} ${now.getDate()} ${MONTHS_LONG[now.getMonth()].slice(0, 3)}`;
@@ -807,7 +830,12 @@ export default function Planner({
         />
       )}
 
-      {showLeftPanel && (
+      {showLeftPanel && isMobile && trip && (
+        <aside aria-label={trip.label} className={CARD + " flex-1 min-h-0 p-5"}>
+          {stopSchedule(trip, false)}
+        </aside>
+      )}
+      {showLeftPanel && !(isMobile && trip) && (
         <LeftPanel
           card={CARD}
           overlay={activeOverlay === "links"}
@@ -820,11 +848,13 @@ export default function Planner({
           userName={userName}
           onSwitchTeam={onSwitchTeam}
           onOpenSettings={openSettings}
-          onSelectTrip={selectStop}
-          onEditTrip={(t) => jumpToTrip(t)}
+          onSelectTrip={(t) =>
+            t.id === openTripId ? closeDrawer() : jumpToTrip(t)
+          }
+          detail={trip && !isMobile ? stopSchedule(trip, true) : null}
+          width={stopWidth}
           onAddTrip={handleAddTrip}
           addingTrip={addingTrip}
-          onDeleteTrip={handleDeleteTrip}
           onClose={closeOverlay}
           showClose={!!activeOverlay}
           todayLabel={todayLabel}
@@ -841,9 +871,9 @@ export default function Planner({
           }
         >
           <header className="flex flex-wrap items-center justify-between gap-3 mb-5">
-            <h1 className="m-0 whitespace-nowrap text-2xl font-normal tabular-nums text-muted">
+            <h1 className="m-0 whitespace-nowrap text-3xl font-medium tabular-nums text-muted-2">
               <TransitionText value={`${cursor.y}-${cursor.m}`}>
-                <strong className="font-semibold text-ink">
+                <strong className="font-bold text-ink">
                   {MONTHS_LONG[cursor.m]}
                 </strong>{" "}
                 {cursor.y}
@@ -851,7 +881,7 @@ export default function Planner({
             </h1>
             <div className="flex items-center gap-1.5 flex-none">
               <Button
-                variant="outline"
+                variant="secondary"
                 size="icon"
                 aria-label="Previous month"
                 onClick={() =>
@@ -873,7 +903,7 @@ export default function Planner({
                 Today
               </Button>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="icon"
                 aria-label="Next month"
                 onClick={() =>
@@ -904,14 +934,19 @@ export default function Planner({
           overlay={activeOverlay === "finances"}
           isMobile={isMobile}
           trips={trips}
+          stop={trip}
           currency={teamCurrency}
-          total={tripTotal}
-          onOpenItem={openExpenseFromPanel}
-          onAddExpense={() => openExpense()}
+          onOpenStop={(t) => jumpToTrip(t)}
+          onEditItem={(key, item) => {
+            startEdit(key, item.id, editState(item));
+            if (isMobile) setMobileTab("links");
+          }}
+          onAddExpense={() => openExpense({ tripId: openTripId })}
           canAddExpense={trips.length > 0}
           onClose={closeOverlay}
           showClose={!!activeOverlay}
           members={members}
+          currentUserId={currentUserId}
         />
       )}
 
@@ -924,44 +959,6 @@ export default function Planner({
       )}
 
       <AnimatePresence initial={false}>
-        {trip && (
-          <TripDrawer
-            key={trip.id}
-            trip={trip}
-            currency={teamCurrency}
-            isMobile={isMobile}
-            editing={editing}
-            form={form}
-            formError={formError}
-            saving={saving}
-            onFormChange={onFormChange}
-            onFormError={setFormError}
-            onClose={closeDrawer}
-            onStartAdd={startAdd}
-            onStartEdit={startEdit}
-            onCancelForm={() => {
-              setEditing(null);
-              setFormError(null);
-            }}
-            onSaveForm={saveForm}
-            onDeleteItem={removeItem}
-            onUpdateDates={onUpdateStopDates}
-            onRename={onRenameTrip}
-            onChangeColor={onChangeTripColor}
-            onDeleteTrip={handleDeleteTrip}
-            onMoveItem={async (itemId, date) => {
-              await setItemDay(itemId, date);
-              refresh();
-            }}
-            me={{ id: currentUserId, name: userName }}
-            onSetGoing={async (itemId, going) => {
-              await setGoing(itemId, going);
-              refresh();
-            }}
-            members={members}
-          />
-        )}
-
         {expenseOpen && (
           <ExpenseDialog
             key="expense"

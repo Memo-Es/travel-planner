@@ -89,7 +89,7 @@ export default async function AuthorizePage({
           type="submit"
           name="decision"
           value="deny"
-          variant="outline"
+          variant="secondary"
           className="flex-1"
         >
           Cancel
