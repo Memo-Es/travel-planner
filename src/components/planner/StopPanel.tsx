@@ -3,10 +3,7 @@
 import {
   AnimatedBackground,
   Disclosure,
-  accordionSpring,
 } from "@/components/motion/primitives";
-import { motion, useReducedMotion } from "motion/react";
-import { LEFT_W } from "@/lib/theme";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   Plus,
@@ -99,50 +96,10 @@ type ScheduleProps = {
 };
 
 /** A stop's schedule: dates, color and its stays, transport and activities
- * day by day. On wider screens it grows out of the Trips panel over the
- * calendar; on mobile it takes the Trips tab. What things cost lives in
- * Finances on the right. */
-export default function StopPanel({
-  card,
-  left,
-  width,
-  ...props
-}: ScheduleProps & {
-  card: string;
-  /** Where the panel's left edge sits; null on mobile, where it fills the tab. */
-  left: number | null;
-  /** The width it grows to from the Trips panel's. */
-  width: number;
-}) {
-  const reduce = !!useReducedMotion();
-  const box = (children: React.ReactNode) =>
-    left === null ? (
-      <aside aria-label={props.trip.label} className={card + " flex-1 min-h-0 p-5"}>
-        {children}
-      </aside>
-    ) : (
-      <motion.aside
-        aria-label={props.trip.label}
-        initial={{ width: LEFT_W }}
-        animate={{ width }}
-        exit={{ width: LEFT_W, opacity: 0 }}
-        transition={
-          reduce
-            ? { duration: 0 }
-            : { ...accordionSpring, opacity: { duration: 0.15 } }
-        }
-        style={{ left }}
-        className={card + " absolute bottom-3 top-3 z-panel p-5 shadow-overlay"}
-      >
-        {children}
-      </motion.aside>
-    );
-  // Keyed by stop, so drafts and the open tab reset when switching stops
-  // without replaying the panel's grow.
-  return box(<StopSchedule key={props.trip.id} {...props} />);
-}
-
-function StopSchedule({
+ * day by day. What things cost lives in Finances on the right. Inline, it
+ * sits beside the stops list; otherwise it has a back button to the list. */
+export function StopSchedule({
+  inline = false,
   trip,
   currency,
   editing,
@@ -165,13 +122,13 @@ function StopSchedule({
   me,
   onSetGoing,
   members,
-}: ScheduleProps) {
+}: ScheduleProps & { inline?: boolean }) {
   const dd = useDayDrag(trip, onMoveItem);
   const stopDays = tripDays(trip);
   const backRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    backRef.current?.focus({ preventScroll: true });
-  }, [trip.id]);
+    if (!inline) backRef.current?.focus({ preventScroll: true });
+  }, [inline]);
   const [editingDates, setEditingDates] = useState(false);
   const [startDraft, setStartDraft] = useState(trip.start);
   const [endDraft, setEndDraft] = useState(trip.end);
@@ -251,69 +208,88 @@ function StopSchedule({
     setEditingLabel(false);
   }
 
+  const dateButton = (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="-ml-2.5 h-7 min-w-0 max-w-full px-2.5 font-medium tabular-nums text-muted-2"
+      aria-expanded={editingDates}
+      aria-label={`Change dates, ${fmtRange(trip.start, trip.end)}`}
+      onClick={() => {
+        setStartDraft(trip.start);
+        setEndDraft(trip.end);
+        setEditingDates((v) => !v);
+      }}
+    >
+      <CalendarDays />
+      <span className="truncate">
+        {fmtRange(trip.start, trip.end)} · {nightsBetween(trip.start, trip.end)}{" "}
+        {nightsBetween(trip.start, trip.end) === 1 ? "night" : "nights"}
+      </span>
+    </Button>
+  );
+
   return (
     <>
       <header className="shrink-0">
         <div className="flex items-center justify-between gap-2">
-          <Button
-            ref={backRef}
-            variant="secondary"
-            size="icon"
-            className="-ml-1"
-            onClick={onClose}
-            aria-label="Back to all stops"
-          >
-            <ChevronLeft />
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          {inline ? (
+            dateButton
+          ) : (
+            <Button
+              ref={backRef}
+              variant="secondary"
+              size="icon"
+              className="-ml-1"
+              onClick={onClose}
+              aria-label="Back to all stops"
+            >
+              <ChevronLeft />
+            </Button>
+          )}
+          <div className="-mr-1 flex shrink-0 gap-1.5">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  aria-label="Stop options"
+                >
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setLabelDraft(trip.label);
+                    setEditingLabel(true);
+                  }}
+                >
+                  <Pencil />
+                  Rename stop
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  destructive
+                  onSelect={() => onDeleteTrip(trip.id, trip.label)}
+                >
+                  <Trash2 />
+                  Delete stop
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {inline && (
               <Button
                 variant="secondary"
                 size="icon"
-                className="-mr-1"
-                aria-label="Stop options"
+                onClick={onClose}
+                aria-label={`Close ${trip.label}`}
               >
-                <MoreHorizontal />
+                <X />
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onSelect={() => {
-                  setLabelDraft(trip.label);
-                  setEditingLabel(true);
-                }}
-              >
-                <Pencil />
-                Rename stop
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                destructive
-                onSelect={() => onDeleteTrip(trip.id, trip.label)}
-              >
-                <Trash2 />
-                Delete stop
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            )}
+          </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="-ml-2.5 mt-4 h-7 max-w-full px-2.5 font-medium tabular-nums text-muted-2"
-          aria-expanded={editingDates}
-          aria-label={`Change dates, ${fmtRange(trip.start, trip.end)}`}
-          onClick={() => {
-            setStartDraft(trip.start);
-            setEndDraft(trip.end);
-            setEditingDates((v) => !v);
-          }}
-        >
-          <CalendarDays />
-          <span className="truncate">
-            {fmtRange(trip.start, trip.end)} · {nightsBetween(trip.start, trip.end)}{" "}
-            {nightsBetween(trip.start, trip.end) === 1 ? "night" : "nights"}
-          </span>
-        </Button>
+        {!inline && <div className="mt-4">{dateButton}</div>}
         <h2
           id={`${tabsId}-title`}
           className={

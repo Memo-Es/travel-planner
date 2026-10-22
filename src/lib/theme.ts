@@ -9,8 +9,8 @@ export const TASK_GREEN_SOFT = "#E9F0E8"; // Pale Leaf 100
 export const TASK_GREEN_INK = "#41583D"; // Pale Leaf 700
 
 export const LEFT_W = 272;
-/** How wide an open stop grows over the calendar. */
-export const STOP_W = 640;
+/** How wide the Trips panel grows to fit an open stop beside the list. */
+export const STOP_W = 680;
 export const RIGHT_W = 320;
 export const RAIL_W = 54;
 export const MIN_MAIN = 600;

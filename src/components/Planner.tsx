@@ -67,7 +67,7 @@ import {
 } from "@/components/planner/BookingForm";
 import RightRail from "@/components/planner/RightRail";
 import CalendarView from "@/components/planner/CalendarView";
-import StopPanel, { editState } from "@/components/planner/StopPanel";
+import { StopSchedule, editState } from "@/components/planner/StopPanel";
 import TripSettingsModal from "@/components/planner/TripSettingsModal";
 import MobileTabs from "@/components/planner/MobileTabs";
 import Toast from "@/components/planner/Toast";
@@ -713,18 +713,53 @@ export default function Planner({
     ? mobileTab === "finances"
     : mode === "full" || activeOverlay === "finances";
   const showCalendar = isMobile ? mobileTab === "calendar" : true;
-  // An open stop grows out of the Trips panel over the calendar, stopping
-  // short of Finances; on compact screens it sits beside the rail.
-  const stopShown = isMobile
-    ? mobileTab === "links"
-    : mode === "full" || activeOverlay === "links";
-  const stopLeft = isMobile ? null : isCompact ? RAIL_W + 20 : 12;
+  // An open stop's itinerary sits beside the stops list, which grows over
+  // the calendar to fit it, stopping short of Finances. On mobile it takes
+  // the Trips tab instead.
+  const stopLeft = isCompact ? RAIL_W + 20 : 12;
   const stopWidth = Math.max(
     LEFT_W,
     Math.min(
       STOP_W,
-      vw - (stopLeft ?? 0) - (isCompact ? RAIL_W + 24 : RIGHT_W + 24),
+      vw - stopLeft - (isCompact ? RAIL_W + 24 : RIGHT_W + 24),
     ),
+  );
+  const stopSchedule = (t: TripData, inline: boolean) => (
+    <StopSchedule
+      key={t.id}
+      inline={inline}
+          trip={t}
+      currency={teamCurrency}
+      editing={editing}
+      form={form}
+      formError={formError}
+      saving={saving}
+      onFormChange={onFormChange}
+      onFormError={setFormError}
+      onClose={closeDrawer}
+      onStartAdd={startAdd}
+      onStartEdit={startEdit}
+      onCancelForm={() => {
+        setEditing(null);
+        setFormError(null);
+      }}
+      onSaveForm={saveForm}
+      onDeleteItem={removeItem}
+      onUpdateDates={onUpdateStopDates}
+      onRename={onRenameTrip}
+      onChangeColor={onChangeTripColor}
+      onDeleteTrip={handleDeleteTrip}
+      onMoveItem={async (itemId, date) => {
+        await setItemDay(itemId, date);
+        refresh();
+      }}
+      me={{ id: currentUserId, name: userName }}
+      onSetGoing={async (itemId, going) => {
+        await setGoing(itemId, going);
+        refresh();
+      }}
+      members={members}
+    />
   );
 
   const now = new Date();
@@ -795,6 +830,11 @@ export default function Planner({
         />
       )}
 
+      {showLeftPanel && isMobile && trip && (
+        <aside aria-label={trip.label} className={CARD + " flex-1 min-h-0 p-5"}>
+          {stopSchedule(trip, false)}
+        </aside>
+      )}
       {showLeftPanel && !(isMobile && trip) && (
         <LeftPanel
           card={CARD}
@@ -808,7 +848,11 @@ export default function Planner({
           userName={userName}
           onSwitchTeam={onSwitchTeam}
           onOpenSettings={openSettings}
-          onSelectTrip={(t) => jumpToTrip(t)}
+          onSelectTrip={(t) =>
+            t.id === openTripId ? closeDrawer() : jumpToTrip(t)
+          }
+          detail={trip && !isMobile ? stopSchedule(trip, true) : null}
+          width={stopWidth}
           onAddTrip={handleAddTrip}
           addingTrip={addingTrip}
           onClose={closeOverlay}
@@ -915,45 +959,6 @@ export default function Planner({
       )}
 
       <AnimatePresence initial={false}>
-        {stopShown && trip && (
-            <StopPanel
-              key="stop"
-              card={CARD}
-              left={stopLeft}
-              width={stopWidth}
-            trip={trip}
-            currency={teamCurrency}
-            editing={editing}
-            form={form}
-            formError={formError}
-            saving={saving}
-            onFormChange={onFormChange}
-            onFormError={setFormError}
-            onClose={closeDrawer}
-            onStartAdd={startAdd}
-            onStartEdit={startEdit}
-            onCancelForm={() => {
-              setEditing(null);
-              setFormError(null);
-            }}
-            onSaveForm={saveForm}
-            onDeleteItem={removeItem}
-            onUpdateDates={onUpdateStopDates}
-            onRename={onRenameTrip}
-            onChangeColor={onChangeTripColor}
-            onDeleteTrip={handleDeleteTrip}
-            onMoveItem={async (itemId, date) => {
-              await setItemDay(itemId, date);
-              refresh();
-            }}
-            me={{ id: currentUserId, name: userName }}
-            onSetGoing={async (itemId, going) => {
-              await setGoing(itemId, going);
-              refresh();
-            }}
-            members={members}
-          />
-        )}
         {expenseOpen && (
           <ExpenseDialog
             key="expense"
