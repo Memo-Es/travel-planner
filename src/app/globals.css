@@ -81,6 +81,13 @@
      inside so scroll containers never clip it. */
   /* Keeps room for the scrollbar whether or not one is showing, so content
      doesn't shift sideways when a list grows or shrinks past its height. */
+  /* Horizontal overflow fallback without a visible scrollbar. */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
   .scroll-stable {
     scrollbar-gutter: stable;
   }

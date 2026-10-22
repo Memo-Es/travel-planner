@@ -912,6 +912,7 @@ export default function Planner({
           onClose={closeOverlay}
           showClose={!!activeOverlay}
           members={members}
+          currentUserId={currentUserId}
         />
       )}
 

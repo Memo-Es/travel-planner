@@ -12,7 +12,11 @@ is configured for the existing Tailwind 3 project. Add only components we use.
 - Use regular and medium weights for content; reserve semibold for headings,
   key amounts and selected emphasis. Dates and costs use tabular numerals.
 - Space related controls by 8–12px, fields by 12–16px and sections by 24px.
-- Use 8px corners for controls, 12px for booking rows and 16px for panels/dialogs.
+- Use 12px corners for controls (buttons, inputs), 16px for soft cards, panels and
+  dialogs, and full pills only for chips and segmented controls.
+- Type uses the platform UI face (`system-ui`: SF Pro on Apple). Key figures are
+  large display numbers (`text-3xl`/`text-4xl` semibold, tabular) with gray
+  supporting text beneath; avoid boxing them in.
 - Use quiet borders and light shadows for surfaces. Stronger shadows belong to
   floating menus and dialogs. Use the shared theme tokens rather than new colors.
 - No gradients, glows or backdrop blur. Surfaces are flat; overlays dim with a
@@ -29,6 +33,21 @@ is configured for the existing Tailwind 3 project. Add only components we use.
   Stops pick from Lavender, Sage, Clay, Khaki and Stone. Keep text on these at
   WCAG AA (4.5:1) — use the 700/800 steps for text, 100/200 for fills. Pair color
   with text.
+
+## Surface patterns
+
+The Finances panel sets a calm, mostly monochrome style; reuse these
+patterns elsewhere rather than inventing new ones.
+
+- Soft cards: `rounded-2xl bg-secondary`, no border, 16px padding; title left,
+  gray detail beneath, value right, optionally in a `rounded-full bg-hover-2` pill.
+- Segmented control: text-only options; the selected one sits on a soft gray pill
+  (`AnimatedBackground`); unselected options are gray text, no container.
+- Lists: rows separated by dotted stone-300 dividers; a plain gray icon leads,
+  amounts or times align right.
+- One primary call to action per surface: `Button size="lg"` (48px, 16px corners,
+  semibold), near-black.
+- People appear as `Avatar` (initials in a soft accent circle) next to their name.
 
 ## Interaction
 

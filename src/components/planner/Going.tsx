@@ -5,12 +5,8 @@ import { Check, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Person } from "@/lib/types";
 
-export function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
+export { initials } from "@/lib/people";
+import { initials } from "@/lib/people";
 
 function names(people: Person[]): string {
   const first = people.map((p) => p.name.split(/\s+/)[0]);
