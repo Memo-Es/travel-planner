@@ -21,7 +21,7 @@ export const buttonVariants = cva(
         default: "h-10 px-4 py-2",
         sm: "h-9 px-3",
         icon: "size-9",
-        // Joi-style primary call to action: tall, rounded, semibold.
+        // Primary call to action: tall, rounded, semibold.
         lg: "h-12 rounded-2xl px-6 text-base font-semibold",
       },
     },

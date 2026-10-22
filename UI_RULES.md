@@ -34,9 +34,9 @@ is configured for the existing Tailwind 3 project. Add only components we use.
   WCAG AA (4.5:1) — use the 700/800 steps for text, 100/200 for fills. Pair color
   with text.
 
-## Joi patterns
+## Surface patterns
 
-The Finances panel follows Joi's calm, mostly monochrome style; reuse these
+The Finances panel sets a calm, mostly monochrome style; reuse these
 patterns elsewhere rather than inventing new ones.
 
 - Soft cards: `rounded-2xl bg-secondary`, no border, 16px padding; title left,
