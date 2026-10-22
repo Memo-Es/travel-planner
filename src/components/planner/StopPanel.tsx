@@ -3,7 +3,10 @@
 import {
   AnimatedBackground,
   Disclosure,
+  accordionSpring,
 } from "@/components/motion/primitives";
+import { motion, useReducedMotion } from "motion/react";
+import { LEFT_W } from "@/lib/theme";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   Plus,
@@ -64,41 +67,9 @@ export function editState(item: ItemData): FormState {
   };
 }
 
-/** A stop's schedule: dates, color and its stays, transport and activities
- * day by day. It takes the left panel's place while the stop is open; what
- * things cost lives in Finances on the right. */
-export default function StopPanel({
-  card,
-  overlay,
-  trip,
-  currency,
-  isMobile,
-  editing,
-  form,
-  formError,
-  saving,
-  onFormChange,
-  onFormError,
-  onClose,
-  onStartAdd,
-  onStartEdit,
-  onCancelForm,
-  onSaveForm,
-  onDeleteItem,
-  onUpdateDates,
-  onRename,
-  onChangeColor,
-  onDeleteTrip,
-  onMoveItem,
-  me,
-  onSetGoing,
-  members,
-}: {
-  card: string;
-  overlay: boolean;
+type ScheduleProps = {
   trip: TripData;
   currency: string;
-  isMobile: boolean;
   editing: Editing;
   form: FormState;
   formError: string | null;
@@ -125,12 +96,78 @@ export default function StopPanel({
   me: Person;
   onSetGoing: (itemId: string, going: boolean) => Promise<void>;
   members: MemberOption[];
+};
+
+/** A stop's schedule: dates, color and its stays, transport and activities
+ * day by day. On wider screens it grows out of the Trips panel over the
+ * calendar; on mobile it takes the Trips tab. What things cost lives in
+ * Finances on the right. */
+export default function StopPanel({
+  card,
+  left,
+  width,
+  ...props
+}: ScheduleProps & {
+  card: string;
+  /** Where the panel's left edge sits; null on mobile, where it fills the tab. */
+  left: number | null;
+  /** The width it grows to from the Trips panel's. */
+  width: number;
 }) {
+  const reduce = !!useReducedMotion();
+  const box = (children: React.ReactNode) =>
+    left === null ? (
+      <aside aria-label={props.trip.label} className={card + " flex-1 min-h-0 p-5"}>
+        {children}
+      </aside>
+    ) : (
+      <motion.aside
+        aria-label={props.trip.label}
+        initial={{ width: LEFT_W }}
+        animate={{ width }}
+        exit={{ width: LEFT_W, opacity: 0 }}
+        transition={
+          reduce
+            ? { duration: 0 }
+            : { ...accordionSpring, opacity: { duration: 0.15 } }
+        }
+        style={{ left }}
+        className={card + " absolute bottom-3 top-3 z-panel p-5 shadow-overlay"}
+      >
+        {children}
+      </motion.aside>
+    );
+  // Keyed by stop, so drafts and the open tab reset when switching stops
+  // without replaying the panel's grow.
+  return box(<StopSchedule key={props.trip.id} {...props} />);
+}
+
+function StopSchedule({
+  trip,
+  currency,
+  editing,
+  form,
+  formError,
+  saving,
+  onFormChange,
+  onFormError,
+  onClose,
+  onStartAdd,
+  onStartEdit,
+  onCancelForm,
+  onSaveForm,
+  onDeleteItem,
+  onUpdateDates,
+  onRename,
+  onChangeColor,
+  onDeleteTrip,
+  onMoveItem,
+  me,
+  onSetGoing,
+  members,
+}: ScheduleProps) {
   const dd = useDayDrag(trip, onMoveItem);
   const stopDays = tripDays(trip);
-  const overlayBox =
-    "absolute bottom-3 left-[74px] top-3 z-panel w-[360px] shadow-overlay";
-  const positionClass = overlay ? overlayBox : isMobile ? "flex-1 min-h-0" : "";
   const backRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     backRef.current?.focus({ preventScroll: true });
@@ -215,10 +252,7 @@ export default function StopPanel({
   }
 
   return (
-    <aside
-      aria-labelledby={`${tabsId}-title`}
-      className={card + " p-5 " + positionClass}
-    >
+    <>
       <header className="shrink-0">
         <div className="flex items-center justify-between gap-2">
           <Button
@@ -740,6 +774,6 @@ export default function StopPanel({
         })}
       </div>
       {dd.ghost}
-    </aside>
+    </>
   );
 }

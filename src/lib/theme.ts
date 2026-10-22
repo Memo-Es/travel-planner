@@ -9,8 +9,8 @@ export const TASK_GREEN_SOFT = "#E9F0E8"; // Pale Leaf 100
 export const TASK_GREEN_INK = "#41583D"; // Pale Leaf 700
 
 export const LEFT_W = 272;
-/** The left panel while a stop is open. */
-export const STOP_W = 360;
+/** How wide an open stop grows over the calendar. */
+export const STOP_W = 640;
 export const RIGHT_W = 320;
 export const RAIL_W = 54;
 export const MIN_MAIN = 600;

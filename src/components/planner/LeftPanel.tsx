@@ -3,7 +3,6 @@
 import { useId } from "react";
 import { AnimatedBackground } from "@/components/motion/primitives";
 import {
-  ChevronRight,
   X,
   Settings2,
   MapPin,
@@ -31,7 +30,6 @@ export default function LeftPanel({
   onSwitchTeam,
   onOpenSettings,
   onSelectTrip,
-  onEditTrip,
   onAddTrip,
   addingTrip,
   onClose,
@@ -49,10 +47,8 @@ export default function LeftPanel({
   userName: string;
   onSwitchTeam: (id: string) => void;
   onOpenSettings: () => void;
-  /** Picks a stop and moves the calendar to it. */
+  /** Opens the stop: its schedule here, its costs in Finances. */
   onSelectTrip: (t: TripData) => void;
-  /** Opens the stop's drawer to edit it. */
-  onEditTrip: (t: TripData) => void;
   onAddTrip: () => void;
   addingTrip: boolean;
   onClose: () => void;
@@ -133,57 +129,43 @@ export default function LeftPanel({
             const color = stopColor(t.color);
             return (
               <li key={t.id} className="py-1">
-                <div className="group relative isolate -mx-2 flex items-center rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => onSelectTrip(t)}
+                  aria-current={selected ? "true" : undefined}
+                  className="relative isolate -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl py-2.5 pl-2 pr-3 text-left outline-offset-[-2px] transition-colors duration-150 hover:bg-hover"
+                >
                   {selected && (
                     <AnimatedBackground
                       layoutId={highlightId}
                       className="bg-secondary"
                     />
                   )}
-                  <button
-                    type="button"
-                    onClick={() => onSelectTrip(t)}
-                    aria-current={selected ? "true" : undefined}
-                    className="flex min-w-0 flex-1 items-center gap-3 rounded-xl py-2.5 pl-2 text-left outline-offset-[-2px] transition-colors duration-150 hover:bg-hover"
-                  >
-                    {t.photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={t.photoUrl}
-                        alt=""
-                        className="size-8 shrink-0 rounded-lg object-cover"
+                  {t.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={t.photoUrl}
+                      alt=""
+                      className="size-8 shrink-0 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <span className="flex size-8 shrink-0 items-center justify-center">
+                      <MapPin
+                        className="size-5"
+                        style={{ color: color.base }}
+                        strokeWidth={2.25}
                       />
-                    ) : (
-                      <span className="flex size-8 shrink-0 items-center justify-center">
-                        <MapPin
-                          className="size-5"
-                          style={{ color: color.base }}
-                          strokeWidth={2.25}
-                        />
-                      </span>
-                    )}
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-base font-medium text-ink">
-                        {t.label}
-                      </span>
-                      <span className="block truncate text-xs tabular-nums text-muted-2">
-                        {fmtRange(t.start, t.end)}
-                      </span>
                     </span>
-                  </button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => onEditTrip(t)}
-                    aria-label={`Open ${t.label}`}
-                    className={
-                      "mr-0.5 size-8 focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100 " +
-                      (selected ? "opacity-100" : "opacity-0")
-                    }
-                  >
-                    <ChevronRight />
-                  </Button>
-                </div>
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-base font-medium text-ink">
+                      {t.label}
+                    </span>
+                    <span className="block truncate text-xs tabular-nums text-muted-2">
+                      {fmtRange(t.start, t.end)}
+                    </span>
+                  </span>
+                </button>
               </li>
             );
           })}
