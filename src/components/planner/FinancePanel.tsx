@@ -36,10 +36,11 @@ export default function FinancePanel({
   card,
   overlay,
   isMobile,
-  trips,
+  trips: allTrips,
+  stop,
   currency,
-  total,
   onOpenStop,
+  onEditItem,
   onAddExpense,
   canAddExpense,
   onClose,
@@ -51,9 +52,11 @@ export default function FinancePanel({
   overlay: boolean;
   isMobile: boolean;
   trips: TripData[];
+  /** The open stop, which narrows Finances to its bookings. */
+  stop: TripData | null;
   currency: string;
-  total: number;
   onOpenStop: (trip: TripData) => void;
+  onEditItem: (key: ItemSectionKey, item: ItemData) => void;
   onAddExpense: () => void;
   canAddExpense: boolean;
   onClose: () => void;
@@ -86,6 +89,10 @@ export default function FinancePanel({
   const costed = (item: ItemData) => item.costAmount !== null;
   const sum = (items: ItemData[]) =>
     items.reduce((n, i) => n + (i.costAmount ?? 0), 0);
+  const trips = stop ? [stop] : allTrips;
+  const total = sum(
+    trips.flatMap((t) => [...t.stay, ...t.transport, ...t.activities]),
+  );
   const categories = SECTION_DEFS.map((sec) => {
     const items = trips.flatMap((t) => t[sec.key]).filter(costed);
     const value = sum(items);
@@ -107,9 +114,31 @@ export default function FinancePanel({
       subtotal: sum(keys.flatMap((k) => trip[k]).filter(costed)),
     }))
     .filter((s) => s.subtotal > 0);
+  // With a stop open, its bookings take the place of the stop list.
+  const expenses = stop
+    ? keys.flatMap((key) =>
+        stop[key].filter(costed).map((item) => ({ key, item })),
+      )
+    : [];
+  const rows = stop
+    ? expenses.map(({ key, item }) => ({
+        id: item.id,
+        label: item.t,
+        detail: SECTION_DEFS.find((d) => d.key === key)!.name,
+        value: item.costAmount ?? 0,
+        onClick: () => onEditItem(key, item),
+      }))
+    : stops.map(({ trip, subtotal }) => ({
+        id: trip.id,
+        label: trip.label,
+        detail: null,
+        value: subtotal,
+        onClick: () => onOpenStop(trip),
+      }));
 
-  const showBalances = hasPaidExpenses(trips);
-  const balances = showBalances ? computeBalances(trips, members) : [];
+  // Who owes who is settled across the whole trip, not per stop.
+  const showBalances = hasPaidExpenses(allTrips);
+  const balances = showBalances ? computeBalances(allTrips, members) : [];
   const owed = showBalances ? settleUp(balances) : [];
   const mine = balances.find((b) => b.person.id === currentUserId)?.net ?? 0;
   const [balanceLabel, balanceTone] =
@@ -173,8 +202,12 @@ export default function FinancePanel({
 
         <header className="mt-6">
           <h2 className="text-sm font-medium text-ink">
-            <TransitionText value={filter}>
-              {active ? `${active.name} spend` : "Total spent"}
+            <TransitionText value={`${filter}-${stop?.id ?? ""}`}>
+              {active
+                ? `${active.name} spend${stop ? ` in ${stop.label}` : ""}`
+                : stop
+                  ? `Spent in ${stop.label}`
+                  : "Total spent"}
             </TransitionText>
           </h2>
           <p
@@ -191,7 +224,7 @@ export default function FinancePanel({
             />
           </p>
           <p className="mt-2 text-pretty text-xs leading-relaxed tabular-nums text-muted-2">
-            <TransitionText value={filter}>
+            <TransitionText value={`${filter}-${stop?.id ?? ""}`}>
               {active
                 ? `${active.count} ${active.count === 1 ? "expense" : "expenses"} · ${active.share}% of ${money(total)}`
                 : total > 0
@@ -221,7 +254,7 @@ export default function FinancePanel({
                 onClick={() => setOpen("stops")}
                 className="flex min-h-14 w-full items-center justify-between gap-3 rounded-[inherit] px-4 text-left text-sm font-medium text-muted transition-colors duration-150 hover:text-ink"
               >
-                Expenses by stop
+                {stop ? "Expenses" : "Expenses by stop"}
               </button>
             </h3>
             <AccordionBody
@@ -232,23 +265,30 @@ export default function FinancePanel({
             >
               <ul className="border-t border-dotted border-stone-300">
                 <AnimatePresence initial={false}>
-                  {stops.map(({ trip, subtotal }) => (
+                  {rows.map((row) => (
                     <motion.li
-                      key={trip.id}
+                      key={row.id}
                       {...rowMotion}
                       className="-mx-2 overflow-hidden [&:last-child>div]:border-b-0"
                     >
                       <div className="mx-2 border-b border-dotted border-stone-300">
                         <button
                           type="button"
-                          onClick={() => onOpenStop(trip)}
+                          onClick={row.onClick}
                           className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-lg px-2 py-3.5 text-left transition-colors duration-150 hover:bg-hover-2/60"
                         >
-                          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">
-                            {trip.label}
+                          <span className="min-w-0 flex-1">
+                            <span className="line-clamp-2 break-words text-sm font-semibold text-ink">
+                              {row.label}
+                            </span>
+                            {row.detail && (
+                              <span className="block truncate text-xs text-muted-2">
+                                {row.detail}
+                              </span>
+                            )}
                           </span>
                           <AnimatedNumber
-                            value={subtotal}
+                            value={row.value}
                             format={money}
                             className="shrink-0 text-sm text-muted-2"
                           />
@@ -256,7 +296,7 @@ export default function FinancePanel({
                       </div>
                     </motion.li>
                   ))}
-                  {stops.length === 0 && (
+                  {rows.length === 0 && (
                     <motion.li
                       key="empty"
                       {...rowMotion}
@@ -265,7 +305,9 @@ export default function FinancePanel({
                       <p className="py-4 text-pretty text-xs leading-relaxed text-muted">
                         {active
                           ? `No ${active.name.toLowerCase()} costs yet.`
-                          : "Costs on stays, transport and activities add up here."}
+                          : stop
+                            ? `Costs on ${stop.label}'s bookings add up here.`
+                            : "Costs on stays, transport and activities add up here."}
                       </p>
                     </motion.li>
                   )}
@@ -322,7 +364,7 @@ export default function FinancePanel({
         <Button
           size="lg"
           className="w-full"
-          onClick={onAddExpense}
+          onClick={() => onAddExpense()}
           disabled={!canAddExpense}
           aria-describedby={!canAddExpense ? "expense-needs-stop" : undefined}
         >

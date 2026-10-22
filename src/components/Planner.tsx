@@ -22,7 +22,7 @@ import { MONTHS_LONG, DAY, ms, toDateInput } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
 import { isScheduled, sectionTotal } from "@/lib/tripSections";
 import { defaultTripId, plansByDate } from "@/lib/itinerary";
-import { LEFT_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
+import { LEFT_W, STOP_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
 import {
   createTrip,
   addItem,
@@ -67,7 +67,7 @@ import {
 } from "@/components/planner/BookingForm";
 import RightRail from "@/components/planner/RightRail";
 import CalendarView from "@/components/planner/CalendarView";
-import TripDrawer from "@/components/planner/TripDrawer";
+import StopPanel, { editState } from "@/components/planner/StopPanel";
 import TripSettingsModal from "@/components/planner/TripSettingsModal";
 import MobileTabs from "@/components/planner/MobileTabs";
 import Toast from "@/components/planner/Toast";
@@ -278,9 +278,10 @@ export default function Planner({
   const isCompact = mode === "compact";
   const activeOverlay = isCompact ? overlay : null;
 
-  const width = mainWidth(vw, mode, LEFT_W, RIGHT_W, RAIL_W);
-
   const trip = trips.find((t) => t.id === openTripId) ?? null;
+  // An open stop widens the left panel to fit its schedule.
+  const leftW = trip ? STOP_W : LEFT_W;
+  const width = mainWidth(vw, mode, leftW, RIGHT_W, RAIL_W);
   // The left panel opens the days of the last stop you opened, falling back to the stop
   // happening now (or next).
   const itineraryTrip = trips.some((t) => t.id === itineraryTripId)
@@ -291,6 +292,8 @@ export default function Planner({
   function openTrip(tripId: string) {
     setOpenTripId(tripId);
     setItineraryTripId(tripId);
+    if (isCompact) setOverlay("links");
+    if (isMobile) setMobileTab("links");
   }
 
   const events: CalendarEvent[] = useMemo(() => {
@@ -336,8 +339,11 @@ export default function Planner({
     setCursor({ y, m: m - 1 });
     setOverlay(null);
     setItineraryTripId(t.id);
-    if (openDrawer) setOpenTripId(t.id);
-    if (isMobile) setMobileTab("calendar");
+    if (openDrawer) {
+      setOpenTripId(t.id);
+      if (isCompact) setOverlay("links");
+    }
+    if (isMobile) setMobileTab(openDrawer ? "links" : "calendar");
   }
 
   // Picking a stop in the left panel moves the calendar to it, which shows
@@ -708,7 +714,7 @@ export default function Planner({
     : {
         gridTemplateColumns: isCompact
           ? `${RAIL_W}px minmax(0,1fr) ${RAIL_W}px`
-          : `${LEFT_W}px minmax(${MIN_MAIN}px,1fr) ${RIGHT_W}px`,
+          : `${leftW}px minmax(0,1fr) ${RIGHT_W}px`,
       };
 
   const showBackdrop = !!activeOverlay;
@@ -790,7 +796,46 @@ export default function Planner({
         />
       )}
 
-      {showLeftPanel && (
+      {showLeftPanel && trip && (
+        <StopPanel
+          key={trip.id}
+          card={CARD}
+          overlay={activeOverlay === "links"}
+          trip={trip}
+          currency={teamCurrency}
+          isMobile={isMobile}
+          editing={editing}
+          form={form}
+          formError={formError}
+          saving={saving}
+          onFormChange={onFormChange}
+          onFormError={setFormError}
+          onClose={closeDrawer}
+          onStartAdd={startAdd}
+          onStartEdit={startEdit}
+          onCancelForm={() => {
+            setEditing(null);
+            setFormError(null);
+          }}
+          onSaveForm={saveForm}
+          onDeleteItem={removeItem}
+          onUpdateDates={onUpdateStopDates}
+          onRename={onRenameTrip}
+          onChangeColor={onChangeTripColor}
+          onDeleteTrip={handleDeleteTrip}
+          onMoveItem={async (itemId, date) => {
+            await setItemDay(itemId, date);
+            refresh();
+          }}
+          me={{ id: currentUserId, name: userName }}
+          onSetGoing={async (itemId, going) => {
+            await setGoing(itemId, going);
+            refresh();
+          }}
+          members={members}
+        />
+      )}
+      {showLeftPanel && !trip && (
         <LeftPanel
           card={CARD}
           overlay={activeOverlay === "links"}
@@ -886,10 +931,14 @@ export default function Planner({
           overlay={activeOverlay === "finances"}
           isMobile={isMobile}
           trips={trips}
+          stop={trip}
           currency={teamCurrency}
-          total={tripTotal}
           onOpenStop={(t) => jumpToTrip(t)}
-          onAddExpense={() => openExpense()}
+          onEditItem={(key, item) => {
+            startEdit(key, item.id, editState(item));
+            if (isMobile) setMobileTab("links");
+          }}
+          onAddExpense={() => openExpense({ tripId: openTripId })}
           canAddExpense={trips.length > 0}
           onClose={closeOverlay}
           showClose={!!activeOverlay}
@@ -907,44 +956,6 @@ export default function Planner({
       )}
 
       <AnimatePresence initial={false}>
-        {trip && (
-          <TripDrawer
-            key={trip.id}
-            trip={trip}
-            currency={teamCurrency}
-            isMobile={isMobile}
-            editing={editing}
-            form={form}
-            formError={formError}
-            saving={saving}
-            onFormChange={onFormChange}
-            onFormError={setFormError}
-            onClose={closeDrawer}
-            onStartAdd={startAdd}
-            onStartEdit={startEdit}
-            onCancelForm={() => {
-              setEditing(null);
-              setFormError(null);
-            }}
-            onSaveForm={saveForm}
-            onDeleteItem={removeItem}
-            onUpdateDates={onUpdateStopDates}
-            onRename={onRenameTrip}
-            onChangeColor={onChangeTripColor}
-            onDeleteTrip={handleDeleteTrip}
-            onMoveItem={async (itemId, date) => {
-              await setItemDay(itemId, date);
-              refresh();
-            }}
-            me={{ id: currentUserId, name: userName }}
-            onSetGoing={async (itemId, going) => {
-              await setGoing(itemId, going);
-              refresh();
-            }}
-            members={members}
-          />
-        )}
-
         {expenseOpen && (
           <ExpenseDialog
             key="expense"

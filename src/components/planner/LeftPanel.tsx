@@ -4,17 +4,17 @@ import { useId } from "react";
 import { AnimatedBackground } from "@/components/motion/primitives";
 import {
   ChevronRight,
-  Plus,
   X,
   Settings2,
   MapPin,
-  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { NativeSelect } from "@/components/ui/input";
 import type { TripData, TeamOption } from "@/lib/types";
-import { fmtRange, ms } from "@/lib/dates";
+import { fmtRange } from "@/lib/dates";
+import { statusFor } from "@/lib/tripStatus";
+import { AddRow } from "@/components/planner/AddRow";
 import { logout } from "@/actions/team";
 import { stopColor } from "@/lib/theme";
 
@@ -64,7 +64,13 @@ export default function LeftPanel({
     "absolute bottom-3 left-[74px] top-3 z-panel w-[272px] shadow-overlay";
   const positionClass = overlay ? overlayBox : isMobile ? "flex-1 min-h-0" : "";
 
-  const status = tripStatus(trips);
+  // The whole itinerary, first arrival to last departure.
+  const status = trips.length
+    ? statusFor(
+        trips.reduce((a, t) => (t.start < a ? t.start : a), trips[0].start),
+        trips.reduce((a, t) => (t.end > a ? t.end : a), trips[0].end),
+      )
+    : null;
 
   return (
     <aside aria-label="Trips" className={card + " p-5 " + positionClass}>
@@ -121,7 +127,7 @@ export default function LeftPanel({
         data-drag-scroll
         className="scroll-stable -mx-2 mt-5 min-h-0 overflow-y-auto overscroll-contain px-2"
       >
-        <ul className="divide-y divide-dotted divide-stone-300">
+        <ul>
           {trips.map((t) => {
             const selected = selectedTripId === t.id;
             const color = stopColor(t.color);
@@ -182,31 +188,22 @@ export default function LeftPanel({
             );
           })}
           <li className="py-1">
-            <button
-              type="button"
+            <AddRow
               onClick={onAddTrip}
-              disabled={addingTrip}
-              className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl py-2.5 pl-2 text-left text-base font-medium text-muted-2 outline-offset-[-2px] transition-colors duration-150 hover:bg-hover hover:text-ink disabled:opacity-60"
-            >
-              <span className="flex size-8 shrink-0 items-center justify-center">
-                {addingTrip ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <span
-                    aria-hidden="true"
-                    className="flex size-5 items-center justify-center rounded-md border-2 border-dashed border-stone-300"
-                  >
-                    <Plus className="size-3" strokeWidth={2.5} />
-                  </span>
-                )}
-              </span>
-              {addingTrip ? "Adding stop…" : trips.length ? "Add stop" : "Add your first stop"}
-            </button>
+              busy={addingTrip}
+              label={
+                addingTrip
+                  ? "Adding stop…"
+                  : trips.length
+                    ? "Add stop"
+                    : "Add your first stop"
+              }
+            />
           </li>
         </ul>
       </nav>
 
-      <footer className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-dotted border-stone-300 pt-4">
+      <footer className="mt-auto flex shrink-0 items-center justify-between gap-2 pt-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <Avatar name={userName} />
           <span className="min-w-0">
@@ -227,26 +224,4 @@ export default function LeftPanel({
       </footer>
     </aside>
   );
-}
-
-const DAY_MS = 86_400_000;
-
-/** Status chip: how far the whole itinerary is from today. */
-function tripStatus(trips: TripData[]): string | null {
-  if (trips.length === 0) return null;
-  const start = Math.min(...trips.map((t) => ms(t.start)));
-  const end = Math.max(...trips.map((t) => ms(t.end)));
-  const now = new Date();
-  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  const days = (a: number, b: number) => Math.round((a - b) / DAY_MS);
-  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-  if (today < start) {
-    const n = days(start, today);
-    return n === 1 ? "Starts tomorrow" : `Starts in ${plural(n, "day")}`;
-  }
-  if (today <= end) {
-    return `Day ${days(today, start) + 1} of ${days(end, start) + 1}`;
-  }
-  const n = days(today, end);
-  return n === 1 ? "Ended yesterday" : `Ended ${plural(n, "day")} ago`;
 }

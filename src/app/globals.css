@@ -117,18 +117,6 @@
 }
 
 @layer components {
-  .booking-card {
-    transition:
-      transform 180ms ease-out,
-      box-shadow 180ms ease-out,
-      border-color 150ms;
-  }
-  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-    .booking-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px -10px rgb(28 25 23 / 0.16);
-    }
-  }
   @media (prefers-reduced-motion: no-preference) {
     .ui-button {
       transition:
