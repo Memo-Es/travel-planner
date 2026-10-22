@@ -503,23 +503,6 @@ export default function Planner({
     }
   }
 
-  function openExpenseFromPanel(t: TripData, key: ItemSectionKey, itemId: string) {
-    const item = t[key].find((i) => i.id === itemId);
-    if (!item) return;
-    jumpToTrip(t);
-    startEdit(key, itemId, {
-      t: item.t,
-      url: item.url,
-      cost: item.costAmount === null ? "" : String(item.costAmount),
-      date: item.date ?? "",
-      time: item.time ?? "",
-      notes: item.notes ?? "",
-      paidBy: item.paidBy?.id ?? "",
-      files: [],
-      removeIds: [],
-    });
-  }
-
   function openExpense(defaults: {
     tripId?: string | null;
     key?: ItemSectionKey;
@@ -906,7 +889,7 @@ export default function Planner({
           trips={trips}
           currency={teamCurrency}
           total={tripTotal}
-          onOpenItem={openExpenseFromPanel}
+          onOpenStop={(t) => jumpToTrip(t)}
           onAddExpense={() => openExpense()}
           canAddExpense={trips.length > 0}
           onClose={closeOverlay}
