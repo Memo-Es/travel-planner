@@ -51,9 +51,22 @@ const config: Config = {
         "task-green": "#88A682",
         "task-green-soft": "#E9F0E8",
         "task-green-ink": "#41583D",
+        // Khaki (Foggy Gray) tints: the transport category.
+        khaki: "#AEA689",
+        "khaki-soft": "#EEEDE6",
+        "khaki-ink": "#635849",
       },
       fontFamily: {
-        sans: ['"Helvetica Neue"', "Helvetica", "Arial", "sans-serif"],
+        // The platform UI face: SF Pro on Apple devices, Segoe UI on Windows.
+        sans: [
+          "ui-sans-serif",
+          "system-ui",
+          "-apple-system",
+          '"Segoe UI"',
+          '"Helvetica Neue"',
+          "Arial",
+          "sans-serif",
+        ],
       },
       borderRadius: {
         card: "16px",

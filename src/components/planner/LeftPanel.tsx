@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Avatar } from "@/components/ui/avatar";
 import { NativeSelect } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -223,12 +224,7 @@ export default function LeftPanel({
       </Button>
       <footer className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-line-soft pt-4">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span
-            aria-hidden="true"
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent-ink"
-          >
-            {initials(userName)}
-          </span>
+          <Avatar name={userName} />
           <span className="min-w-0">
             <span className="block truncate text-sm font-medium text-ink-soft">
               {userName}
@@ -247,11 +243,4 @@ export default function LeftPanel({
       </footer>
     </aside>
   );
-}
-
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
