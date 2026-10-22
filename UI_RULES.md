@@ -12,8 +12,9 @@ is configured for the existing Tailwind 3 project. Add only components we use.
 - Use regular and medium weights for content; reserve semibold for headings,
   key amounts and selected emphasis. Dates and costs use tabular numerals.
 - Space related controls by 8–12px, fields by 12–16px and sections by 24px.
-- Use 12px corners for controls (buttons, inputs), 16px for soft cards, panels and
-  dialogs, and full pills only for chips and segmented controls.
+- Use 12px corners for controls (buttons, inputs), 16px for soft cards and form
+  boxes, 24px for panels, dialogs and sheets, and full pills for chips, status
+  badges and segmented controls.
 - Type uses the platform UI face (`system-ui`: SF Pro on Apple). Key figures are
   large display numbers (`text-3xl`/`text-4xl` semibold, tabular) with gray
   supporting text beneath; avoid boxing them in.
@@ -36,8 +37,20 @@ is configured for the existing Tailwind 3 project. Add only components we use.
 
 ## Surface patterns
 
-The Finances panel sets a calm, mostly monochrome style; reuse these
-patterns elsewhere rather than inventing new ones.
+A calm, mostly monochrome style with soft fills instead of outlines (the Trips
+and Finances panels are the reference); reuse these patterns rather than
+inventing new ones.
+
+- No outlined controls: secondary buttons and inputs are soft stone fills. Inputs
+  turn white with a ring halo on focus. Form boxes that hold inputs are white with
+  a hairline border so the soft fields stay visible.
+- Display headings: trip and stop names at `text-2xl` semibold, the calendar month
+  at `text-3xl` bold with the year in gray, weekday labels small uppercase.
+- Status chip: a full-width `rounded-full bg-secondary` pill with one line of
+  centered status ("Starts in 25 days", "Day 3 of 19").
+- Add rows: the last row of a list is a dashed-square placeholder ("Add stop") in
+  gray, not a separate outlined button.
+- Mobile bottom sheets show a grab handle.
 
 - Soft cards: `rounded-2xl bg-secondary`, no border, 16px padding; title left,
   gray detail beneath, value right, optionally in a `rounded-full bg-hover-2` pill.
@@ -51,8 +64,10 @@ patterns elsewhere rather than inventing new ones.
 
 ## Interaction
 
-- Use Button variants consistently: primary for save/create, outline for secondary
-  actions, ghost for contextual actions, destructive for confirmed deletion.
+- Use Button variants consistently: primary for save/create, secondary (soft
+  fill) for other actions, ghost for contextual actions, accent for an "on" toggle
+  state (Going), soft-destructive for inline removal, destructive for confirmed
+  deletion.
 - Keep icon controls at least 36px and provide accessible names. File pickers are
   driven by a labelled button; the native input stays visually hidden.
 - Put edit/delete actions in an overflow menu. Stop deletion requires the shared

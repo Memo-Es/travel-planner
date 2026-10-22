@@ -69,7 +69,7 @@ const config: Config = {
         ],
       },
       borderRadius: {
-        card: "16px",
+        card: "24px",
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",

@@ -807,7 +807,6 @@ export default function Planner({
           onEditTrip={(t) => jumpToTrip(t)}
           onAddTrip={handleAddTrip}
           addingTrip={addingTrip}
-          onDeleteTrip={handleDeleteTrip}
           onClose={closeOverlay}
           showClose={!!activeOverlay}
           todayLabel={todayLabel}
@@ -824,9 +823,9 @@ export default function Planner({
           }
         >
           <header className="flex flex-wrap items-center justify-between gap-3 mb-5">
-            <h1 className="m-0 whitespace-nowrap text-2xl font-normal tabular-nums text-muted">
+            <h1 className="m-0 whitespace-nowrap text-3xl font-medium tabular-nums text-muted-2">
               <TransitionText value={`${cursor.y}-${cursor.m}`}>
-                <strong className="font-semibold text-ink">
+                <strong className="font-bold text-ink">
                   {MONTHS_LONG[cursor.m]}
                 </strong>{" "}
                 {cursor.y}
@@ -834,7 +833,7 @@ export default function Planner({
             </h1>
             <div className="flex items-center gap-1.5 flex-none">
               <Button
-                variant="outline"
+                variant="secondary"
                 size="icon"
                 aria-label="Previous month"
                 onClick={() =>
@@ -856,7 +855,7 @@ export default function Planner({
                 Today
               </Button>
               <Button
-                variant="outline"
+                variant="secondary"
                 size="icon"
                 aria-label="Next month"
                 onClick={() =>

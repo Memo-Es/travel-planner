@@ -63,7 +63,7 @@ export default function CalendarView({
         {weekdays.map((wd, i) => (
           <div
             key={i}
-            className="overflow-hidden pr-1.5 text-right text-xs text-muted"
+            className="overflow-hidden pr-1.5 text-right text-xs font-semibold uppercase text-muted-2"
           >
             {wd}
           </div>
