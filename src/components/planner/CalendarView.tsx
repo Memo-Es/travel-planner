@@ -102,7 +102,6 @@ function PlanLine({
 
 export default function CalendarView({
   view,
-  focusId,
   weeks,
   width,
   onBarPointerDown,
@@ -111,8 +110,6 @@ export default function CalendarView({
   plans,
 }: {
   view: View;
-  /** The stop being looked at; other stops' plans fade back. */
-  focusId: string | null;
   weeks: CalendarWeek[];
   /** Plans by "YYYY-MM-DD", shown as a one-line preview in each day. */
   plans: Map<string, Plan[]>;
@@ -167,10 +164,7 @@ export default function CalendarView({
                     plan={first}
                     all={dayPlans}
                     onOpenTrip={onOpenTrip}
-                    className={cn(
-                      "mb-1 mt-auto",
-                      focusId && first.trip.id !== focusId && "opacity-30",
-                    )}
+                    className="mb-1 mt-auto"
                   />
                 ) : (
                   first && (
@@ -186,11 +180,6 @@ export default function CalendarView({
                             plan={p}
                             wrap={width / 7 >= 80}
                             onOpenTrip={onOpenTrip}
-                            className={
-                              focusId && p.trip.id !== focusId
-                                ? "opacity-30"
-                                : undefined
-                            }
                           />
                         </li>
                       ))}

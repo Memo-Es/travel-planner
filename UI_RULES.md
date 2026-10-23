@@ -50,7 +50,8 @@ inventing new ones.
   full width under the title on mobile). Week views title the date range, list a
   day's plans under its bars and step by their own length.
 - Opening a stop zooms the calendar to the tightest view that shows it whole
-  (week, 2 weeks or month), fading other stops back; closing it returns to the
+  (week, 2 weeks or month) and gives it the calendar to itself: other stops,
+  holidays and their plans are hidden and days outside it are grayed; closing it returns to the
   previous view unless one was picked in between.
 - Status chip: a full-width `rounded-full bg-secondary` pill with one line of
   centered status ("Starts in 25 days", "Day 3 of 19").
