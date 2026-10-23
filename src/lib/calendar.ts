@@ -55,6 +55,14 @@ export const VIEW_PLANS: Record<CalendarView, number> = { month: 1, "2weeks": 4,
 /** Height of one plan line in a day. */
 const PREVIEW_H = 20;
 
+/** The tightest view that shows a stop whole: one week, two, or its month. */
+export function fitView(start: string, end: string, startOn = 0): CalendarView {
+  const from = ms(start);
+  const weekStart = from - ((new Date(from).getUTCDay() - startOn + 7) % 7) * DAY;
+  const days = Math.round((ms(end) - weekStart) / DAY);
+  return days < 7 ? "week" : days < 14 ? "2weeks" : "month";
+}
+
 /** The first day shown: the start of the month's first week, or of the
  * week holding the cursor's day. */
 export function gridStart(
@@ -79,6 +87,8 @@ export function buildWeeks(
     todayMs: number;
     /** Plans per day, which get room under the bars. */
     planCounts?: Map<string, number>;
+    /** The stop being looked at; every other bar fades back. */
+    focusId?: string | null;
   },
 ): CalendarWeek[] {
   const { m } = cursor;
@@ -191,7 +201,8 @@ export function buildWeeks(
           color: e.isNote ? "#57534e" : c ? c.ink : ACCENT_INK, // stone-600
           background: e.isNote ? "#f5f5f4" : c ? c.soft : ACCENT_SOFT, // stone-100
           borderRadius: contL ? "0 999px 999px 0" : contR ? "999px 0 0 999px" : 999,
-          opacity: contL ? 0.72 : 1,
+          opacity: opts.focusId && e.id !== opts.focusId ? 0.3 : contL ? 0.72 : 1,
+          transition: "opacity 200ms ease-out",
           pointerEvents: e.isNote ? "none" : "auto",
           cursor: e.isNote ? "default" : "pointer",
         },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { AnimatePresence } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   AnimatedBackground,
   TransitionText,
@@ -17,6 +17,7 @@ import type {
 } from "@/lib/types";
 import {
   buildWeeks,
+  fitView,
   gridStart,
   VIEW_WEEKS,
   type CalendarView as CalView,
@@ -182,6 +183,11 @@ export default function Planner({
   // the week(s) starting with the week it's in.
   const [cursor, setCursor] = useState(() => cursorAt(Date.now()));
   const [calView, setCalView] = useState<CalView>("month");
+  const reduceMotion = !!useReducedMotion();
+  const [zoomedFrom, setZoomedFrom] = useState<{
+    view: CalView;
+    cursor: Cursor;
+  } | null>(null);
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [openTripId, setOpenTripId] = useState<string | null>(null);
   // The open stop's itinerary folded away to give Finances its room back.
@@ -341,7 +347,25 @@ export default function Planner({
     : defaultTripId(trips, todayMs);
   const plans = useMemo(() => plansByDate(trips), [trips]);
 
+  // Opening a stop zooms the calendar to the tightest view that shows it
+  // whole; closing it goes back to where you were, unless you picked a view
+  // yourself in between.
+  function zoomTo(t: TripData) {
+    setZoomedFrom((z) => z ?? { view: calView, cursor });
+    setCalView(fitView(t.start, t.end));
+    setCursor(cursorAt(ms(t.start)));
+  }
+  function zoomBack() {
+    if (zoomedFrom) {
+      setCalView(zoomedFrom.view);
+      setCursor(zoomedFrom.cursor);
+      setZoomedFrom(null);
+    }
+  }
+
   function openTrip(tripId: string) {
+    const t = trips.find((x) => x.id === tripId);
+    if (t) zoomTo(t);
     setOpenTripId(tripId);
     setItineraryFolded(false);
     setItineraryTripId(tripId);
@@ -384,8 +408,9 @@ export default function Planner({
         mainWidth: width,
         todayMs,
         planCounts: new Map([...plans].map(([date, p]) => [date, p.length])),
+        focusId: openTripId,
       }),
-    [cursor, calView, events, width, todayMs, plans],
+    [cursor, calView, events, width, todayMs, plans, openTripId],
   );
 
   const rangeStart = gridStart(cursor, calView, 0);
@@ -407,7 +432,10 @@ export default function Planner({
           key={v.id}
           type="button"
           aria-pressed={calView === v.id}
-          onClick={() => setCalView(v.id)}
+          onClick={() => {
+            setCalView(v.id);
+            setZoomedFrom(null);
+          }}
           className={
             "relative isolate h-7 whitespace-nowrap rounded-full px-3 text-sm font-medium transition-colors duration-150 " +
             (isMobile ? "flex-1 " : "") +
@@ -431,6 +459,7 @@ export default function Planner({
     setOverlay(null);
     setItineraryTripId(t.id);
     if (openDrawer) {
+      zoomTo(t);
       setOpenTripId(t.id);
       setItineraryFolded(false);
       if (isCompact) setOverlay("links");
@@ -481,10 +510,12 @@ export default function Planner({
     setOpenTripId(null);
     setEditing(null);
     setItineraryFolded(false);
+    zoomBack();
   }
 
   function closeOverlay() {
     setOverlay(null);
+    if (openTripId) zoomBack();
     setOpenTripId(null);
     setEditing(null);
     setSettingsOpen(false);
@@ -1019,15 +1050,24 @@ export default function Planner({
           </header>
           {isMobile && viewSwitcher}
 
-          <CalendarView
-            view={calView}
-            weeks={weeks}
-            width={width}
-            onBarPointerDown={onBarPointerDown}
-            onOpenTrip={openTrip}
-            onResizeStart={onResizeStart}
-            plans={plans}
-          />
+          <motion.div
+            key={`${calView}-${rangeStart}`}
+            initial={reduceMotion ? false : { opacity: 0, scale: 0.985 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            <CalendarView
+              view={calView}
+              focusId={openTripId}
+              weeks={weeks}
+              width={width}
+              onBarPointerDown={onBarPointerDown}
+              onOpenTrip={openTrip}
+              onResizeStart={onResizeStart}
+              plans={plans}
+            />
+          </motion.div>
         </main>
       )}
 
