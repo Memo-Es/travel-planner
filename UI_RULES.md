@@ -46,6 +46,9 @@ inventing new ones.
   a hairline border so the soft fields stay visible.
 - Display headings: trip and stop names at `text-2xl` semibold, the calendar month
   at `text-3xl` bold with the year in gray, weekday labels small uppercase.
+- The calendar has Month, 2 weeks and Week views (a text-only segmented control;
+  full width under the title on mobile). Week views title the date range, list a
+  day's plans under its bars and step by their own length.
 - Status chip: a full-width `rounded-full bg-secondary` pill with one line of
   centered status ("Starts in 25 days", "Day 3 of 19").
 - Add rows: the last row of a list is a dashed-square placeholder ("Add stop") in

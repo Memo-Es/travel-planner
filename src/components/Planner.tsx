@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { AnimatePresence } from "motion/react";
-import { TransitionText } from "@/components/motion/primitives";
+import {
+  AnimatedBackground,
+  TransitionText,
+} from "@/components/motion/primitives";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import type {
@@ -14,11 +17,14 @@ import type {
 } from "@/lib/types";
 import {
   buildWeeks,
+  gridStart,
+  VIEW_WEEKS,
+  type CalendarView as CalView,
   layoutMode,
   mainWidth,
   type CalendarEvent,
 } from "@/lib/calendar";
-import { MONTHS_LONG, DAY, ms, toDateInput } from "@/lib/dates";
+import { MONTHS_LONG, DAY, fmtRange, ms, toDateInput } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
 import { isScheduled, sectionTotal } from "@/lib/tripSections";
 import { defaultTripId, plansByDate } from "@/lib/itinerary";
@@ -109,6 +115,27 @@ function startOfTodayUTC(): number {
   return Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
+type Cursor = { y: number; m: number; d: number };
+
+const CAL_VIEWS: { id: CalView; label: string; step: string }[] = [
+  { id: "month", label: "Month", step: "month" },
+  { id: "2weeks", label: "2 weeks", step: "2 weeks" },
+  { id: "week", label: "Week", step: "week" },
+];
+
+/** The calendar day a UTC timestamp falls on. */
+function cursorAt(time: number): Cursor {
+  const d = new Date(time);
+  return { y: d.getUTCFullYear(), m: d.getUTCMonth(), d: d.getUTCDate() };
+}
+
+/** A month, or the view's number of weeks, before or after. */
+function stepCursor(c: Cursor, view: CalView, dir: 1 | -1): Cursor {
+  return view === "month"
+    ? cursorAt(Date.UTC(c.y, c.m + dir, 1))
+    : cursorAt(Date.UTC(c.y, c.m, c.d + dir * 7 * VIEW_WEEKS[view]));
+}
+
 type DragState = { tripId: string; curStart: string; curEnd: string } | null;
 
 export default function Planner({
@@ -143,10 +170,10 @@ export default function Planner({
 
   const todayMs = useMemo(() => startOfTodayUTC(), []);
   const [vw, setVw] = useState(1440);
-  const [cursor, setCursor] = useState(() => {
-    const d = new Date();
-    return { y: d.getUTCFullYear(), m: d.getUTCMonth() };
-  });
+  // The day the calendar is on; month view shows its month, the week views
+  // the week(s) starting with the week it's in.
+  const [cursor, setCursor] = useState(() => cursorAt(Date.now()));
+  const [calView, setCalView] = useState<CalView>("month");
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [openTripId, setOpenTripId] = useState<string | null>(null);
   const [pendingOpenTripId, setPendingOpenTripId] = useState<string | null>(
@@ -324,17 +351,53 @@ export default function Planner({
   const weeks = useMemo(
     () =>
       buildWeeks(cursor, events, {
+        view: calView,
         startWeekOn: "Sunday",
         mainWidth: width,
         todayMs,
-        plannedDates: new Set(plans.keys()),
+        planCounts: new Map([...plans].map(([date, p]) => [date, p.length])),
       }),
-    [cursor, events, width, todayMs, plans],
+    [cursor, calView, events, width, todayMs, plans],
+  );
+
+  const rangeStart = gridStart(cursor, calView, 0);
+  const rangeEnd = rangeStart + (VIEW_WEEKS[calView] * 7 - 1) * DAY;
+  const stepName = CAL_VIEWS.find((v) => v.id === calView)!.step;
+  const viewSwitcher = (
+    <div
+      role="group"
+      aria-label="Calendar view"
+      className={
+        "flex gap-0.5 rounded-full bg-secondary p-1 " +
+        (isMobile ? "mb-4" : "mr-1.5")
+      }
+    >
+      {CAL_VIEWS.map((v) => (
+        <button
+          key={v.id}
+          type="button"
+          aria-pressed={calView === v.id}
+          onClick={() => setCalView(v.id)}
+          className={
+            "relative isolate h-7 whitespace-nowrap rounded-full px-3 text-sm font-medium transition-colors duration-150 " +
+            (isMobile ? "flex-1 " : "") +
+            (calView === v.id ? "text-ink" : "text-muted-2 hover:text-ink")
+          }
+        >
+          {calView === v.id && (
+            <AnimatedBackground
+              layoutId="calendar-view"
+              className="bg-white shadow-sm"
+            />
+          )}
+          {v.label}
+        </button>
+      ))}
+    </div>
   );
 
   function jumpToTrip(t: TripData, openDrawer = true) {
-    const [y, m] = t.start.split("-").map(Number);
-    setCursor({ y, m: m - 1 });
+    setCursor(cursorAt(ms(t.start)));
     setOverlay(null);
     setItineraryTripId(t.id);
     if (openDrawer) {
@@ -871,53 +934,57 @@ export default function Planner({
           }
         >
           <header className="flex flex-wrap items-center justify-between gap-3 mb-5">
-            <h1 className="m-0 whitespace-nowrap text-3xl font-medium tabular-nums text-muted-2">
-              <TransitionText value={`${cursor.y}-${cursor.m}`}>
+            <h1
+              className={
+                "m-0 whitespace-nowrap font-medium tabular-nums text-muted-2 " +
+                (isMobile ? "text-2xl" : "text-3xl")
+              }
+            >
+              <TransitionText value={`${calView}-${rangeStart}`}>
                 <strong className="font-bold text-ink">
-                  {MONTHS_LONG[cursor.m]}
+                  {calView === "month"
+                    ? MONTHS_LONG[cursor.m]
+                    : fmtRange(
+                        toDateInput(rangeStart),
+                        toDateInput(rangeEnd),
+                      )}
                 </strong>{" "}
-                {cursor.y}
+                {calView === "month"
+                  ? cursor.y
+                  : new Date(rangeEnd).getUTCFullYear()}
               </TransitionText>
             </h1>
-            <div className="flex items-center gap-1.5 flex-none">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              {!isMobile && viewSwitcher}
               <Button
                 variant="secondary"
                 size="icon"
-                aria-label="Previous month"
-                onClick={() =>
-                  setCursor((c) =>
-                    c.m === 0 ? { y: c.y - 1, m: 11 } : { y: c.y, m: c.m - 1 },
-                  )
-                }
+                aria-label={`Previous ${stepName}`}
+                onClick={() => setCursor((c) => stepCursor(c, calView, -1))}
               >
                 <ChevronLeft size={16} />
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => {
-                  const d = new Date();
-                  setCursor({ y: d.getUTCFullYear(), m: d.getUTCMonth() });
-                }}
+                onClick={() => setCursor(cursorAt(Date.now()))}
               >
                 Today
               </Button>
               <Button
                 variant="secondary"
                 size="icon"
-                aria-label="Next month"
-                onClick={() =>
-                  setCursor((c) =>
-                    c.m === 11 ? { y: c.y + 1, m: 0 } : { y: c.y, m: c.m + 1 },
-                  )
-                }
+                aria-label={`Next ${stepName}`}
+                onClick={() => setCursor((c) => stepCursor(c, calView, 1))}
               >
                 <ChevronRight size={16} />
               </Button>
             </div>
           </header>
+          {isMobile && viewSwitcher}
 
           <CalendarView
+            view={calView}
             weeks={weeks}
             width={width}
             onBarPointerDown={onBarPointerDown}
