@@ -152,7 +152,7 @@ export default function FinancePanel({
 
   return (
     <aside aria-label="Finances" className={card + " p-5 " + positionClass}>
-      <div className="scroll-stable -mx-2 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
+      <div className="scroll-stable scroll-quiet -mx-2 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
         <div className="flex items-start justify-between gap-2">
           <div
             role="group"

@@ -85,7 +85,8 @@ inventing new ones.
 - Control feedback uses 150ms transitions; overlays use 200ms. Honor reduced motion.
   Animate only `transform` and `opacity`, with the standard `easeOut` curve.
 - Keep frequent actions immediate. Do not add decorative or looping animations.
-- Support short screens with scrolling panel content.
+- Support short screens with scrolling panel content. Scroll areas use
+  `scroll-quiet`: a thin scrollbar, hidden until the pointer is over the area.
   Use dynamic viewport heights and safe-area padding on mobile.
 
 ## Baseline

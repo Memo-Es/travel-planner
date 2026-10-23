@@ -147,7 +147,7 @@ export default function LeftPanel({
         <nav
           aria-label="Trip stops"
           data-drag-scroll
-          className="scroll-stable -mx-2 mt-5 min-h-0 overflow-y-auto overscroll-contain px-2"
+          className="scroll-stable scroll-quiet -mx-2 mt-5 min-h-0 overflow-y-auto overscroll-contain px-2"
         >
           <ul>
             {trips.map((t) => {

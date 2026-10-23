@@ -55,7 +55,7 @@ export default function CalendarView({
   const weekdays = width / 7 < 48 ? WEEKDAYS_SHORT : WEEKDAYS_FULL;
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden">
+    <div className="scroll-quiet flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden">
       <div
         className="sticky top-0 z-sticky grid border-b border-line-soft bg-white pb-2"
         style={{ gridTemplateColumns: "repeat(7,minmax(0,1fr))" }}

@@ -125,7 +125,7 @@ export default function TripSettingsModal({
             <X />
           </Button>
         </header>
-        <div className="-mx-1 min-h-0 space-y-6 overflow-y-auto px-1 pt-5">
+        <div className="scroll-quiet -mx-1 min-h-0 space-y-6 overflow-y-auto px-1 pt-5">
           <label className="block space-y-1.5">
             <span className="field-label">Trip name</span>
             <Input

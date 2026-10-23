@@ -324,7 +324,7 @@ export function StopSchedule({
 
       <div
         data-drag-scroll
-        className="-mx-2 mt-5 min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-2 pb-2"
+        className="scroll-quiet -mx-2 mt-5 min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-2 pb-2"
       >
         <Disclosure open={editingDates}>
           <div className="space-y-4 rounded-2xl border border-line bg-white p-4">
