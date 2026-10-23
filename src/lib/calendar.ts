@@ -41,29 +41,51 @@ export type CalendarWeek = {
   days: DayCell[];
   bars: BarPill[];
   rowStyle: CSSProperties;
+  /** Where the bars end, so a day's plans can start below them. */
+  barsBottom: number;
 };
 
-/** Height reserved under the bars for a day's plan preview. */
-const PREVIEW_H = 22;
+export type CalendarView = "month" | "2weeks" | "week";
+
+/** Weeks shown, and how many of a day's plans are listed before "+n", per
+ * view. Shorter views have taller days, so they list more. */
+export const VIEW_WEEKS: Record<CalendarView, number> = { month: 6, "2weeks": 2, week: 1 };
+export const VIEW_PLANS: Record<CalendarView, number> = { month: 1, "2weeks": 4, week: 12 };
+
+/** Height of one plan line in a day. */
+const PREVIEW_H = 20;
+
+/** The first day shown: the start of the month's first week, or of the
+ * week holding the cursor's day. */
+export function gridStart(
+  cursor: { y: number; m: number; d: number },
+  view: CalendarView,
+  startOn: number,
+): number {
+  const anchor = Date.UTC(cursor.y, cursor.m, view === "month" ? 1 : cursor.d);
+  const shift = (new Date(anchor).getUTCDay() - startOn + 7) % 7;
+  return anchor - shift * DAY;
+}
 
 /** Direct port of the Claude Design prototype's lane-packing algorithm, so trip
  * bars keep the exact same overlap-free layout at any viewport width. */
 export function buildWeeks(
-  cursor: { y: number; m: number },
+  cursor: { y: number; m: number; d: number },
   events: CalendarEvent[],
   opts: {
+    view: CalendarView;
     startWeekOn: "Sunday" | "Monday";
     mainWidth: number;
     todayMs: number;
-    /** Days with plans get room under the bars for a preview line. */
-    plannedDates?: Set<string>;
+    /** Plans per day, which get room under the bars. */
+    planCounts?: Map<string, number>;
   },
 ): CalendarWeek[] {
-  const { y, m } = cursor;
+  const { m } = cursor;
   const startOn = opts.startWeekOn === "Monday" ? 1 : 0;
-  const first = Date.UTC(y, m, 1);
-  const shift = (new Date(first).getUTCDay() - startOn + 7) % 7;
-  const gridStart = first - shift * DAY;
+  const start = gridStart(cursor, opts.view, startOn);
+  const month = opts.view === "month";
+  const maxPlans = VIEW_PLANS[opts.view];
 
   const cellW = Math.max(28, opts.mainWidth / 7);
   const pillMin = Math.max(52, Math.min(96, Math.round(cellW * 2.4)));
@@ -74,18 +96,23 @@ export function buildWeeks(
 
   const weeks: CalendarWeek[] = [];
 
-  for (let w = 0; w < 6; w++) {
-    const wStart = gridStart + w * 7 * DAY;
+  for (let w = 0; w < VIEW_WEEKS[opts.view]; w++) {
+    const wStart = start + w * 7 * DAY;
     const wEnd = wStart + 6 * DAY;
     const days: DayCell[] = [];
 
     for (let i = 0; i < 7; i++) {
       const cur = wStart + i * DAY;
       const d = new Date(cur);
-      const inMonth = d.getUTCMonth() === m;
+      // Week views have no "other month" days to dim.
+      const inMonth = !month || d.getUTCMonth() === m;
+      const named = d.getUTCDate() === 1 || (!month && w === 0 && i === 0);
       days.push({
         date: toDateInput(cur),
-        label: d.getUTCDate() === 1 && cellW > 52 ? "1 " + MONTHS_SHORT[d.getUTCMonth()] : String(d.getUTCDate()),
+        label:
+          named && cellW > 52
+            ? `${d.getUTCDate()} ${MONTHS_SHORT[d.getUTCMonth()]}`
+            : String(d.getUTCDate()),
         bg: inMonth ? "#ffffff" : "#fafaf9", // stone-50
         color: cur === opts.todayMs ? ACCENT_INK : inMonth ? "#44403c" : "#a8a29e", // stone-700 / 400
         weight: cur === opts.todayMs ? 700 : 400,
@@ -171,17 +198,24 @@ export function buildWeeks(
       });
     });
 
+    // Room for the most plans any day this week lists, plus its "+n" line.
+    const planLines = Math.max(
+      0,
+      ...days.map((d) => {
+        const n = opts.planCounts?.get(d.date) ?? 0;
+        return n > maxPlans ? maxPlans + (maxPlans > 1 ? 1 : 0) : n;
+      }),
+    );
+    const barsBottom = band + lanes.length * pitch;
     weeks.push({
       days,
       bars,
+      barsBottom,
       rowStyle: {
         position: "relative",
         flex: "1 1 auto",
         minHeight:
-          band +
-          Math.max(1, lanes.length) * pitch +
-          8 +
-          (days.some((d) => opts.plannedDates?.has(d.date)) ? PREVIEW_H : 0),
+          Math.max(band + pitch, barsBottom) + 8 + planLines * PREVIEW_H,
         display: "grid",
         gridTemplateColumns: "repeat(7,minmax(0,1fr))",
       },
