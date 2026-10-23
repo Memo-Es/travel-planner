@@ -16,6 +16,9 @@ export const RAIL_W = 54;
 export const MIN_MAIN = 600;
 /** The narrowest the calendar gets while a stop is open beside it. */
 export const MIN_OPEN_MAIN = 440;
+/** Below this, an open stop tucks Finances into its rail to give the
+ * calendar room. */
+export const ROOMY_MAIN = 640;
 
 export type StopColor = { id: string; label: string; base: string; soft: string; ink: string };
 

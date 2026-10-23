@@ -35,6 +35,7 @@ import {
   RAIL_W,
   MIN_MAIN,
   MIN_OPEN_MAIN,
+  ROOMY_MAIN,
 } from "@/lib/theme";
 import {
   createTrip,
@@ -310,18 +311,27 @@ export default function Planner({
   const mode = layoutMode(vw, LEFT_W, RIGHT_W, MIN_MAIN);
   const isMobile = mode === "mobile";
   const isCompact = mode === "compact";
-  const activeOverlay = isCompact ? overlay : null;
-
   const trip = trips.find((t) => t.id === openTripId) ?? null;
+  // On smaller monitors an open stop tucks Finances into its rail, so the
+  // calendar keeps a usable width; the rail opens it over the calendar.
+  const rightTucked =
+    mode === "full" && !!trip && vw - 48 - RIGHT_W - STOP_W < ROOMY_MAIN;
+  const rightCol = rightTucked ? RAIL_W : RIGHT_W;
+  const activeOverlay = isCompact
+    ? overlay
+    : rightTucked && overlay === "finances"
+      ? overlay
+      : null;
+
   // An open stop's itinerary sits beside the stops list. On wide screens the
   // left column grows to fit it and the calendar narrows (keeping at least
   // MIN_OPEN_MAIN); on compact ones the panel grows over the calendar beside
   // the rail. On mobile the stop takes the Trips tab instead.
   const stopWidth = isCompact
     ? Math.max(LEFT_W, Math.min(STOP_W, vw - (RAIL_W + 20) - (RAIL_W + 24)))
-    : Math.max(LEFT_W, Math.min(STOP_W, vw - 48 - RIGHT_W - MIN_OPEN_MAIN));
+    : Math.max(LEFT_W, Math.min(STOP_W, vw - 48 - rightCol - MIN_OPEN_MAIN));
   const leftCol = mode === "full" && trip ? stopWidth : LEFT_W;
-  const width = mainWidth(vw, mode, leftCol, RIGHT_W, RAIL_W);
+  const width = mainWidth(vw, mode, leftCol, rightCol, RAIL_W);
   // The left panel opens the days of the last stop you opened, falling back to the stop
   // happening now (or next).
   const itineraryTrip = trips.some((t) => t.id === itineraryTripId)
@@ -466,10 +476,14 @@ export default function Planner({
   function closeDrawer() {
     setOpenTripId(null);
     setEditing(null);
+    // Finances opened from its rail goes with the stop that tucked it away.
+    if (mode === "full") setOverlay(null);
   }
 
   function closeOverlay() {
     setOverlay(null);
+    // Closing Finances over the calendar keeps the open stop.
+    if (rightTucked) return;
     setOpenTripId(null);
     setEditing(null);
     setSettingsOpen(false);
@@ -780,18 +794,18 @@ export default function Planner({
     : {
         gridTemplateColumns: isCompact
           ? `${RAIL_W}px minmax(0,1fr) ${RAIL_W}px`
-          : `${leftCol}px minmax(0,1fr) ${RIGHT_W}px`,
+          : `${leftCol}px minmax(0,1fr) ${rightCol}px`,
       };
 
   const showBackdrop = !!activeOverlay;
   const showLeftRail = isCompact;
-  const showRightRail = isCompact;
+  const showRightRail = isCompact || rightTucked;
   const showLeftPanel = isMobile
     ? mobileTab === "links"
     : mode === "full" || activeOverlay === "links";
   const showRightPanel = isMobile
     ? mobileTab === "finances"
-    : mode === "full" || activeOverlay === "finances";
+    : (mode === "full" && !rightTucked) || activeOverlay === "finances";
   const showCalendar = isMobile ? mobileTab === "calendar" : true;
   const stopSchedule = (t: TripData, inline: boolean) => (
     <StopSchedule
@@ -925,7 +939,7 @@ export default function Planner({
           onAddTrip={handleAddTrip}
           addingTrip={addingTrip}
           onClose={closeOverlay}
-          showClose={!!activeOverlay}
+          showClose={activeOverlay === "links"}
           todayLabel={todayLabel}
         />
       )}
