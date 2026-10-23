@@ -400,17 +400,30 @@ export default function Planner({
     return noteEvents.concat(tripEvents);
   }, [trips, dragging]);
 
+  // An open stop has the calendar to itself: no other stops, holidays or
+  // plans.
+  const shownEvents = useMemo(
+    () => (trip ? events.filter((e) => e.id === trip.id) : events),
+    [events, trip],
+  );
+  const shownPlans = useMemo(
+    () => (trip ? plansByDate([trip]) : plans),
+    [plans, trip],
+  );
+
   const weeks = useMemo(
     () =>
-      buildWeeks(cursor, events, {
+      buildWeeks(cursor, shownEvents, {
         view: calView,
         startWeekOn: "Sunday",
         mainWidth: width,
         todayMs,
-        planCounts: new Map([...plans].map(([date, p]) => [date, p.length])),
-        focusId: openTripId,
+        planCounts: new Map(
+          [...shownPlans].map(([date, p]) => [date, p.length]),
+        ),
+        focus: trip ? { start: trip.start, end: trip.end } : null,
       }),
-    [cursor, calView, events, width, todayMs, plans, openTripId],
+    [cursor, calView, shownEvents, width, todayMs, shownPlans, trip],
   );
 
   const rangeStart = gridStart(cursor, calView, 0);
@@ -1059,13 +1072,12 @@ export default function Planner({
           >
             <CalendarView
               view={calView}
-              focusId={openTripId}
               weeks={weeks}
               width={width}
               onBarPointerDown={onBarPointerDown}
               onOpenTrip={openTrip}
               onResizeStart={onResizeStart}
-              plans={plans}
+              plans={shownPlans}
             />
           </motion.div>
         </main>

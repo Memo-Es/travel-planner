@@ -87,8 +87,8 @@ export function buildWeeks(
     todayMs: number;
     /** Plans per day, which get room under the bars. */
     planCounts?: Map<string, number>;
-    /** The stop being looked at; every other bar fades back. */
-    focusId?: string | null;
+    /** The open stop's dates; days outside them are grayed out. */
+    focus?: { start: string; end: string } | null;
   },
 ): CalendarWeek[] {
   const { m } = cursor;
@@ -114,11 +114,15 @@ export function buildWeeks(
     for (let i = 0; i < 7; i++) {
       const cur = wStart + i * DAY;
       const d = new Date(cur);
-      // Week views have no "other month" days to dim.
-      const inMonth = !month || d.getUTCMonth() === m;
+      // Week views have no "other month" days to dim; with a stop open, the
+      // days outside it are dimmed instead.
+      const date = toDateInput(cur);
+      const inMonth = opts.focus
+        ? date >= opts.focus.start && date <= opts.focus.end
+        : !month || d.getUTCMonth() === m;
       const named = d.getUTCDate() === 1 || (!month && w === 0 && i === 0);
       days.push({
-        date: toDateInput(cur),
+        date,
         label:
           named && cellW > 52
             ? `${d.getUTCDate()} ${MONTHS_SHORT[d.getUTCMonth()]}`
@@ -201,8 +205,7 @@ export function buildWeeks(
           color: e.isNote ? "#57534e" : c ? c.ink : ACCENT_INK, // stone-600
           background: e.isNote ? "#f5f5f4" : c ? c.soft : ACCENT_SOFT, // stone-100
           borderRadius: contL ? "0 999px 999px 0" : contR ? "999px 0 0 999px" : 999,
-          opacity: opts.focusId && e.id !== opts.focusId ? 0.3 : contL ? 0.72 : 1,
-          transition: "opacity 200ms ease-out",
+          opacity: contL ? 0.72 : 1,
           pointerEvents: e.isNote ? "none" : "auto",
           cursor: e.isNote ? "default" : "pointer",
         },
