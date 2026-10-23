@@ -86,8 +86,9 @@ inventing new ones.
   stops list stays, then a dotted vertical divider, then that stop's itinerary. On
   wide screens its column grows and the calendar narrows to make room (never below
   440px), and on monitors too small to keep the calendar roomy (640px) Finances
-  tucks into its rail, opening over the calendar from there; on compact screens it
-  grows over the calendar. Finances narrows to the
+  tucks into its rail. The rail swaps them back: the itinerary folds away (the stop
+  stays selected and Finances shows its costs) and clicking the stop unfolds it.
+  On compact screens it grows over the calendar. Finances narrows to the
   stop's costs; there is no stop drawer.
 - Control feedback uses 150ms transitions; overlays use 200ms. Honor reduced motion.
   Animate only `transform` and `opacity`, with the standard `easeOut` curve.
