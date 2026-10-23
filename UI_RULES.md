@@ -82,9 +82,13 @@ inventing new ones.
   that prevent duplicate submissions. Preserve drafts when saving fails.
 - Booking links are separate from edit buttons; never nest interactive controls.
 - Dialogs trap focus, close on Escape and return focus to the opening control.
-  Clicking a stop (one click, no separate open button) widens the Trips panel over
-  the calendar: the stops list stays, then a dotted vertical divider, then that
-  stop's itinerary. Finances narrows to the stop's costs; there is no stop drawer.
+  Clicking a stop (one click, no separate open button) widens the Trips panel: the
+  stops list stays, then a dotted vertical divider, then that stop's itinerary. On
+  wide screens its column grows and the calendar narrows to make room (never below
+  440px), and on monitors too small to keep the calendar roomy (640px) Finances
+  tucks into its rail, opening over the calendar from there; on compact screens it
+  grows over the calendar. Finances narrows to the
+  stop's costs; there is no stop drawer.
 - Control feedback uses 150ms transitions; overlays use 200ms. Honor reduced motion.
   Animate only `transform` and `opacity`, with the standard `easeOut` curve.
 - Keep frequent actions immediate. Do not add decorative or looping animations.
