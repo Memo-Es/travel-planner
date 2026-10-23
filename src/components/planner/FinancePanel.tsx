@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { ChevronDown, Plus, X } from "lucide-react";
 import {
   AnimatedBackground,
   AnimatedNumber,
@@ -243,7 +243,7 @@ export default function FinancePanel({
             initial={false}
             animate={{ borderRadius: section === "stops" ? 16 : 28 }}
             transition={spring}
-            className="bg-secondary"
+            className={cardClass(section === "stops")}
           >
             <h3>
               <button
@@ -252,9 +252,29 @@ export default function FinancePanel({
                 aria-expanded={section === "stops"}
                 aria-controls={`${ids}-stops`}
                 onClick={() => setOpen("stops")}
-                className="flex min-h-14 w-full items-center justify-between gap-3 rounded-[inherit] px-4 text-left text-sm font-medium text-muted transition-colors duration-150 hover:text-ink"
+                className={cn(
+                  "flex min-h-14 w-full items-center justify-between gap-3 rounded-[inherit] px-4 text-left text-sm font-medium transition-colors duration-150",
+                  section === "stops" ? "text-ink" : "text-muted",
+                )}
               >
                 {stop ? "Expenses" : "Expenses by stop"}
+                {showBalances && (
+                  <span className="flex items-center gap-2.5">
+                    {section !== "stops" && (
+                      <span className="text-xs font-normal tabular-nums text-muted-2">
+                        {rows.length}{" "}
+                        {stop
+                          ? rows.length === 1
+                            ? "expense"
+                            : "expenses"
+                          : rows.length === 1
+                            ? "stop"
+                            : "stops"}
+                      </span>
+                    )}
+                    <SwapChip open={section === "stops"} />
+                  </span>
+                )}
               </button>
             </h3>
             <AccordionBody
@@ -318,7 +338,9 @@ export default function FinancePanel({
 
           {/* Who owes who, from the signed-in person's side */}
           {showBalances && (
-            <section className="rounded-2xl bg-secondary">
+            <section
+              className={cn("rounded-2xl", cardClass(section === "balance"))}
+            >
               <h3>
                 <button
                   type="button"
@@ -326,21 +348,29 @@ export default function FinancePanel({
                   aria-expanded={section === "balance"}
                   aria-controls={`${ids}-balance`}
                   onClick={() => setOpen("balance")}
-                  className="w-full rounded-[inherit] px-4 py-4 text-left"
+                  className="flex w-full items-center justify-between gap-3 rounded-[inherit] px-4 py-4 text-left"
                 >
-                  <span className="block text-sm font-medium text-muted">
-                    {balanceLabel}
-                  </span>
-                  {Math.abs(mine) > EPS && (
+                  <span className="min-w-0">
                     <span
                       className={cn(
-                        "mt-1 block text-2xl font-semibold tabular-nums",
-                        balanceTone,
+                        "block text-sm font-medium transition-colors duration-150",
+                        section === "balance" ? "text-ink" : "text-muted",
                       )}
                     >
-                      {money(Math.abs(mine))}
+                      {balanceLabel}
                     </span>
-                  )}
+                    {Math.abs(mine) > EPS && (
+                      <span
+                        className={cn(
+                          "mt-1 block text-2xl font-semibold tabular-nums",
+                          balanceTone,
+                        )}
+                      >
+                        {money(Math.abs(mine))}
+                      </span>
+                    )}
+                  </span>
+                  <SwapChip open={section === "balance"} />
                 </button>
               </h3>
               <AccordionBody
@@ -381,5 +411,28 @@ export default function FinancePanel({
         )}
       </div>
     </aside>
+  );
+}
+
+/** The open card reads as selected; the closed one tints on hover. */
+function cardClass(open: boolean) {
+  return cn(
+    "transition-colors duration-150",
+    open ? "bg-secondary" : "bg-secondary hover:bg-hover-2/70",
+  );
+}
+
+/** Shown on the closed card, so it's clear it can be opened instead. */
+function SwapChip({ open }: { open: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "flex size-7 shrink-0 items-center justify-center rounded-full bg-white text-muted shadow-sm transition-[opacity,transform] duration-200 ease-out",
+        open ? "scale-75 opacity-0" : "scale-100 opacity-100",
+      )}
+    >
+      <ChevronDown className="size-4" />
+    </span>
   );
 }
