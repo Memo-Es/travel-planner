@@ -7,7 +7,7 @@ import {
   TransitionText,
 } from "@/components/motion/primitives";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 import type {
   TripData,
   TeamOption,
@@ -37,6 +37,7 @@ import {
   MIN_MAIN,
   MIN_OPEN_MAIN,
   ROOMY_MAIN,
+  stopColor,
 } from "@/lib/theme";
 import {
   createTrip,
@@ -369,8 +370,9 @@ export default function Planner({
     setOpenTripId(tripId);
     setItineraryFolded(false);
     setItineraryTripId(tripId);
+    // On mobile the calendar keeps focus on the stop; its itinerary is a
+    // tap away in the focus bar.
     if (isCompact) setOverlay("links");
-    if (isMobile) setMobileTab("links");
   }
 
   const events: CalendarEvent[] = useMemo(() => {
@@ -1062,6 +1064,40 @@ export default function Planner({
             </div>
           </header>
           {isMobile && viewSwitcher}
+          {isMobile && trip && (
+            // The stop the calendar is focused on, with a way into its
+            // itinerary and a way back out.
+            <div className="-mt-1 mb-3 flex items-center gap-2 rounded-full bg-secondary py-1 pl-3.5 pr-1">
+              <span
+                aria-hidden="true"
+                className="size-2 shrink-0 rounded-full"
+                style={{ background: stopColor(trip.color).base }}
+              />
+              <span className="min-w-0 flex-1 truncate text-sm">
+                <span className="font-medium text-ink">{trip.label}</span>{" "}
+                <span className="tabular-nums text-muted-2">
+                  {fmtRange(trip.start, trip.end)}
+                </span>
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 shrink-0 rounded-full px-3"
+                onClick={() => setMobileTab("links")}
+              >
+                Details
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 shrink-0 rounded-full"
+                onClick={closeDrawer}
+                aria-label={`Show all stops, not just ${trip.label}`}
+              >
+                <X />
+              </Button>
+            </div>
+          )}
 
           <motion.div
             key={`${calView}-${rangeStart}`}
