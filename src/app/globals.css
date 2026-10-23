@@ -146,6 +146,10 @@
 
 @layer components {
   @media (prefers-reduced-motion: no-preference) {
+    /* The page's columns ease when an open stop widens the left one. */
+    .shell-grid {
+      transition: grid-template-columns 350ms cubic-bezier(0.32, 0.72, 0, 1);
+    }
     .ui-button {
       transition:
         color 150ms,

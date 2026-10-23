@@ -28,7 +28,14 @@ import { MONTHS_LONG, DAY, fmtRange, ms, toDateInput } from "@/lib/dates";
 import { HOLIDAY_NOTES } from "@/lib/demoData";
 import { isScheduled, sectionTotal } from "@/lib/tripSections";
 import { defaultTripId, plansByDate } from "@/lib/itinerary";
-import { LEFT_W, STOP_W, RIGHT_W, RAIL_W, MIN_MAIN } from "@/lib/theme";
+import {
+  LEFT_W,
+  STOP_W,
+  RIGHT_W,
+  RAIL_W,
+  MIN_MAIN,
+  MIN_OPEN_MAIN,
+} from "@/lib/theme";
 import {
   createTrip,
   addItem,
@@ -306,7 +313,15 @@ export default function Planner({
   const activeOverlay = isCompact ? overlay : null;
 
   const trip = trips.find((t) => t.id === openTripId) ?? null;
-  const width = mainWidth(vw, mode, LEFT_W, RIGHT_W, RAIL_W);
+  // An open stop's itinerary sits beside the stops list. On wide screens the
+  // left column grows to fit it and the calendar narrows (keeping at least
+  // MIN_OPEN_MAIN); on compact ones the panel grows over the calendar beside
+  // the rail. On mobile the stop takes the Trips tab instead.
+  const stopWidth = isCompact
+    ? Math.max(LEFT_W, Math.min(STOP_W, vw - (RAIL_W + 20) - (RAIL_W + 24)))
+    : Math.max(LEFT_W, Math.min(STOP_W, vw - 48 - RIGHT_W - MIN_OPEN_MAIN));
+  const leftCol = mode === "full" && trip ? stopWidth : LEFT_W;
+  const width = mainWidth(vw, mode, leftCol, RIGHT_W, RAIL_W);
   // The left panel opens the days of the last stop you opened, falling back to the stop
   // happening now (or next).
   const itineraryTrip = trips.some((t) => t.id === itineraryTripId)
@@ -363,6 +378,8 @@ export default function Planner({
   const rangeStart = gridStart(cursor, calView, 0);
   const rangeEnd = rangeStart + (VIEW_WEEKS[calView] * 7 - 1) * DAY;
   const stepName = CAL_VIEWS.find((v) => v.id === calView)!.step;
+  // A calendar narrowed by an open stop puts its title on a line of its own.
+  const narrowCal = !isMobile && width < 700;
   const viewSwitcher = (
     <div
       role="group"
@@ -757,13 +774,13 @@ export default function Planner({
 
   const shellClass = isMobile
     ? "flex flex-col gap-2.5 p-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] pb-[max(0.625rem,env(safe-area-inset-bottom))] h-dvh box-border relative bg-canvas text-ink"
-    : "grid gap-3 p-3 h-dvh box-border relative bg-canvas text-ink";
+    : "grid gap-3 p-3 h-dvh box-border relative bg-canvas text-ink shell-grid";
   const shellStyle = isMobile
     ? undefined
     : {
         gridTemplateColumns: isCompact
           ? `${RAIL_W}px minmax(0,1fr) ${RAIL_W}px`
-          : `${LEFT_W}px minmax(${MIN_MAIN}px,1fr) ${RIGHT_W}px`,
+          : `${leftCol}px minmax(0,1fr) ${RIGHT_W}px`,
       };
 
   const showBackdrop = !!activeOverlay;
@@ -776,17 +793,6 @@ export default function Planner({
     ? mobileTab === "finances"
     : mode === "full" || activeOverlay === "finances";
   const showCalendar = isMobile ? mobileTab === "calendar" : true;
-  // An open stop's itinerary sits beside the stops list, which grows over
-  // the calendar to fit it, stopping short of Finances. On mobile it takes
-  // the Trips tab instead.
-  const stopLeft = isCompact ? RAIL_W + 20 : 12;
-  const stopWidth = Math.max(
-    LEFT_W,
-    Math.min(
-      STOP_W,
-      vw - stopLeft - (isCompact ? RAIL_W + 24 : RIGHT_W + 24),
-    ),
-  );
   const stopSchedule = (t: TripData, inline: boolean) => (
     <StopSchedule
       key={t.id}
@@ -915,7 +921,7 @@ export default function Planner({
             t.id === openTripId ? closeDrawer() : jumpToTrip(t)
           }
           detail={trip && !isMobile ? stopSchedule(trip, true) : null}
-          width={stopWidth}
+          width={isCompact ? stopWidth : null}
           onAddTrip={handleAddTrip}
           addingTrip={addingTrip}
           onClose={closeOverlay}
@@ -937,7 +943,7 @@ export default function Planner({
             <h1
               className={
                 "m-0 whitespace-nowrap font-medium tabular-nums text-muted-2 " +
-                (isMobile ? "text-2xl" : "text-3xl")
+                (isMobile || narrowCal ? "w-full text-2xl" : "text-3xl")
               }
             >
               <TransitionText value={`${calView}-${rangeStart}`}>
@@ -954,31 +960,38 @@ export default function Planner({
                   : new Date(rangeEnd).getUTCFullYear()}
               </TransitionText>
             </h1>
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <div
+              className={
+                "flex min-w-0 flex-wrap items-center gap-1.5 " +
+                (narrowCal ? "w-full justify-between" : "")
+              }
+            >
               {!isMobile && viewSwitcher}
-              <Button
-                variant="secondary"
-                size="icon"
-                aria-label={`Previous ${stepName}`}
-                onClick={() => setCursor((c) => stepCursor(c, calView, -1))}
-              >
-                <ChevronLeft size={16} />
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setCursor(cursorAt(Date.now()))}
-              >
-                Today
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                aria-label={`Next ${stepName}`}
-                onClick={() => setCursor((c) => stepCursor(c, calView, 1))}
-              >
-                <ChevronRight size={16} />
-              </Button>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  aria-label={`Previous ${stepName}`}
+                  onClick={() => setCursor((c) => stepCursor(c, calView, -1))}
+                >
+                  <ChevronLeft size={16} />
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setCursor(cursorAt(Date.now()))}
+                >
+                  Today
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  aria-label={`Next ${stepName}`}
+                  onClick={() => setCursor((c) => stepCursor(c, calView, 1))}
+                >
+                  <ChevronRight size={16} />
+                </Button>
+              </div>
             </div>
           </header>
           {isMobile && viewSwitcher}
