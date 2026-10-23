@@ -20,11 +20,7 @@ import type {
 } from "@/lib/types";
 import { SECTION_DEFS } from "@/lib/tripSections";
 import { formatTotal } from "@/lib/currency";
-import {
-  computeBalances,
-  hasPaidExpenses,
-  settlements as settleUp,
-} from "@/lib/balances";
+import { hasPaidExpenses, relationshipsFor } from "@/lib/balances";
 import { cn } from "@/lib/utils";
 
 type Filter = "all" | ItemSectionKey;
@@ -138,9 +134,10 @@ export default function FinancePanel({
 
   // Who owes who is settled across the whole trip, not per stop.
   const showBalances = hasPaidExpenses(allTrips);
-  const balances = showBalances ? computeBalances(allTrips, members) : [];
-  const owed = showBalances ? settleUp(balances) : [];
-  const mine = balances.find((b) => b.person.id === currentUserId)?.net ?? 0;
+  const relationships = showBalances
+    ? relationshipsFor(allTrips, members, currentUserId)
+    : [];
+  const mine = relationships.reduce((n, r) => n + r.net, 0);
   const [balanceLabel, balanceTone] =
     mine > EPS
       ? ["You're owed", "text-task-green-ink"]
@@ -380,7 +377,7 @@ export default function FinancePanel({
                 className="px-4 pb-1"
               >
                 <SettleUpList
-                  settlements={owed}
+                  relationships={relationships}
                   currency={currency}
                   currentUserId={currentUserId}
                 />

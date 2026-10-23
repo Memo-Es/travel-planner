@@ -1,64 +1,64 @@
 import type { ItemData, Person, TripData } from "@/lib/types";
 
 // Tricount-style splitting: who fronted the money for a booking, split
-// equally among who it was for, rolled up into one net balance per person
-// and the fewest payments that would settle them.
+// equally among who it was for, seen from one person's side - what each
+// other person owes them, or they owe that person, and which bookings
+// that comes from.
 
-export type Balance = { person: Person; net: number };
-export type Settlement = { from: Person; to: Person; amount: number };
+/** One booking's part in a relationship. Positive: their share of something
+ * you paid. Negative: your share of something they paid. */
+export type ShareLine = {
+  item: ItemData;
+  paidBy: Person;
+  splitCount: number;
+  amount: number;
+};
 
-function allItems(trips: TripData[]): ItemData[] {
-  return trips.flatMap((t) => [...t.stay, ...t.transport, ...t.activities]);
-}
+/** Positive net: they owe you. Negative: you owe them. */
+export type Relationship = { person: Person; net: number; lines: ShareLine[] };
 
 const round = (n: number) => Math.round(n * 100) / 100;
 
-/** Positive: this person is owed money overall. Negative: they owe it.
- * A costed, paid item splits equally among whoever signed up to go, or the
- * whole team when nobody has - a stay or a transfer is usually everyone's,
- * where nobody "joins" it the way they join a single activity. */
-export function computeBalances(trips: TripData[], members: Person[]): Balance[] {
-  const net = new Map<string, number>(members.map((m) => [m.id, 0]));
-  for (const item of allItems(trips)) {
-    if (item.costAmount === null || item.costAmount === 0 || !item.paidBy) continue;
-    const splitWith = item.going.length > 0 ? item.going : members;
-    if (splitWith.length === 0) continue;
-    const share = item.costAmount / splitWith.length;
-    net.set(item.paidBy.id, (net.get(item.paidBy.id) ?? 0) + item.costAmount);
-    for (const p of splitWith) net.set(p.id, (net.get(p.id) ?? 0) - share);
-  }
-  return members.map((m) => ({ person: m, net: round(net.get(m.id) ?? 0) }));
+/** Who a costed, paid booking is split with: whoever signed up to go, or
+ * the whole team when nobody has - a stay or a transfer is usually
+ * everyone's, where nobody "joins" it the way they join an activity. */
+function splitWith(item: ItemData, members: Person[]): Person[] {
+  return item.going.length > 0 ? item.going : members;
 }
 
-/** The fewest payments that clear every balance: match whoever's owed the
- * most against whoever owes the most, settle the smaller of the two, repeat.
- * Doesn't always find the mathematically smallest set of transfers, but
- * it's the same approach every splitting app ships, and it's simple enough
- * to read and trust. */
-export function settlements(balances: Balance[]): Settlement[] {
-  const creditors = balances
-    .filter((b) => b.net > 0.005)
-    .map((b) => ({ person: b.person, left: b.net }))
-    .sort((a, b) => b.left - a.left);
-  const debtors = balances
-    .filter((b) => b.net < -0.005)
-    .map((b) => ({ person: b.person, left: -b.net }))
-    .sort((a, b) => b.left - a.left);
-
-  const out: Settlement[] = [];
-  let i = 0;
-  let j = 0;
-  while (i < creditors.length && j < debtors.length) {
-    const amount = round(Math.min(creditors[i].left, debtors[j].left));
-    if (amount > 0.005) {
-      out.push({ from: debtors[j].person, to: creditors[i].person, amount });
+/** Everyone you share costs with, the bookings involved and the net. Your
+ * overall balance is the sum of these nets. */
+export function relationshipsFor(
+  trips: TripData[],
+  members: Person[],
+  meId: string,
+): Relationship[] {
+  const byPerson = new Map<string, Relationship>();
+  const add = (person: Person, line: ShareLine) => {
+    const rel = byPerson.get(person.id) ?? { person, net: 0, lines: [] };
+    rel.lines.push(line);
+    rel.net += line.amount;
+    byPerson.set(person.id, rel);
+  };
+  for (const trip of trips) {
+    for (const item of [...trip.stay, ...trip.transport, ...trip.activities]) {
+      if (!item.costAmount || !item.paidBy) continue;
+      const people = splitWith(item, members);
+      if (people.length === 0) continue;
+      const share = item.costAmount / people.length;
+      const line = { item, paidBy: item.paidBy, splitCount: people.length };
+      if (item.paidBy.id === meId) {
+        for (const p of people) {
+          if (p.id !== meId) add(p, { ...line, amount: share });
+        }
+      } else if (people.some((p) => p.id === meId)) {
+        add(item.paidBy, { ...line, amount: -share });
+      }
     }
-    creditors[i].left = round(creditors[i].left - amount);
-    debtors[j].left = round(debtors[j].left - amount);
-    if (creditors[i].left <= 0.005) i++;
-    if (debtors[j].left <= 0.005) j++;
   }
-  return out;
+  return [...byPerson.values()]
+    .map((r) => ({ ...r, net: round(r.net) }))
+    .sort((a, b) => Math.abs(b.net) - Math.abs(a.net));
 }
 
 /** Whether there's anything to show at all - at least one booking has both
@@ -66,7 +66,7 @@ export function settlements(balances: Balance[]): Settlement[] {
  * doesn't show an empty "everyone's settled up" box to a trip that's never
  * used Paid by. */
 export function hasPaidExpenses(trips: TripData[]): boolean {
-  return allItems(trips).some(
-    (i) => i.costAmount !== null && i.costAmount !== 0 && i.paidBy !== null,
-  );
+  return trips
+    .flatMap((t) => [...t.stay, ...t.transport, ...t.activities])
+    .some((i) => !!i.costAmount && i.paidBy !== null);
 }
