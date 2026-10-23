@@ -184,6 +184,8 @@ export default function Planner({
   const [calView, setCalView] = useState<CalView>("month");
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [openTripId, setOpenTripId] = useState<string | null>(null);
+  // The open stop's itinerary folded away to give Finances its room back.
+  const [itineraryFolded, setItineraryFolded] = useState(false);
   const [pendingOpenTripId, setPendingOpenTripId] = useState<string | null>(
     null,
   );
@@ -312,16 +314,16 @@ export default function Planner({
   const isMobile = mode === "mobile";
   const isCompact = mode === "compact";
   const trip = trips.find((t) => t.id === openTripId) ?? null;
-  // On smaller monitors an open stop tucks Finances into its rail, so the
-  // calendar keeps a usable width; the rail opens it over the calendar.
+  // On wide screens the open stop's itinerary shows beside the list unless
+  // it was folded away to make room for Finances.
+  const showItinerary = mode === "full" && !!trip && !itineraryFolded;
+  // On smaller monitors the itinerary tucks Finances into its rail, so the
+  // calendar keeps a usable width. The rail swaps them back: it folds the
+  // itinerary away (the stop stays selected) and Finances returns.
   const rightTucked =
-    mode === "full" && !!trip && vw - 48 - RIGHT_W - STOP_W < ROOMY_MAIN;
+    showItinerary && vw - 48 - RIGHT_W - STOP_W < ROOMY_MAIN;
   const rightCol = rightTucked ? RAIL_W : RIGHT_W;
-  const activeOverlay = isCompact
-    ? overlay
-    : rightTucked && overlay === "finances"
-      ? overlay
-      : null;
+  const activeOverlay = isCompact ? overlay : null;
 
   // An open stop's itinerary sits beside the stops list. On wide screens the
   // left column grows to fit it and the calendar narrows (keeping at least
@@ -330,7 +332,7 @@ export default function Planner({
   const stopWidth = isCompact
     ? Math.max(LEFT_W, Math.min(STOP_W, vw - (RAIL_W + 20) - (RAIL_W + 24)))
     : Math.max(LEFT_W, Math.min(STOP_W, vw - 48 - rightCol - MIN_OPEN_MAIN));
-  const leftCol = mode === "full" && trip ? stopWidth : LEFT_W;
+  const leftCol = showItinerary ? stopWidth : LEFT_W;
   const width = mainWidth(vw, mode, leftCol, rightCol, RAIL_W);
   // The left panel opens the days of the last stop you opened, falling back to the stop
   // happening now (or next).
@@ -341,6 +343,7 @@ export default function Planner({
 
   function openTrip(tripId: string) {
     setOpenTripId(tripId);
+    setItineraryFolded(false);
     setItineraryTripId(tripId);
     if (isCompact) setOverlay("links");
     if (isMobile) setMobileTab("links");
@@ -429,6 +432,7 @@ export default function Planner({
     setItineraryTripId(t.id);
     if (openDrawer) {
       setOpenTripId(t.id);
+      setItineraryFolded(false);
       if (isCompact) setOverlay("links");
     }
     if (isMobile) setMobileTab(openDrawer ? "links" : "calendar");
@@ -476,14 +480,11 @@ export default function Planner({
   function closeDrawer() {
     setOpenTripId(null);
     setEditing(null);
-    // Finances opened from its rail goes with the stop that tucked it away.
-    if (mode === "full") setOverlay(null);
+    setItineraryFolded(false);
   }
 
   function closeOverlay() {
     setOverlay(null);
-    // Closing Finances over the calendar keeps the open stop.
-    if (rightTucked) return;
     setOpenTripId(null);
     setEditing(null);
     setSettingsOpen(false);
@@ -932,9 +933,17 @@ export default function Planner({
           onSwitchTeam={onSwitchTeam}
           onOpenSettings={openSettings}
           onSelectTrip={(t) =>
-            t.id === openTripId ? closeDrawer() : jumpToTrip(t)
+            t.id !== openTripId
+              ? jumpToTrip(t)
+              : itineraryFolded
+                ? setItineraryFolded(false)
+                : closeDrawer()
           }
-          detail={trip && !isMobile ? stopSchedule(trip, true) : null}
+          detail={
+            trip && !isMobile && (isCompact || showItinerary)
+              ? stopSchedule(trip, true)
+              : null
+          }
           width={isCompact ? stopWidth : null}
           onAddTrip={handleAddTrip}
           addingTrip={addingTrip}
@@ -1048,7 +1057,9 @@ export default function Planner({
         <RightRail
           total={tripTotal}
           currency={teamCurrency}
-          onOpenFinances={() => setOverlay("finances")}
+          onOpenFinances={() =>
+            rightTucked ? setItineraryFolded(true) : setOverlay("finances")
+          }
         />
       )}
 
