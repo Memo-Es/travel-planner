@@ -104,7 +104,7 @@ export default function ExpenseDialog({
             <X />
           </Button>
         </header>
-        <div className="-mx-1 min-h-0 overflow-y-auto overscroll-contain px-1 pb-1 pt-5">
+        <div className="scroll-quiet -mx-1 min-h-0 overflow-y-auto overscroll-contain px-1 pb-1 pt-5">
           <BookingForm
             form={form}
             onChange={(f) => {

@@ -79,8 +79,6 @@
 @layer components {
   /* Full-width list row (trip stops, finance lines). Its focus ring is drawn
      inside so scroll containers never clip it. */
-  /* Keeps room for the scrollbar whether or not one is showing, so content
-     doesn't shift sideways when a list grows or shrinks past its height. */
   /* Horizontal overflow fallback without a visible scrollbar. */
   .no-scrollbar {
     scrollbar-width: none;
@@ -88,8 +86,38 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+  /* Keeps room for the scrollbar whether or not one is showing, so content
+     doesn't shift sideways when a list grows or shrinks past its height. */
   .scroll-stable {
     scrollbar-gutter: stable;
+  }
+  /* A thin scrollbar that stays hidden until the pointer is over the area,
+     then fades in. The thumb color is a registered property so it can
+     transition. */
+  .scroll-quiet {
+    --scroll-thumb: transparent;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb) transparent;
+    transition: --scroll-thumb 400ms ease-out;
+  }
+  .scroll-quiet:hover,
+  .scroll-quiet:focus-visible {
+    --scroll-thumb: rgb(168 162 158 / 0.5);
+    transition-duration: 150ms;
+  }
+  /* Safari ignores scrollbar-color. */
+  @supports not (scrollbar-color: auto) {
+    .scroll-quiet::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .scroll-quiet::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .scroll-quiet::-webkit-scrollbar-thumb {
+      border-radius: 9999px;
+      background: var(--scroll-thumb);
+    }
   }
   .list-row {
     @apply rounded-lg transition-colors duration-150 hover:bg-hover;
@@ -129,4 +157,10 @@
       transform: scale(0.97);
     }
   }
+}
+
+@property --scroll-thumb {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
 }

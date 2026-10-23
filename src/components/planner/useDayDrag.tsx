@@ -302,7 +302,7 @@ export function MoveHandle({
           <GripVertical />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="max-h-72 overflow-y-auto">
+      <DropdownMenuContent align="end" className="scroll-quiet max-h-72 overflow-y-auto">
         <p className="px-3 pb-1 pt-2 text-xs font-medium text-muted">Move to</p>
         {[...days, UNDATED].map((to) => (
           <DropdownMenuItem
