@@ -49,6 +49,7 @@ export default async function HomePage() {
     label: t.label,
     color: t.color,
     photoUrl: t.photoUrl,
+    icon: t.icon,
     start: t.start.toISOString().slice(0, 10),
     end: t.end.toISOString().slice(0, 10),
     stay: t.items.filter((i) => i.section === "STAY").map(toItem),

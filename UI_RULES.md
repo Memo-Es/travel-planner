@@ -65,6 +65,9 @@ inventing new ones.
 - Focus rings: standalone buttons get a ring just outside them; rows, card
   headers and pill tabs that fill their container use `focus-inset`, a ring
   inside that follows their own rounded corners.
+- Stops show a city icon in their color (lib/cityIcons: Hugeicons landmarks plus
+  ones drawn here on the same 24px grid with open rounded strokes), matched from
+  the stop's name or picked by hand, falling back to the pin. No photos.
 - Add rows: the last row of a list is a dashed-square placeholder ("Add stop") in
   gray, not a separate outlined button (`AddRow`).
 - Lists have no dividers: rows are borderless, separated by spacing, with a soft

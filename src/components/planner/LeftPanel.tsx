@@ -9,7 +9,6 @@ import {
 import {
   X,
   Settings2,
-  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
@@ -18,6 +17,7 @@ import type { TripData, TeamOption } from "@/lib/types";
 import { fmtRange } from "@/lib/dates";
 import { statusFor } from "@/lib/tripStatus";
 import { AddRow } from "@/components/planner/AddRow";
+import { StopIcon } from "@/components/planner/StopIcon";
 import { logout } from "@/actions/team";
 import { LEFT_W, stopColor } from "@/lib/theme";
 
@@ -167,22 +167,12 @@ export default function LeftPanel({
                         className="bg-secondary"
                       />
                     )}
-                    {t.photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={t.photoUrl}
-                        alt=""
-                        className="size-8 shrink-0 rounded-lg object-cover"
-                      />
-                    ) : (
-                      <span className="flex size-8 shrink-0 items-center justify-center">
-                        <MapPin
-                          className="size-5"
-                          style={{ color: color.base }}
-                          strokeWidth={2.25}
-                        />
-                      </span>
-                    )}
+                    <span
+                      className="flex size-8 shrink-0 items-center justify-center"
+                      style={{ color: color.base }}
+                    >
+                      <StopIcon stop={t} className="size-6" />
+                    </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-base font-medium text-ink">
                         {t.label}

@@ -29,6 +29,8 @@ export type TripData = {
   label: string;
   color: string | null;
   photoUrl: string | null;
+  /** A city icon chosen by hand; null picks one from the name. */
+  icon: string | null;
   start: string;
   end: string;
   stay: ItemData[];

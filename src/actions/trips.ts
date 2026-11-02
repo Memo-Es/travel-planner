@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/team";
 import { lookupDestinationPhoto } from "@/lib/photo";
 import { requireAttachmentAccess, requireItemAccess } from "@/lib/access";
 import { removeFile } from "@/lib/storage";
+import { CITY_ICONS } from "@/lib/cityIcons";
 import {
   addItemToStop,
   colorSchema,
@@ -69,6 +70,17 @@ export async function updateTripColor(tripId: string, color: string) {
   await requireTripAccess(tripId);
   const parsed = colorSchema.parse(color);
   await prisma.trip.update({ where: { id: tripId }, data: { color: parsed } });
+  revalidatePath("/");
+}
+
+/** A city icon chosen by hand, "pin" for none, or null to pick one from
+ * the stop's name again. */
+export async function updateTripIcon(tripId: string, icon: string | null) {
+  await requireTripAccess(tripId);
+  if (icon !== null && icon !== "pin" && !(icon in CITY_ICONS)) {
+    throw new Error("Unknown icon");
+  }
+  await prisma.trip.update({ where: { id: tripId }, data: { icon } });
   revalidatePath("/");
 }
 

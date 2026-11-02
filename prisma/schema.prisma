@@ -83,6 +83,9 @@ model Trip {
   label     String
   color     String?
   photoUrl  String?
+  /// A city icon chosen by hand (a key in lib/cityIcons, or "pin"); null
+  /// picks one from the stop's name.
+  icon      String?
   start     DateTime
   end       DateTime
   order     Int        @default(0)

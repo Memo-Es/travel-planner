@@ -50,6 +50,7 @@ import {
   updateStopDates,
   updateTripLabel,
   updateTripColor,
+  updateTripIcon,
   deleteAttachment,
 } from "@/actions/trips";
 import { uploadPdf } from "@/lib/uploads";
@@ -769,6 +770,11 @@ export default function Planner({
     refresh();
   }
 
+  async function onChangeTripIcon(tripId: string, icon: string | null) {
+    await updateTripIcon(tripId, icon);
+    refresh();
+  }
+
   async function onChangeTripColor(tripId: string, color: string) {
     await updateTripColor(tripId, color);
     refresh();
@@ -918,6 +924,7 @@ export default function Planner({
       onUpdateDates={onUpdateStopDates}
       onRename={onRenameTrip}
       onChangeColor={onChangeTripColor}
+      onChangeIcon={onChangeTripIcon}
       onDeleteTrip={handleDeleteTrip}
       onMoveItem={async (itemId, date) => {
         await setItemDay(itemId, date);
