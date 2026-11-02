@@ -293,14 +293,28 @@ const CITY_MATCHES: [string[], CityIconKey][] = [
 const fold = (s: string) =>
   s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
+/** A nickname that swaps a city's lead syllable for a pun still reads as
+ * that city if it keeps enough of the ending - "MAXterdam" for Amsterdam.
+ * The tail required is at least 5 letters or 60% of the city name,
+ * whichever is longer, so a short name (Rome, Pisa, Nara, etc.) needs its whole
+ * self and can't fire on a coincidental few letters. */
+function endsWithCityTail(name: string, city: string): boolean {
+  const tailLen = Math.max(5, Math.ceil(city.length * 0.6));
+  return name.endsWith(city.slice(-tailLen));
+}
+
 /** The icon a stop shows: the one chosen for it, else one matched from its
- * name, else none (the plain pin). */
+ * name, else none (the plain pin). Tries an exact match first, so a
+ * nickname is never preferred over a real mention of the city. */
 export function iconFor(stop: { label: string; icon: string | null }): CityIconKey | null {
   if (stop.icon === "pin") return null;
   if (stop.icon && stop.icon in CITY_ICONS) return stop.icon as CityIconKey;
   const name = fold(stop.label);
   for (const [cities, key] of CITY_MATCHES) {
     if (cities.some((c) => name.includes(c))) return key;
+  }
+  for (const [cities, key] of CITY_MATCHES) {
+    if (cities.some((c) => endsWithCityTail(name, c))) return key;
   }
   return null;
 }
