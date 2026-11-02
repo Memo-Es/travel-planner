@@ -54,7 +54,7 @@ inventing new ones.
   holidays and their plans are hidden and days outside it are grayed; closing it returns to the
   previous view unless one was picked in between.
 - Tapping a plan on the calendar opens it where its itinerary is: on mobile, that
-  day's plans in a bottom sheet; on wider screens, the itinerary beside the
+  day's plans in a bottom sheet (with the stop's day tabs); on wider screens, the itinerary beside the
   calendar on that plan's day. Either way the tapped plan is highlighted and
   scrolled into view.
 - Plan rows read: title, time, notes, link and PDF chips, then Join, with one ⋯

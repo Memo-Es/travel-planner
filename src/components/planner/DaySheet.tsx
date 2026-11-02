@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { AnimatedBackground } from "@/components/motion/primitives";
 import { ArrowUpRight, Clock, FileText, Pencil, X } from "lucide-react";
 import {
   Dialog,
@@ -19,10 +20,12 @@ import { stopColor } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 /** Everything planned on one day, opened from a plan on the calendar with
- * that plan highlighted and scrolled into view. A bottom sheet on mobile. */
+ * that plan highlighted and scrolled into view. Day tabs switch to the
+ * stop's other days. A bottom sheet on mobile. */
 export default function DaySheet({
   date,
-  plans,
+  days,
+  plansByDate,
   focusId,
   isMobile,
   me,
@@ -30,9 +33,11 @@ export default function DaySheet({
   onEdit,
   onClose,
 }: {
-  /** "YYYY-MM-DD" */
+  /** The day it opens on, "YYYY-MM-DD". */
   date: string;
-  plans: Plan[];
+  /** The days its tabs offer: the stop's, arrival through departure. */
+  days: string[];
+  plansByDate: Map<string, Plan[]>;
   /** The plan that was tapped. */
   focusId: string;
   isMobile: boolean;
@@ -41,7 +46,16 @@ export default function DaySheet({
   onEdit: (plan: Plan) => void;
   onClose: () => void;
 }) {
+  const ids = useId();
+  const [current, setCurrent] = useState(date);
+  const plans = plansByDate.get(current) ?? [];
   const focusRef = useRef<HTMLLIElement>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    tabsRef.current
+      ?.querySelector<HTMLElement>("[aria-selected=true]")
+      ?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [current]);
   useEffect(() => {
     // After the sheet's entrance, so the scroll lands where it settles.
     const t = setTimeout(
@@ -65,10 +79,11 @@ export default function DaySheet({
       >
         <header className="flex shrink-0 items-start justify-between gap-3">
           <div className="min-w-0">
-            <DialogTitle className="text-2xl font-semibold">{fmtDay(date)}</DialogTitle>
+            <DialogTitle className="text-2xl font-semibold">{fmtDay(current)}</DialogTitle>
             <DialogDescription className="mt-0.5 truncate text-sm text-muted-2">
-              {stops.map((s) => s.label).join(" · ")} · {plans.length}{" "}
-              {plans.length === 1 ? "plan" : "plans"}
+              {plans.length === 0
+                ? "Nothing planned yet"
+                : `${stops.map((s) => s.label).join(" · ")} · ${plans.length} ${plans.length === 1 ? "plan" : "plans"}`}
             </DialogDescription>
           </div>
           <Button
@@ -82,6 +97,60 @@ export default function DaySheet({
           </Button>
         </header>
 
+        {days.length > 1 && (
+          <div
+            ref={tabsRef}
+            role="tablist"
+            aria-label="Days"
+            className="no-scrollbar -mx-1 mt-4 flex shrink-0 gap-1 overflow-x-auto px-1"
+          >
+            {days.map((d) => {
+              const selected = d === current;
+              const count = plansByDate.get(d)?.length ?? 0;
+              const [weekday, num] = fmtDay(d).split(" ");
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  aria-label={`${fmtDay(d)}, ${count} ${count === 1 ? "plan" : "plans"}`}
+                  onClick={() => setCurrent(d)}
+                  className={cn(
+                    "relative isolate flex w-12 shrink-0 flex-col items-center rounded-2xl py-1.5 transition-colors duration-150",
+                    selected ? "text-ink" : "text-muted-2 hover:text-ink",
+                  )}
+                >
+                  {selected && (
+                    <AnimatedBackground
+                      layoutId={`${ids}-day`}
+                      className="bg-secondary"
+                    />
+                  )}
+                  <span className="text-[11px] font-medium uppercase tracking-wide">
+                    {weekday}
+                  </span>
+                  <span className="text-base font-semibold leading-6 tabular-nums">
+                    {num}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "size-1 rounded-full bg-current",
+                      count === 0 && "opacity-0",
+                    )}
+                  />
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {plans.length === 0 && (
+          <p className="mt-6 pb-4 text-center text-sm text-muted-2">
+            A free day. Add plans from the stop&apos;s itinerary.
+          </p>
+        )}
         <ul
           className={cn(
             "scroll-quiet -mx-2 mt-4 space-y-1 overflow-y-auto overscroll-contain px-2 pb-1",
