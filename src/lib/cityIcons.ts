@@ -261,6 +261,14 @@ export const CITY_ICONS = {
       "M15.5 20V16.5C15.5 15.7 16.2 15 17 15C17.8 15 18.5 15.7 18.5 16.5V20",
     ],
   },
+  mountain: {
+    label: "Mountain",
+    paths: [
+      "M2 20H22",
+      "M3 20L8 8L12 14L16 6L21 20",
+      "M14.3 9.4L16 7.4L17.7 9.4",
+    ],
+  },
 } satisfies Record<string, CityIcon>;
 
 export type CityIconKey = keyof typeof CITY_ICONS;
@@ -293,6 +301,10 @@ const CITY_MATCHES: [string[], CityIconKey][] = [
   [["new york", "chicago", "singapore", "toronto"], "city"],
 ];
 
+/** What the stop IS beats where it is - checked before any place name, so
+ * "Hike Danes" reads as a hike first and Denmark second. */
+const ACTIVITY_MATCHES: [string[], CityIconKey][] = [[["hike", "hiking"], "mountain"]];
+
 const fold = (s: string) =>
   s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
@@ -307,12 +319,15 @@ function endsWithCityTail(name: string, city: string): boolean {
 }
 
 /** The icon a stop shows: the one chosen for it, else one matched from its
- * name, else none (the plain pin). Tries an exact match first, so a
- * nickname is never preferred over a real mention of the city. */
+ * name, else none (the plain pin). An activity wins over a place, and an
+ * exact place match wins over a nickname. */
 export function iconFor(stop: { label: string; icon: string | null }): CityIconKey | null {
   if (stop.icon === "pin") return null;
   if (stop.icon && stop.icon in CITY_ICONS) return stop.icon as CityIconKey;
   const name = fold(stop.label);
+  for (const [words, key] of ACTIVITY_MATCHES) {
+    if (words.some((w) => name.includes(w))) return key;
+  }
   for (const [cities, key] of CITY_MATCHES) {
     if (cities.some((c) => name.includes(c))) return key;
   }
