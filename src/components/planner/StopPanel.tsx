@@ -6,7 +6,6 @@ import {
 } from "@/components/motion/primitives";
 import { useEffect, useId, useRef, useState } from "react";
 import {
-  Plus,
   Trash2,
   X,
   Pencil,
@@ -18,12 +17,13 @@ import {
   Clock,
   GripVertical,
   Copy,
+  ArrowUpRight,
 } from "lucide-react";
 import type { TripData, ItemSectionKey, ItemData, MemberOption, Person } from "@/lib/types";
 import { fmtRange, nightsBetween } from "@/lib/dates";
 import { statusFor } from "@/lib/tripStatus";
 import { AddRow } from "@/components/planner/AddRow";
-import { SECTION_DEFS } from "@/lib/tripSections";
+import { SECTION_DEFS, hostFromUrl } from "@/lib/tripSections";
 import {
   PLANNED_SECTIONS,
   dayShareText,
@@ -37,7 +37,7 @@ import { attachmentHref } from "@/lib/uploads";
 import BookingForm from "@/components/planner/BookingForm";
 import { STOP_COLORS, stopColor } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
-import { MoveHandle, UNDATED, useDayDrag } from "@/components/planner/useDayDrag";
+import { UNDATED, useDayDrag } from "@/components/planner/useDayDrag";
 import { GoingControl } from "@/components/planner/Going";
 import { Input } from "@/components/ui/input";
 import {
@@ -47,6 +47,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import type { Editing, FormState } from "@/components/Planner";
+import { cn } from "@/lib/utils";
 
 const DRAG_TIP_KEY = "travel-planner:dragTipDismissed";
 
@@ -93,6 +94,9 @@ type ScheduleProps = {
   me: Person;
   onSetGoing: (itemId: string, going: boolean) => Promise<void>;
   members: MemberOption[];
+  /** A plan picked on the calendar: its day opens and it's highlighted.
+   * The counter re-runs it when the same plan is picked again. */
+  focusPlan?: { id: string; n: number } | null;
 };
 
 /** A stop's schedule: dates, color and its stays, transport and activities
@@ -122,6 +126,7 @@ export function StopSchedule({
   me,
   onSetGoing,
   members,
+  focusPlan,
 }: ScheduleProps & { inline?: boolean }) {
   const dd = useDayDrag(trip, onMoveItem);
   const stopDays = tripDays(trip);
@@ -143,6 +148,51 @@ export function StopSchedule({
   }, [editing?.key]);
   const tabsId = useId();
   const tabsRef = useRef<HTMLDivElement>(null);
+
+  // Activities show one day at a time: the first day with plans, else the
+  // first day of the stop.
+  const dayOf = (item: ItemData) =>
+    item.date && stopDays.includes(item.date) ? item.date : UNDATED;
+  const [day, setDay] = useState<string>(
+    () =>
+      stopDays.find((d) => trip.activities.some((a) => a.date === d)) ??
+      stopDays[0] ??
+      UNDATED,
+  );
+  // A plan picked on the calendar, or opened for editing from elsewhere,
+  // opens its section and day; a picked one is highlighted for a moment.
+  const [flash, setFlash] = useState<string | null>(null);
+  function reveal(id: string, highlight: boolean) {
+    for (const sec of SECTION_DEFS) {
+      const item = trip[sec.key].find((i) => i.id === id);
+      if (!item) continue;
+      setTab(sec.key);
+      if (sec.key === "activities") setDay(dayOf(item));
+      if (highlight) setFlash(id);
+      // After the section and day have rendered.
+      setTimeout(
+        () =>
+          document
+            .getElementById(`${tabsId}-plan-${id}`)
+            ?.scrollIntoView({ block: "nearest", behavior: "smooth" }),
+        60,
+      );
+      return;
+    }
+  }
+  useEffect(() => {
+    if (focusPlan) reveal(focusPlan.id, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusPlan?.id, focusPlan?.n]);
+  useEffect(() => {
+    if (editing?.itemId) reveal(editing.itemId, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing?.itemId]);
+  useEffect(() => {
+    if (!flash) return;
+    const t = setTimeout(() => setFlash(null), 2400);
+    return () => clearTimeout(t);
+  }, [flash]);
 
   // A plan can be dragged onto another day, which has no other hint it's
   // possible. Shown once per browser, on the Activities tab where it applies.
@@ -476,9 +526,6 @@ export function StopSchedule({
               members={members}
             />
           );
-          // An activity's day, as a drop target: its date, or no day yet.
-          const dayOf = (item: ItemData) =>
-            item.date && stopDays.includes(item.date) ? item.date : UNDATED;
           const draggable = sec.key === "activities";
           const when = (item: ItemData) =>
             // Activities are already grouped under their day.
@@ -490,44 +537,49 @@ export function StopSchedule({
           const renderRow = (item: ItemData) => (
             <article
               key={item.id}
+              id={`${tabsId}-plan-${item.id}`}
               data-drag-row={draggable || undefined}
               onPointerDown={
                 draggable ? (e) => dd.start(e, item, dayOf(item), true) : undefined
               }
-              className={
-                "group -mx-2 rounded-xl px-2 py-2.5 transition-[background-color,opacity] duration-150 hover:bg-hover " +
-                (draggable ? "cursor-grab active:cursor-grabbing " : "") +
-                (dd.dragging === item.id ? "opacity-40" : "")
-              }
+              className={cn(
+                "group -mx-2.5 rounded-2xl px-2.5 py-3 transition-[background-color,opacity] duration-300",
+                flash === item.id ? "bg-accent-soft" : "hover:bg-hover",
+                draggable && "cursor-grab active:cursor-grabbing",
+                dd.dragging === item.id && "opacity-40",
+              )}
             >
               <div className="flex items-start gap-2">
-                <button
-                  className="min-w-0 flex-1 text-pretty rounded text-left text-base font-medium leading-6 text-ink"
-                  onClick={() => onStartEdit(sec.key, item.id, editState(item))}
+                <div className="min-w-0 flex-1">
+                  <button
+                    className="text-pretty rounded text-left text-base font-medium leading-6 text-ink"
+                    onClick={() => onStartEdit(sec.key, item.id, editState(item))}
+                  >
+                    {item.t}
+                  </button>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-sm tabular-nums text-muted-2">
+                    <Clock className="size-3.5 shrink-0" />
+                    <span className="truncate">{when(item) ?? "Any time"}</span>
+                  </p>
+                </div>
+                <DropdownMenu
+                  open={dd.menuFor === item.id}
+                  onOpenChange={(open) => dd.setMenuFor(open ? item.id : null)}
                 >
-                  {item.t}
-                </button>
-                {draggable && (
-                  <MoveHandle
-                    item={item}
-                    from={dayOf(item)}
-                    days={stopDays}
-                    dd={dd}
-                    className="-my-1.5 size-9 text-muted-2"
-                  />
-                )}
-                <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="-my-1.5 -mr-1 size-9 text-muted-2"
+                      className="-mr-1.5 -mt-1 size-9 shrink-0 text-muted-2"
                       aria-label={`Options for ${item.t}`}
                     >
                       <MoreHorizontal />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent
+                    align="end"
+                    className="scroll-quiet max-h-80 overflow-y-auto"
+                  >
                     <DropdownMenuItem
                       onSelect={() =>
                         onStartEdit(sec.key, item.id, editState(item))
@@ -536,6 +588,26 @@ export function StopSchedule({
                       <Pencil />
                       Edit booking
                     </DropdownMenuItem>
+                    {draggable && (
+                      <>
+                        <p className="px-3 pb-1 pt-2 text-xs font-medium text-muted">
+                          Move to
+                        </p>
+                        {[...stopDays, UNDATED].map((to) => (
+                          <DropdownMenuItem
+                            key={to}
+                            disabled={to === dayOf(item)}
+                            onSelect={() => dd.move(item, to)}
+                          >
+                            <CalendarDays />
+                            <span className="flex-1 tabular-nums">
+                              {to === UNDATED ? "No day yet" : fmtDay(to)}
+                            </span>
+                            {to === dayOf(item) && <Check aria-label="Current day" />}
+                          </DropdownMenuItem>
+                        ))}
+                      </>
+                    )}
                     <DropdownMenuItem
                       destructive
                       onSelect={() => onDeleteItem(item.id)}
@@ -546,36 +618,27 @@ export function StopSchedule({
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              {(when(item) || sec.key === "activities") && (
-                <div className="mt-0.5 flex min-h-8 items-center justify-between gap-3">
-                  <p className="flex min-w-0 items-center gap-1.5 text-sm tabular-nums text-muted-2">
-                    {when(item) ? (
-                      <>
-                        <Clock className="size-3.5 shrink-0" />
-                        <span className="truncate">{when(item)}</span>
-                      </>
-                    ) : (
-                      <span>Any time</span>
-                    )}
-                  </p>
-                  {sec.key === "activities" && (
-                    <GoingControl
-                      itemId={item.id}
-                      title={item.t}
-                      going={item.going}
-                      me={me}
-                      onSetGoing={onSetGoing}
-                    />
-                  )}
-                </div>
-              )}
               {item.notes && (
-                <p className="mt-1 text-pretty text-sm leading-relaxed text-ink-soft">
+                <p className="mt-2 text-pretty text-sm leading-relaxed text-ink-soft">
                   {item.notes}
                 </p>
               )}
-              {item.attachments.length > 0 && (
+              {(item.url || item.attachments.length > 0) && (
                 <ul className="mt-2 flex flex-wrap gap-1.5">
+                  {item.url && (
+                    <li className="min-w-0 max-w-full">
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex min-w-0 items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-ink-soft transition-colors duration-150 hover:bg-hover-2 hover:text-ink"
+                      >
+                        <span className="truncate">{hostFromUrl(item.url)}</span>
+                        <ArrowUpRight className="size-3 shrink-0" />
+                        <span className="sr-only"> (opens in a new tab)</span>
+                      </a>
+                    </li>
+                  )}
                   {item.attachments.map((a) => (
                     <li key={a.id} className="min-w-0 max-w-full">
                       <a
@@ -591,6 +654,17 @@ export function StopSchedule({
                     </li>
                   ))}
                 </ul>
+              )}
+              {sec.key === "activities" && (
+                <div className="mt-2">
+                  <GoingControl
+                    itemId={item.id}
+                    title={item.t}
+                    going={item.going}
+                    me={me}
+                    onSetGoing={onSetGoing}
+                  />
+                </div>
               )}
             </article>
           );
@@ -626,7 +700,7 @@ export function StopSchedule({
                     <div className="mb-2 flex items-center gap-2.5 rounded-2xl bg-secondary py-1.5 pl-3.5 pr-1.5 text-xs text-ink-soft">
                       <GripVertical className="size-3.5 shrink-0 text-muted-2" />
                       <p className="flex-1 text-pretty leading-relaxed">
-                        Drag a plan onto another day to move it.
+                        Drag a plan onto a day above to move it there.
                       </p>
                       <Button
                         variant="ghost"
@@ -642,26 +716,90 @@ export function StopSchedule({
                 </>
               )}
               {byDay
-                ? items.length > 0 && (
-                    <div className="space-y-3">
-                      {byDay.days.map(({ date, plans }) => {
-                        const acts = plans.filter((p) => p.key === "activities");
-                        const free = freeParts(plans);
-                        return (
-                          <div
-                            key={date}
-                            data-drop={date}
-                            className={
-                              "-mx-2 rounded-2xl px-2 pt-1 transition-colors duration-150 " +
-                              (dd.isOver(date) ? "bg-accent-soft" : "")
-                            }
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <h3 className="flex min-w-0 items-baseline gap-1.5 text-xs font-medium text-muted">
-                                <span className="shrink-0 uppercase tracking-wide">
-                                  {fmtDay(date)}
+                ? (() => {
+                    const hasUndated = byDay.undated.some(
+                      (p) => p.key === "activities",
+                    );
+                    const tabs = [
+                      ...stopDays,
+                      ...(hasUndated || dd.dragActive || day === UNDATED
+                        ? [UNDATED]
+                        : []),
+                    ];
+                    const plansOn = (d: string) =>
+                      d === UNDATED
+                        ? byDay.undated
+                        : (byDay.days.find((x) => x.date === d)?.plans ?? []);
+                    const shown = plansOn(day);
+                    const acts = shown.filter((p) => p.key === "activities");
+                    const free = day === UNDATED ? null : freeParts(shown);
+                    return (
+                      <>
+                        <div
+                          role="tablist"
+                          aria-label="Days"
+                          className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto px-1 pb-1"
+                        >
+                          {tabs.map((d) => {
+                            const selected = d === day;
+                            const count = plansOn(d).filter(
+                              (p) => p.key === "activities",
+                            ).length;
+                            const [weekday, num] =
+                              d === UNDATED ? ["No", "day"] : fmtDay(d).split(" ");
+                            return (
+                              <button
+                                key={d}
+                                type="button"
+                                role="tab"
+                                data-drop={d}
+                                aria-selected={selected}
+                                aria-label={`${d === UNDATED ? "No day yet" : fmtDay(d)}, ${count} ${count === 1 ? "activity" : "activities"}`}
+                                onClick={() => setDay(d)}
+                                className={cn(
+                                  "relative isolate flex w-12 shrink-0 flex-col items-center rounded-2xl py-1.5 transition-colors duration-150",
+                                  selected ? "text-ink" : "text-muted-2 hover:text-ink",
+                                  dd.isOver(d) && "bg-accent-soft",
+                                )}
+                              >
+                                {selected && (
+                                  <AnimatedBackground
+                                    layoutId={`${tabsId}-day`}
+                                    className="bg-secondary"
+                                  />
+                                )}
+                                <span className="text-[11px] font-medium uppercase tracking-wide">
+                                  {weekday}
                                 </span>
-                                {acts.length === 0 ? (
+                                <span className="text-base font-semibold leading-6 tabular-nums">
+                                  {num}
+                                </span>
+                                <span
+                                  aria-hidden="true"
+                                  className={cn(
+                                    "size-1 rounded-full bg-current",
+                                    count === 0 && "opacity-0",
+                                  )}
+                                />
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div
+                          role="tabpanel"
+                          data-drop={day}
+                          className={cn(
+                            "-mx-2.5 mt-2 rounded-2xl px-2.5 pt-1 transition-colors duration-150",
+                            dd.isOver(day) && "bg-accent-soft",
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="flex min-w-0 items-baseline gap-1.5 text-xs font-medium text-muted">
+                              <span className="shrink-0 uppercase tracking-wide">
+                                {day === UNDATED ? "No day yet" : fmtDay(day)}
+                              </span>
+                              {day !== UNDATED &&
+                                (acts.length === 0 ? (
                                   <span className="truncate font-normal text-muted-2">
                                     Free day
                                   </span>
@@ -672,64 +810,34 @@ export function StopSchedule({
                                       Free {free.join(", ")}
                                     </span>
                                   )
+                                ))}
+                            </h3>
+                            {day !== UNDATED && shown.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="-mr-1 size-7 shrink-0 text-muted-2"
+                                onClick={() => copyDay(day, shown)}
+                                aria-label={
+                                  copiedDate === day
+                                    ? `${fmtDay(day)} copied`
+                                    : `Copy ${fmtDay(day)} as text`
+                                }
+                                title="Copy as text"
+                              >
+                                {copiedDate === day ? (
+                                  <Check className="size-3.5" />
+                                ) : (
+                                  <Copy className="size-3.5" />
                                 )}
-                              </h3>
-                              <div className="flex shrink-0 items-center">
-                                {plans.length > 0 && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="size-7 text-muted-2"
-                                    onClick={() => copyDay(date, plans)}
-                                    aria-label={
-                                      copiedDate === date
-                                        ? `${fmtDay(date)} copied`
-                                        : `Copy ${fmtDay(date)} as text`
-                                    }
-                                    title="Copy as text"
-                                  >
-                                    {copiedDate === date ? (
-                                      <Check className="size-3.5" />
-                                    ) : (
-                                      <Copy className="size-3.5" />
-                                    )}
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="-mr-1 size-7 text-muted-2"
-                                  onClick={() => onStartAdd("activities", date)}
-                                  aria-label={`Add an activity on ${fmtDay(date)}`}
-                                  title="Add an activity"
-                                >
-                                  <Plus className="size-3.5" />
-                                </Button>
-                              </div>
-                            </div>
-                            {acts.map((p) => row$(p.item))}
+                              </Button>
+                            )}
                           </div>
-                        );
-                      })}
-                      {(byDay.undated.some((p) => p.key === "activities") ||
-                        dd.dragActive) && (
-                        <div
-                          data-drop={UNDATED}
-                          className={
-                            "-mx-2 rounded-2xl px-2 pt-1 transition-colors duration-150 " +
-                            (dd.isOver(UNDATED) ? "bg-accent-soft" : "")
-                          }
-                        >
-                          <h3 className="text-xs font-medium uppercase tracking-wide text-muted">
-                            No day yet
-                          </h3>
-                          {byDay.undated
-                            .filter((p) => p.key === "activities")
-                            .map((p) => row$(p.item))}
+                          {acts.map((p) => row$(p.item))}
                         </div>
-                      )}
-                    </div>
-                  )
+                      </>
+                    );
+                  })()
                 : items.map(row$)}
               <Disclosure open={adding}>
                 <div className="py-1">{form$([], "Add booking")}</div>
@@ -737,11 +845,19 @@ export function StopSchedule({
               {!adding && (
                 <AddRow
                   className="mt-1"
-                  onClick={() => onStartAdd(sec.key)}
+                  onClick={() =>
+                    sec.key === "activities" && day !== UNDATED
+                      ? onStartAdd(sec.key, day)
+                      : onStartAdd(sec.key)
+                  }
                   label={
-                    items.length === 0
-                      ? `Add your first ${sec.key === "activities" ? "activity" : sec.name.toLowerCase()}`
-                      : `Add ${sec.key === "activities" ? "activity" : sec.name.toLowerCase()}`
+                    sec.key === "activities"
+                      ? day === UNDATED
+                        ? "Add activity"
+                        : `Add activity on ${fmtDay(day)}`
+                      : items.length === 0
+                        ? `Add your first ${sec.name.toLowerCase()}`
+                        : `Add ${sec.name.toLowerCase()}`
                   }
                 />
               )}
