@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, type ReactNode } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   AnimatedBackground,
@@ -40,6 +41,7 @@ export default function LeftPanel({
   showClose,
   todayLabel,
   sampleOwnTeamId,
+  demoMode,
   detail,
   width,
 }: {
@@ -63,6 +65,9 @@ export default function LeftPanel({
   todayLabel: string;
   /** On the sample trip: the user's own trip to switch to (null if none). */
   sampleOwnTeamId?: string | null;
+  /** The public, unauthenticated tour: no one to sign out, so the footer
+   * offers signing up instead. */
+  demoMode?: boolean;
   /** The open stop's itinerary, shown beside the list. */
   detail: ReactNode;
   /** How wide the panel grows over the calendar to fit it, on compact
@@ -130,6 +135,14 @@ export default function LeftPanel({
                 <span>Sample trip</span>
                 <span className="font-medium">Start my own →</span>
               </button>
+            ) : demoMode ? (
+              <Link
+                href="/signup"
+                className="focus-inset mt-2 flex w-full items-center justify-between gap-2 rounded-full bg-accent-soft px-4 py-2 text-sm text-accent-ink transition-colors duration-150 hover:bg-accent-soft/70"
+              >
+                <span>Sample trip</span>
+                <span className="font-medium">Sign up for your own →</span>
+              </Link>
             ) : (
               <p className="mt-2 rounded-full bg-accent-soft px-4 py-2 text-center text-sm text-accent-ink">
                 Sample trip
@@ -232,11 +245,17 @@ export default function LeftPanel({
               </span>
             </span>
           </div>
-          <form action={logout} className="shrink-0">
-            <Button type="submit" variant="secondary" size="sm">
-              Sign out
+          {demoMode ? (
+            <Button asChild size="sm" className="shrink-0">
+              <Link href="/signup">Sign up</Link>
             </Button>
-          </form>
+          ) : (
+            <form action={logout} className="shrink-0">
+              <Button type="submit" variant="secondary" size="sm">
+                Sign out
+              </Button>
+            </form>
+          )}
         </footer>
       </div>
 

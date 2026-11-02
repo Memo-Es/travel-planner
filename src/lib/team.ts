@@ -6,11 +6,20 @@ import { prisma } from "@/lib/prisma";
 const ACTIVE_TEAM_COOKIE = "activeTeamId";
 const LAST_EMAIL_COOKIE = "lastEmail";
 const FLASH_SIGNED_IN_COOKIE = "flashSignedIn";
+const DEMO_ONBOARDED_COOKIE = "demoOnboarded";
 
 export async function requireUser() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   return session.user;
+}
+
+/** Like requireUser, but returns null instead of redirecting - the home
+ * page's own way of telling "signed in" from "touring the public demo"
+ * apart, where a redirect would be the wrong answer for the second case. */
+export async function getOptionalUser() {
+  const session = await auth();
+  return session?.user?.id ? session.user : null;
 }
 
 /** Confirms the signed-in user belongs to a team, or throws. Shared by
@@ -93,4 +102,22 @@ export async function hasSignedInFlash(): Promise<boolean> {
 export async function clearSignedInFlash() {
   const cookieStore = await cookies();
   cookieStore.delete(FLASH_SIGNED_IN_COOKIE);
+}
+
+/** Whether this browser has already seen the public demo's own onboarding,
+ * so a returning anonymous visitor to `/` isn't shown the walkthrough
+ * every single time. */
+export async function hasSeenDemoOnboarding(): Promise<boolean> {
+  const cookieStore = await cookies();
+  return !!cookieStore.get(DEMO_ONBOARDED_COOKIE)?.value;
+}
+
+export async function setDemoOnboardedCookie() {
+  const cookieStore = await cookies();
+  cookieStore.set(DEMO_ONBOARDED_COOKIE, "1", {
+    httpOnly: false,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
 }

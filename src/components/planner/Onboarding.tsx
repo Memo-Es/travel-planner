@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import {
@@ -12,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { StopIcon } from "@/components/planner/StopIcon";
-import { finishOnboarding } from "@/actions/onboarding";
+import { finishOnboarding, finishDemoOnboarding } from "@/actions/onboarding";
 import { stopColor } from "@/lib/theme";
 import type { CityIconKey } from "@/lib/cityIcons";
 import { firstName } from "@/lib/people";
@@ -32,6 +33,7 @@ export default function Onboarding({
   isMobile,
   pals,
   ownTeamId,
+  demoMode,
   onDone,
 }: {
   userName: string;
@@ -40,6 +42,10 @@ export default function Onboarding({
   pals: string[];
   /** The user's own trip, when they're looking at the sample. */
   ownTeamId: string | null;
+  /** The public tour: nobody's signed in, so there's no account to mark
+   * onboarded and no own trip to offer - only a cookie, and a link to
+   * sign up. */
+  demoMode: boolean;
   onDone: () => void;
 }) {
   const reduce = !!useReducedMotion();
@@ -55,7 +61,7 @@ export default function Onboarding({
   function finish(goTo: string | null, which: "own" | "sample") {
     setChoice(which);
     startTransition(async () => {
-      await finishOnboarding(goTo);
+      await (demoMode ? finishDemoOnboarding() : finishOnboarding(goTo));
       onDone();
     });
   }
@@ -144,10 +150,16 @@ export default function Onboarding({
       ),
     },
     {
-      title: ownTeamId ? "Try it, then make it yours" : "You're all set",
-      body: ownTeamId
-        ? `We set up a sample trip with ${palList || "a few pretend friends"}, pretend travel buddies, so you can try everything. Your own trip is ready whenever you are.`
-        : "Your trip is ready. Add your first stop to get going.",
+      title: demoMode
+        ? "Go ahead, try it"
+        : ownTeamId
+          ? "Try it, then make it yours"
+          : "You're all set",
+      body: demoMode
+        ? "This is a shared demo, so nothing you add or change here is kept. Sign up and it's yours for real."
+        : ownTeamId
+          ? `We set up a sample trip with ${palList || "a few pretend friends"}, pretend travel buddies, so you can try everything. Your own trip is ready whenever you are.`
+          : "Your trip is ready. Add your first stop to get going.",
       art: (
         <div className="flex items-center justify-center -space-x-1.5">
           {[firstName(userName), ...names].map((n) => (
@@ -217,6 +229,21 @@ export default function Onboarding({
             <Button size="lg" onClick={() => setStep((s) => s + 1)}>
               Next
             </Button>
+          ) : demoMode ? (
+            <>
+              <Button size="lg" asChild>
+                <Link href="/signup">Sign up to start your own trip</Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="secondary"
+                disabled={pending}
+                onClick={() => finish(null, "sample")}
+              >
+                {pending && <Loader2 className="animate-spin" />}
+                Keep exploring
+              </Button>
+            </>
           ) : ownTeamId ? (
             <>
               <Button size="lg" disabled={pending} onClick={() => finish(ownTeamId, "own")}>

@@ -51,6 +51,10 @@ model Team {
   placesApiKey String?
   /// The sample trip seeded at signup, with pretend travel buddies.
   isSample     Boolean      @default(false)
+  /// The one shared sample trip an unauthenticated visitor tours at `/`.
+  /// Lazily created on first visit (see lib/publicDemo.ts) and never more
+  /// than one row - every anonymous visitor sees the same team.
+  isPublicDemo Boolean      @default(false)
   createdAt    DateTime     @default(now())
   memberships  Membership[]
   trips        Trip[]

@@ -100,20 +100,40 @@ const STOPS: SampleStop[] = [
 
 const DAY_MS = 86_400_000;
 
-/** Creates the sample trip workspace for a new user, with its pretend travel
- * buddies, and returns its id. The trip starts three weeks from today so it
- * always reads as upcoming. Run inside the signup transaction. */
+/** Creates the sample trip workspace, with its pretend travel buddies, and
+ * returns its team id and who plays "me" in it. The trip starts three weeks
+ * from today so it always reads as upcoming.
+ *
+ * `userId` is the real account that owns it - the signup flow's own user,
+ * run inside its transaction. Pass null for a trip with no real owner at
+ * all: a pretend "You" is created to play that part instead, which is what
+ * the one shared public demo at `/` uses, since nobody is signed in to own
+ * it. */
 export async function seedSampleTrip(
   tx: Prisma.TransactionClient,
-  userId: string,
-): Promise<string> {
+  userId: string | null,
+  options: { isPublicDemo?: boolean } = {},
+): Promise<{ teamId: string; meId: string }> {
   const now = new Date();
   const start = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) + 21 * DAY_MS;
   const day = (offset: number) => new Date(start + offset * DAY_MS);
 
   // Pretend buddies can't sign in: their password is random and never kept.
   const passwordHash = await bcrypt.hash(randomBytes(24).toString("hex"), 10);
-  const people: Record<Who, string> = { me: userId, sofia: "", kenji: "", ama: "" };
+  let meId = userId;
+  if (meId === null) {
+    const me = await tx.user.create({
+      data: {
+        name: "You",
+        email: `sample-you-${randomBytes(8).toString("hex")}@example.invalid`,
+        passwordHash,
+        isSample: true,
+        onboardedAt: now,
+      },
+    });
+    meId = me.id;
+  }
+  const people: Record<Who, string> = { me: meId, sofia: "", kenji: "", ama: "" };
   for (const pal of PALS) {
     const user = await tx.user.create({
       data: {
@@ -131,9 +151,10 @@ export async function seedSampleTrip(
     data: {
       name: "Sample trip · Europe",
       isSample: true,
+      isPublicDemo: options.isPublicDemo ?? false,
       memberships: {
         create: [
-          { userId, role: "OWNER" },
+          { userId: meId, role: "OWNER" },
           ...PALS.map((p) => ({ userId: people[p.key], role: "MEMBER" as const })),
         ],
       },
@@ -168,5 +189,5 @@ export async function seedSampleTrip(
       },
     });
   }
-  return team.id;
+  return { teamId: team.id, meId };
 }

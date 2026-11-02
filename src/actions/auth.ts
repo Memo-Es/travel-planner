@@ -40,7 +40,7 @@ export async function signup(_prev: ActionState, formData: FormData): Promise<Ac
 
   // A new account gets its own, empty trip plus a sample one to explore
   // first; the welcome walkthrough offers the way from one to the other.
-  const sampleTeamId = await prisma.$transaction(
+  const { teamId: sampleTeamId } = await prisma.$transaction(
     async (tx) => {
       const user = await tx.user.create({ data: { name, email, passwordHash } });
       await tx.team.create({

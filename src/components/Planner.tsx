@@ -87,6 +87,7 @@ import CalendarView from "@/components/planner/CalendarView";
 import { StopSchedule, editState } from "@/components/planner/StopPanel";
 import DaySheet from "@/components/planner/DaySheet";
 import Onboarding from "@/components/planner/Onboarding";
+import SignupPrompt from "@/components/planner/SignupPrompt";
 import { tripDays, type Plan } from "@/lib/itinerary";
 import TripSettingsModal from "@/components/planner/TripSettingsModal";
 import MobileTabs from "@/components/planner/MobileTabs";
@@ -167,6 +168,7 @@ export default function Planner({
   isSample,
   ownTeamId,
   initialTrips,
+  demoMode,
 }: {
   teamId: string;
   teamName: string;
@@ -185,6 +187,10 @@ export default function Planner({
   /** From the sample trip, the user's own trip to switch to. */
   ownTeamId: string | null;
   initialTrips: TripData[];
+  /** The public, unauthenticated tour at `/` for a signed-out visitor:
+   * the same sample trip and walkthrough, fully explorable, but every
+   * mutation is intercepted with a sign-up prompt instead of saving. */
+  demoMode: boolean;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -233,6 +239,19 @@ export default function Planner({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [signupPromptOpen, setSignupPromptOpen] = useState(false);
+
+  /** The one thing standing between a demo visitor and every mutation: show
+   * the sign-up prompt instead of letting it through. Call this first, in
+   * every handler that would otherwise save something, and return without
+   * calling the real action when it answers true - so a dialog or form the
+   * visitor was editing stays open exactly as they left it, rather than
+   * closing as if it had saved. */
+  function demoGate(): boolean {
+    if (!demoMode) return false;
+    setSignupPromptOpen(true);
+    return true;
+  }
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [expenseDefaults, setExpenseDefaults] = useState<{
     tripId: string | null;
@@ -524,6 +543,7 @@ export default function Planner({
 
   async function handleAddTrip() {
     if (addingTripRef.current) return;
+    if (demoGate()) return;
     addingTripRef.current = true;
     setAddingTrip(true);
     try {
@@ -546,6 +566,7 @@ export default function Planner({
 
   async function confirmDeleteTrip() {
     if (!deleteTarget || deletingRef.current) return;
+    if (demoGate()) return;
     deletingRef.current = true;
     setDeleting(true);
     try {
@@ -673,6 +694,7 @@ export default function Planner({
       setExpenseError("Choose a stop for this expense.");
       return;
     }
+    if (demoGate()) return;
     savingRef.current = true;
     setExpenseSaving(true);
     setExpenseError(null);
@@ -722,6 +744,7 @@ export default function Planner({
       setFormError(problem);
       return;
     }
+    if (demoGate()) return;
     savingRef.current = true;
     setSaving(true);
     setFormError(null);
@@ -745,6 +768,7 @@ export default function Planner({
   }
 
   async function removeItem(itemId: string) {
+    if (demoGate()) return;
     try {
       await deleteItem(itemId);
       refresh();
@@ -753,48 +777,69 @@ export default function Planner({
     }
   }
 
+  async function handleMoveItem(itemId: string, date: string | null) {
+    if (demoGate()) return;
+    await setItemDay(itemId, date);
+    refresh();
+  }
+
+  async function handleSetGoing(itemId: string, going: boolean) {
+    if (demoGate()) return;
+    await setGoing(itemId, going);
+    refresh();
+  }
+
   async function onSwitchTeam(id: string) {
+    if (demoGate()) return;
     await switchTeam(id);
     refresh();
   }
 
   async function onRenameTeam(name: string) {
+    if (demoGate()) return;
     await updateTeamName(teamId, name);
     refresh();
   }
 
   async function onChangeTeamCurrency(currency: string) {
+    if (demoGate()) return;
     await updateTeamCurrency(teamId, currency);
     refresh();
   }
 
   async function onChangeTeamPlacesKey(key: string | null) {
+    if (demoGate()) return;
     await updateTeamPlacesKey(teamId, key);
     refresh();
   }
 
   async function handleCreateInvite() {
+    if (demoGate()) return "";
     const token = await createInvite(teamId);
     refresh();
     return token;
   }
 
   async function onUpdateStopDates(tripId: string, start: string, end: string) {
+    if (demoGate()) return;
     await updateStopDates(tripId, start, end);
     refresh();
   }
 
   async function onRenameTrip(tripId: string, label: string) {
+    if (demoGate()) return;
     await updateTripLabel(tripId, label);
     refresh();
   }
 
   async function onChangeTripIcon(tripId: string, icon: string | null) {
+    if (demoGate()) return;
     await updateTripIcon(tripId, icon);
     refresh();
   }
 
   async function onChangeTripColor(tripId: string, color: string) {
+    if (demoGate()) return;
     await updateTripColor(tripId, color);
     refresh();
   }
@@ -831,6 +876,7 @@ export default function Planner({
       document.body.style.userSelect = "";
       setDragging(null);
       if (cur.start !== origStart || cur.end !== origEnd) {
+        if (demoGate()) return;
         await updateStopDates(tripId, cur.start, cur.end);
         refresh();
       }
@@ -879,6 +925,7 @@ export default function Planner({
       document.body.style.userSelect = "";
       setDragging(null);
       if (cur.start !== origStart || cur.end !== origEnd) {
+        if (demoGate()) return;
         await updateStopDates(tripId, cur.start, cur.end);
         refresh();
       }
@@ -945,15 +992,9 @@ export default function Planner({
       onChangeColor={onChangeTripColor}
       onChangeIcon={onChangeTripIcon}
       onDeleteTrip={handleDeleteTrip}
-      onMoveItem={async (itemId, date) => {
-        await setItemDay(itemId, date);
-        refresh();
-      }}
+      onMoveItem={handleMoveItem}
       me={{ id: currentUserId, name: userName }}
-      onSetGoing={async (itemId, going) => {
-        await setGoing(itemId, going);
-        refresh();
-      }}
+      onSetGoing={handleSetGoing}
       members={members}
     />
   );
@@ -1063,6 +1104,7 @@ export default function Planner({
           showClose={activeOverlay === "links"}
           todayLabel={todayLabel}
           sampleOwnTeamId={isSample ? ownTeamId : undefined}
+          demoMode={demoMode}
         />
       )}
 
@@ -1231,6 +1273,7 @@ export default function Planner({
                 : []
             }
             ownTeamId={ownTeamId}
+            demoMode={demoMode}
             onDone={() => setOnboarding(false)}
           />
         )}
@@ -1243,10 +1286,7 @@ export default function Planner({
             focusId={dayView.itemId}
             isMobile={isMobile}
             me={{ id: currentUserId, name: userName }}
-            onSetGoing={async (itemId, going) => {
-              await setGoing(itemId, going);
-              refresh();
-            }}
+            onSetGoing={handleSetGoing}
             onEdit={(plan) => {
               setDayView(null);
               if (plan.trip.id !== openTripId) openTrip(plan.trip.id);
@@ -1292,6 +1332,12 @@ export default function Planner({
             placesKeySet={placesKeySet}
             onChangePlacesKey={onChangeTeamPlacesKey}
             onCreateInvite={handleCreateInvite}
+          />
+        )}
+        {signupPromptOpen && (
+          <SignupPrompt
+            key="signup-prompt"
+            onClose={() => setSignupPromptOpen(false)}
           />
         )}
       </AnimatePresence>
