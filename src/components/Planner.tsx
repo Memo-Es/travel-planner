@@ -85,6 +85,7 @@ import RightRail from "@/components/planner/RightRail";
 import CalendarView from "@/components/planner/CalendarView";
 import { StopSchedule, editState } from "@/components/planner/StopPanel";
 import DaySheet from "@/components/planner/DaySheet";
+import type { Plan } from "@/lib/itinerary";
 import TripSettingsModal from "@/components/planner/TripSettingsModal";
 import MobileTabs from "@/components/planner/MobileTabs";
 import Toast from "@/components/planner/Toast";
@@ -194,6 +195,9 @@ export default function Planner({
   const [openTripId, setOpenTripId] = useState<string | null>(null);
   // The open stop's itinerary folded away to give Finances its room back.
   const [itineraryFolded, setItineraryFolded] = useState(false);
+  const [focusPlan, setFocusPlan] = useState<{ id: string; n: number } | null>(
+    null,
+  );
   // A day's plans opened from the calendar, with the tapped one in focus.
   const [dayView, setDayView] = useState<{ date: string; itemId: string } | null>(
     null,
@@ -526,7 +530,22 @@ export default function Planner({
     }
   }
 
+  // A plan picked on the calendar: on mobile its day opens in a sheet; on
+  // wider screens the itinerary is already beside the calendar, so it opens
+  // there, on the plan's day, highlighted.
+  function openPlan(plan: Plan) {
+    if (isMobile) {
+      if (plan.item.date)
+        setDayView({ date: plan.item.date, itemId: plan.item.id });
+      return;
+    }
+    if (plan.trip.id !== openTripId) openTrip(plan.trip.id);
+    setItineraryFolded(false);
+    setFocusPlan((f) => ({ id: plan.item.id, n: (f?.n ?? 0) + 1 }));
+  }
+
   function closeDrawer() {
+    setFocusPlan(null);
     setOpenTripId(null);
     setEditing(null);
     setItineraryFolded(false);
@@ -863,6 +882,7 @@ export default function Planner({
     <StopSchedule
       key={t.id}
       inline={inline}
+      focusPlan={focusPlan}
           trip={t}
       currency={teamCurrency}
       editing={editing}
@@ -1117,10 +1137,7 @@ export default function Planner({
               width={width}
               onBarPointerDown={onBarPointerDown}
               onOpenTrip={openTrip}
-              onOpenPlan={(plan) =>
-                plan.item.date &&
-                setDayView({ date: plan.item.date, itemId: plan.item.id })
-              }
+              onOpenPlan={openPlan}
               onResizeStart={onResizeStart}
               plans={shownPlans}
             />

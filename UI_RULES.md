@@ -53,9 +53,13 @@ inventing new ones.
   (week, 2 weeks or month) and gives it the calendar to itself: other stops,
   holidays and their plans are hidden and days outside it are grayed; closing it returns to the
   previous view unless one was picked in between.
-- Tapping a plan on the calendar opens that day's plans in a sheet (bottom on
-  mobile, right on desktop) with the tapped one highlighted and scrolled into
-  view; each plan can be joined there or edited in the itinerary.
+- Tapping a plan on the calendar opens it where its itinerary is: on mobile, that
+  day's plans in a bottom sheet; on wider screens, the itinerary beside the
+  calendar on that plan's day. Either way the tapped plan is highlighted and
+  scrolled into view.
+- Plan rows read: title, time, notes, link and PDF chips, then Join, with one ⋯
+  menu (edit, move to a day, remove). A stop's activities show one day at a
+  time behind day tabs, which also take a dragged plan.
 - Status chip: a full-width `rounded-full bg-secondary` pill with one line of
   centered status ("Starts in 25 days", "Day 3 of 19").
 - Add rows: the last row of a list is a dashed-square placeholder ("Add stop") in
