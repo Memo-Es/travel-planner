@@ -486,7 +486,7 @@ export function StopSchedule({
                 tabIndex={active ? 0 : -1}
                 onClick={() => setTab(sec.key)}
                 className={
-                  "relative isolate flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-2 text-sm font-medium transition-colors duration-150 " +
+                  "focus-inset relative isolate flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-2 text-sm font-medium transition-colors duration-150 " +
                   (active ? "text-ink" : "text-muted-2 hover:text-ink")
                 }
               >
@@ -757,7 +757,7 @@ export function StopSchedule({
                                 aria-label={`${d === UNDATED ? "No day yet" : fmtDay(d)}, ${count} ${count === 1 ? "activity" : "activities"}`}
                                 onClick={() => setDay(d)}
                                 className={cn(
-                                  "relative isolate flex w-12 shrink-0 flex-col items-center rounded-2xl py-1.5 transition-colors duration-150",
+                                  "focus-inset relative isolate flex w-12 shrink-0 flex-col items-center rounded-2xl py-1.5 transition-colors duration-150",
                                   selected ? "text-ink" : "text-muted-2 hover:text-ink",
                                   dd.isOver(d) && "bg-accent-soft",
                                 )}

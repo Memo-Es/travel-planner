@@ -49,7 +49,7 @@ export function SettleUpList({
               aria-expanded={expanded}
               aria-controls={`${ids}-${person.id}-lines`}
               onClick={() => setOpen(expanded ? null : person.id)}
-              className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-lg px-2 py-3 text-left transition-colors duration-150 hover:bg-hover-2/60"
+              className="focus-inset -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl px-2 py-3 text-left transition-colors duration-150 hover:bg-hover-2/60"
             >
               <Avatar name={person.name} size="sm" />
               <span className="min-w-0 flex-1">

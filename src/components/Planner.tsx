@@ -472,7 +472,7 @@ export default function Planner({
             setZoomedFrom(null);
           }}
           className={
-            "relative isolate h-7 whitespace-nowrap rounded-full px-3 text-sm font-medium transition-colors duration-150 " +
+            "focus-inset relative isolate h-7 whitespace-nowrap rounded-full px-3 text-sm font-medium transition-colors duration-150 " +
             (isMobile ? "flex-1 " : "") +
             (calView === v.id ? "text-ink" : "text-muted-2 hover:text-ink")
           }

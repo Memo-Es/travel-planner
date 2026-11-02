@@ -19,7 +19,7 @@ export function AddRow({
       onClick={onClick}
       disabled={busy}
       className={cn(
-        "-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl py-2.5 pl-2 text-left text-base font-medium text-muted-2 outline-offset-[-2px] transition-colors duration-150 hover:bg-hover hover:text-ink disabled:opacity-60",
+        "-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl py-2.5 pl-2 text-left text-base font-medium text-muted-2 focus-inset transition-colors duration-150 hover:bg-hover hover:text-ink disabled:opacity-60",
         className,
       )}
     >

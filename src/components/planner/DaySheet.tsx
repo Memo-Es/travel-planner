@@ -117,7 +117,7 @@ export default function DaySheet({
                   aria-label={`${fmtDay(d)}, ${count} ${count === 1 ? "plan" : "plans"}`}
                   onClick={() => setCurrent(d)}
                   className={cn(
-                    "relative isolate flex w-12 shrink-0 flex-col items-center rounded-2xl py-1.5 transition-colors duration-150",
+                    "focus-inset relative isolate flex w-12 shrink-0 flex-col items-center rounded-2xl py-1.5 transition-colors duration-150",
                     selected ? "text-ink" : "text-muted-2 hover:text-ink",
                   )}
                 >
