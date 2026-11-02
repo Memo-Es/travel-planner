@@ -88,6 +88,12 @@
   }
   /* Keeps room for the scrollbar whether or not one is showing, so content
      doesn't shift sideways when a list grows or shrinks past its height. */
+  /* Rows, card headers and pill tabs that fill their container keep their
+     focus ring inside, following their own rounded corners, so it's never
+     clipped or spills past the card. */
+  .focus-inset:focus-visible {
+    outline-offset: -2px;
+  }
   .scroll-stable {
     scrollbar-gutter: stable;
   }

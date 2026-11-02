@@ -33,7 +33,7 @@ export default function MobileTabs({
             aria-current={isActive ? "page" : undefined}
             onClick={() => onChange(tab.id)}
             className={cn(
-              "ui-button relative isolate flex min-h-11 items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition-colors duration-150",
+              "ui-button focus-inset relative isolate flex min-h-11 items-center justify-center gap-1.5 rounded-lg text-sm font-medium transition-colors duration-150",
               isActive ? "text-ink" : "text-muted hover:text-ink",
             )}
           >

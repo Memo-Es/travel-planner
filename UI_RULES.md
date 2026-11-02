@@ -62,6 +62,9 @@ inventing new ones.
   time behind day tabs, which also take a dragged plan.
 - Status chip: a full-width `rounded-full bg-secondary` pill with one line of
   centered status ("Starts in 25 days", "Day 3 of 19").
+- Focus rings: standalone buttons get a ring just outside them; rows, card
+  headers and pill tabs that fill their container use `focus-inset`, a ring
+  inside that follows their own rounded corners.
 - Add rows: the last row of a list is a dashed-square placeholder ("Add stop") in
   gray, not a separate outlined button (`AddRow`).
 - Lists have no dividers: rows are borderless, separated by spacing, with a soft

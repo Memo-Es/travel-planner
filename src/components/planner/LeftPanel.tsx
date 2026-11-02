@@ -159,7 +159,7 @@ export default function LeftPanel({
                     type="button"
                     onClick={() => onSelectTrip(t)}
                     aria-current={selected ? "true" : undefined}
-                    className="relative isolate -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl py-2.5 pl-2 pr-3 text-left outline-offset-[-2px] transition-colors duration-150 hover:bg-hover"
+                    className="relative isolate -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl py-2.5 pl-2 pr-3 text-left focus-inset transition-colors duration-150 hover:bg-hover"
                   >
                     {selected && (
                       <AnimatedBackground

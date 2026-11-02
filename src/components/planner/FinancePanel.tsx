@@ -166,7 +166,7 @@ export default function FinancePanel({
                     aria-pressed={selected}
                     onClick={() => setFilter(f)}
                     className={cn(
-                      "relative isolate h-8 shrink-0 whitespace-nowrap rounded-full px-2.5 text-sm font-medium outline-offset-[-2px] transition-colors duration-150",
+                      "relative isolate h-8 shrink-0 whitespace-nowrap rounded-full px-2.5 text-sm font-medium focus-inset transition-colors duration-150",
                       selected ? "text-ink" : "text-muted-2 hover:text-ink",
                     )}
                   >
@@ -244,7 +244,7 @@ export default function FinancePanel({
             transition={spring}
             className={cardClass(section === "stops")}
           >
-            <h3>
+            <h3 className="rounded-[inherit]">
               <button
                 type="button"
                 id={`${ids}-stops-head`}
@@ -252,7 +252,7 @@ export default function FinancePanel({
                 aria-controls={`${ids}-stops`}
                 onClick={() => setOpen("stops")}
                 className={cn(
-                  "flex min-h-14 w-full items-center justify-between gap-3 rounded-[inherit] px-4 text-left text-sm font-medium transition-colors duration-150",
+                  "focus-inset flex min-h-14 w-full items-center justify-between gap-3 rounded-[inherit] px-4 text-left text-sm font-medium transition-colors duration-150",
                   section === "stops" ? "text-ink" : "text-muted",
                 )}
               >
@@ -294,7 +294,7 @@ export default function FinancePanel({
                         <button
                           type="button"
                           onClick={row.onClick}
-                          className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-lg px-2 py-3.5 text-left transition-colors duration-150 hover:bg-hover-2/60"
+                          className="focus-inset -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl px-2 py-3.5 text-left transition-colors duration-150 hover:bg-hover-2/60"
                         >
                           <span className="min-w-0 flex-1">
                             <span className="line-clamp-2 break-words text-sm font-semibold text-ink">
@@ -340,14 +340,14 @@ export default function FinancePanel({
             <section
               className={cn("rounded-2xl", cardClass(section === "balance"))}
             >
-              <h3>
+              <h3 className="rounded-[inherit]">
                 <button
                   type="button"
                   id={`${ids}-balance-head`}
                   aria-expanded={section === "balance"}
                   aria-controls={`${ids}-balance`}
                   onClick={() => setOpen("balance")}
-                  className="flex w-full items-center justify-between gap-3 rounded-[inherit] px-4 py-4 text-left"
+                  className="focus-inset flex w-full items-center justify-between gap-3 rounded-[inherit] px-4 py-4 text-left"
                 >
                   <span className="min-w-0">
                     <span
