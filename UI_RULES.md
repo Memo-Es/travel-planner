@@ -53,6 +53,9 @@ inventing new ones.
   (week, 2 weeks or month) and gives it the calendar to itself: other stops,
   holidays and their plans are hidden and days outside it are grayed; closing it returns to the
   previous view unless one was picked in between.
+- Tapping a plan on the calendar opens that day's plans in a sheet (bottom on
+  mobile, right on desktop) with the tapped one highlighted and scrolled into
+  view; each plan can be joined there or edited in the itinerary.
 - Status chip: a full-width `rounded-full bg-secondary` pill with one line of
   centered status ("Starts in 25 days", "Day 3 of 19").
 - Add rows: the last row of a list is a dashed-square placeholder ("Add stop") in

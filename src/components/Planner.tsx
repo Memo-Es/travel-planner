@@ -84,6 +84,7 @@ import {
 import RightRail from "@/components/planner/RightRail";
 import CalendarView from "@/components/planner/CalendarView";
 import { StopSchedule, editState } from "@/components/planner/StopPanel";
+import DaySheet from "@/components/planner/DaySheet";
 import TripSettingsModal from "@/components/planner/TripSettingsModal";
 import MobileTabs from "@/components/planner/MobileTabs";
 import Toast from "@/components/planner/Toast";
@@ -193,6 +194,10 @@ export default function Planner({
   const [openTripId, setOpenTripId] = useState<string | null>(null);
   // The open stop's itinerary folded away to give Finances its room back.
   const [itineraryFolded, setItineraryFolded] = useState(false);
+  // A day's plans opened from the calendar, with the tapped one in focus.
+  const [dayView, setDayView] = useState<{ date: string; itemId: string } | null>(
+    null,
+  );
   const [pendingOpenTripId, setPendingOpenTripId] = useState<string | null>(
     null,
   );
@@ -1112,6 +1117,10 @@ export default function Planner({
               width={width}
               onBarPointerDown={onBarPointerDown}
               onOpenTrip={openTrip}
+              onOpenPlan={(plan) =>
+                plan.item.date &&
+                setDayView({ date: plan.item.date, itemId: plan.item.id })
+              }
               onResizeStart={onResizeStart}
               plans={shownPlans}
             />
@@ -1152,6 +1161,27 @@ export default function Planner({
       )}
 
       <AnimatePresence initial={false}>
+        {dayView && (shownPlans.get(dayView.date)?.length ?? 0) > 0 && (
+          <DaySheet
+            key="day"
+            date={dayView.date}
+            plans={shownPlans.get(dayView.date)!}
+            focusId={dayView.itemId}
+            isMobile={isMobile}
+            me={{ id: currentUserId, name: userName }}
+            onSetGoing={async (itemId, going) => {
+              await setGoing(itemId, going);
+              refresh();
+            }}
+            onEdit={(plan) => {
+              setDayView(null);
+              if (plan.trip.id !== openTripId) openTrip(plan.trip.id);
+              if (isMobile) setMobileTab("links");
+              startEdit(plan.key, plan.item.id, editState(plan.item));
+            }}
+            onClose={() => setDayView(null)}
+          />
+        )}
         {expenseOpen && (
           <ExpenseDialog
             key="expense"
