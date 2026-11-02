@@ -85,7 +85,7 @@ import RightRail from "@/components/planner/RightRail";
 import CalendarView from "@/components/planner/CalendarView";
 import { StopSchedule, editState } from "@/components/planner/StopPanel";
 import DaySheet from "@/components/planner/DaySheet";
-import type { Plan } from "@/lib/itinerary";
+import { tripDays, type Plan } from "@/lib/itinerary";
 import TripSettingsModal from "@/components/planner/TripSettingsModal";
 import MobileTabs from "@/components/planner/MobileTabs";
 import Toast from "@/components/planner/Toast";
@@ -199,9 +199,11 @@ export default function Planner({
     null,
   );
   // A day's plans opened from the calendar, with the tapped one in focus.
-  const [dayView, setDayView] = useState<{ date: string; itemId: string } | null>(
-    null,
-  );
+  const [dayView, setDayView] = useState<{
+    date: string;
+    itemId: string;
+    tripId: string;
+  } | null>(null);
   const [pendingOpenTripId, setPendingOpenTripId] = useState<string | null>(
     null,
   );
@@ -439,6 +441,15 @@ export default function Planner({
 
   const rangeStart = gridStart(cursor, calView, 0);
   const rangeEnd = rangeStart + (VIEW_WEEKS[calView] * 7 - 1) * DAY;
+  // The day sheet's tabs: the days of the stop whose plan was tapped.
+  const dayStop = dayView
+    ? trips.find((t) => t.id === dayView.tripId)
+    : undefined;
+  const dayDays = dayView
+    ? dayStop
+      ? tripDays(dayStop)
+      : [dayView.date]
+    : [];
   const stepName = CAL_VIEWS.find((v) => v.id === calView)!.step;
   // A calendar narrowed by an open stop puts its title on a line of its own.
   const narrowCal = !isMobile && width < 700;
@@ -536,7 +547,11 @@ export default function Planner({
   function openPlan(plan: Plan) {
     if (isMobile) {
       if (plan.item.date)
-        setDayView({ date: plan.item.date, itemId: plan.item.id });
+        setDayView({
+          date: plan.item.date,
+          itemId: plan.item.id,
+          tripId: plan.trip.id,
+        });
       return;
     }
     if (plan.trip.id !== openTripId) openTrip(plan.trip.id);
@@ -1178,11 +1193,12 @@ export default function Planner({
       )}
 
       <AnimatePresence initial={false}>
-        {dayView && (shownPlans.get(dayView.date)?.length ?? 0) > 0 && (
+        {dayView && (
           <DaySheet
             key="day"
             date={dayView.date}
-            plans={shownPlans.get(dayView.date)!}
+            days={dayDays}
+            plansByDate={shownPlans}
             focusId={dayView.itemId}
             isMobile={isMobile}
             me={{ id: currentUserId, name: userName }}
