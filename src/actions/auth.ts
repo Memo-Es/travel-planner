@@ -6,7 +6,7 @@ import { CredentialsSignin } from "next-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { signIn } from "@/lib/auth";
-import { demoTrips, DEMO_ITEMS_BY_TRIP_LABEL } from "@/lib/demoData";
+import { seedSampleTrip } from "@/lib/demoData";
 import { setActiveTeamCookie, setLastEmailCookie, setSignedInFlash } from "@/lib/team";
 
 const signupSchema = z.object({
@@ -38,33 +38,23 @@ export async function signup(_prev: ActionState, formData: FormData): Promise<Ac
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const team = await prisma.$transaction(async (tx) => {
-    const user = await tx.user.create({ data: { name, email, passwordHash } });
-    const team = await tx.team.create({
-      data: {
-        name: teamName || `${name}'s Trips`,
-        memberships: { create: { userId: user.id, role: "OWNER" } },
-      },
-    });
+  // A new account gets its own, empty trip plus a sample one to explore
+  // first; the welcome walkthrough offers the way from one to the other.
+  const sampleTeamId = await prisma.$transaction(
+    async (tx) => {
+      const user = await tx.user.create({ data: { name, email, passwordHash } });
+      await tx.team.create({
+        data: {
+          name: teamName || `${name}'s trip`,
+          memberships: { create: { userId: user.id, role: "OWNER" } },
+        },
+      });
+      return seedSampleTrip(tx, user.id);
+    },
+    { timeout: 20_000 },
+  );
 
-    await tx.trip.createMany({ data: demoTrips(team.id) });
-    const trips = await tx.trip.findMany({ where: { teamId: team.id } });
-    const items = trips.flatMap((trip) =>
-      (DEMO_ITEMS_BY_TRIP_LABEL[trip.label] ?? []).map((item, i) => ({
-        tripId: trip.id,
-        section: item.section,
-        title: item.title,
-        url: item.url,
-        costAmount: item.costAmount,
-        order: i,
-      })),
-    );
-    if (items.length) await tx.tripItem.createMany({ data: items });
-
-    return team;
-  });
-
-  await setActiveTeamCookie(team.id);
+  await setActiveTeamCookie(sampleTeamId);
 
   const result = await signIn("credentials", { email, password, redirect: false });
   if (typeof result === "string" && result.includes("error=")) {

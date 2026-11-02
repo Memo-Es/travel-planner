@@ -48,6 +48,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Editing, FormState } from "@/components/Planner";
 import { cn } from "@/lib/utils";
+import { StopIcon } from "@/components/planner/StopIcon";
+import { CITY_ICONS, iconFor, type CityIconKey } from "@/lib/cityIcons";
 
 const DRAG_TIP_KEY = "travel-planner:dragTipDismissed";
 
@@ -87,6 +89,8 @@ type ScheduleProps = {
   onUpdateDates: (tripId: string, start: string, end: string) => void;
   onRename: (tripId: string, label: string) => void;
   onChangeColor: (tripId: string, color: string) => void;
+  /** A city icon key, "pin", or null to pick from the name again. */
+  onChangeIcon: (tripId: string, icon: string | null) => void;
   onDeleteTrip: (tripId: string, label: string) => void;
   /** Puts an activity on another day of the stop, or on no day (null). */
   onMoveItem: (itemId: string, date: string | null) => Promise<void>;
@@ -121,6 +125,7 @@ export function StopSchedule({
   onUpdateDates,
   onRename,
   onChangeColor,
+  onChangeIcon,
   onDeleteTrip,
   onMoveItem,
   me,
@@ -148,6 +153,8 @@ export function StopSchedule({
   }, [editing?.key]);
   const tabsId = useId();
   const tabsRef = useRef<HTMLDivElement>(null);
+  const [pickingIcon, setPickingIcon] = useState(false);
+  const autoIcon = iconFor({ label: trip.label, icon: null });
 
   // Activities show one day at a time: the first day with plans, else the
   // first day of the stop.
@@ -463,7 +470,76 @@ export function StopSchedule({
             })}
           </div>
         </fieldset>
-
+        <fieldset className="min-w-0 !mt-4">
+          <legend className="sr-only">Icon</legend>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span
+                className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary"
+                style={{ color: stopColor(trip.color).base }}
+              >
+                <StopIcon stop={trip} className="size-6" />
+              </span>
+              <span className="min-w-0">
+                <span className="field-label block">Icon</span>
+                <span className="block truncate text-xs text-muted-2">
+                  {trip.icon === null
+                    ? `Auto${autoIcon ? ` · ${CITY_ICONS[autoIcon].label}` : " · Pin"}`
+                    : trip.icon === "pin"
+                      ? "Pin"
+                      : (CITY_ICONS[trip.icon as CityIconKey]?.label ?? "Pin")}
+                </span>
+              </span>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              aria-expanded={pickingIcon}
+              onClick={() => setPickingIcon((v) => !v)}
+            >
+              {pickingIcon ? "Done" : "Change"}
+            </Button>
+          </div>
+          <Disclosure open={pickingIcon}>
+            <div className="-ml-1.5 mt-2 flex flex-wrap gap-0.5">
+              {([null, "pin", ...(Object.keys(CITY_ICONS) as CityIconKey[])] as (
+                | CityIconKey
+                | "pin"
+                | null
+              )[]).map((key) => {
+                const active = trip.icon === key;
+                const label =
+                  key === null
+                    ? "Auto, from the city name"
+                    : key === "pin"
+                      ? "Pin"
+                      : CITY_ICONS[key].label;
+                return (
+                  <button
+                    key={key ?? "auto"}
+                    type="button"
+                    onClick={() => onChangeIcon(trip.id, key)}
+                    aria-label={label}
+                    aria-pressed={active}
+                    title={label}
+                    className={cn(
+                      "flex size-10 items-center justify-center rounded-xl transition-colors duration-150",
+                      active ? "bg-secondary text-ink" : "text-muted hover:bg-hover hover:text-ink",
+                    )}
+                  >
+                    {key === null ? (
+                      <span className="text-[11px] font-semibold uppercase tracking-wide">
+                        Auto
+                      </span>
+                    ) : (
+                      <StopIcon icon={key === "pin" ? null : key} className="size-6" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </Disclosure>
+        </fieldset>
 
         <div
           ref={tabsRef}

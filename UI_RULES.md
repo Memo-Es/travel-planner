@@ -65,6 +65,13 @@ inventing new ones.
 - Focus rings: standalone buttons get a ring just outside them; rows, card
   headers and pill tabs that fill their container use `focus-inset`, a ring
   inside that follows their own rounded corners.
+- Stops show a city icon in their color (lib/cityIcons: Hugeicons landmarks plus
+  ones drawn here on the same 24px grid with open rounded strokes), matched from
+  the stop's name or picked by hand, falling back to the pin. No photos.
+- New accounts get their own empty trip plus a sample trip (pretend travel
+  buddies, timed plans, shared costs) and a one-time welcome walkthrough that
+  ends in "Start my own trip" or "Explore the sample trip". The sample shows a
+  "Sample trip · Start my own" chip in the Trips panel.
 - Add rows: the last row of a list is a dashed-square placeholder ("Add stop") in
   gray, not a separate outlined button (`AddRow`).
 - Lists have no dividers: rows are borderless, separated by spacing, with a soft

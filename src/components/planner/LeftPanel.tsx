@@ -9,7 +9,6 @@ import {
 import {
   X,
   Settings2,
-  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
@@ -18,6 +17,7 @@ import type { TripData, TeamOption } from "@/lib/types";
 import { fmtRange } from "@/lib/dates";
 import { statusFor } from "@/lib/tripStatus";
 import { AddRow } from "@/components/planner/AddRow";
+import { StopIcon } from "@/components/planner/StopIcon";
 import { logout } from "@/actions/team";
 import { LEFT_W, stopColor } from "@/lib/theme";
 
@@ -39,6 +39,7 @@ export default function LeftPanel({
   onClose,
   showClose,
   todayLabel,
+  sampleOwnTeamId,
   detail,
   width,
 }: {
@@ -60,6 +61,8 @@ export default function LeftPanel({
   onClose: () => void;
   showClose: boolean;
   todayLabel: string;
+  /** On the sample trip: the user's own trip to switch to (null if none). */
+  sampleOwnTeamId?: string | null;
   /** The open stop's itinerary, shown beside the list. */
   detail: ReactNode;
   /** How wide the panel grows over the calendar to fit it, on compact
@@ -117,6 +120,21 @@ export default function LeftPanel({
               {status}
             </p>
           )}
+          {sampleOwnTeamId !== undefined &&
+            (sampleOwnTeamId ? (
+              <button
+                type="button"
+                onClick={() => onSwitchTeam(sampleOwnTeamId)}
+                className="focus-inset mt-2 flex w-full items-center justify-between gap-2 rounded-full bg-accent-soft px-4 py-2 text-sm text-accent-ink transition-colors duration-150 hover:bg-accent-soft/70"
+              >
+                <span>Sample trip</span>
+                <span className="font-medium">Start my own →</span>
+              </button>
+            ) : (
+              <p className="mt-2 rounded-full bg-accent-soft px-4 py-2 text-center text-sm text-accent-ink">
+                Sample trip
+              </p>
+            ))}
           {showClose && (
             <Button
               variant="ghost"
@@ -167,22 +185,12 @@ export default function LeftPanel({
                         className="bg-secondary"
                       />
                     )}
-                    {t.photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={t.photoUrl}
-                        alt=""
-                        className="size-8 shrink-0 rounded-lg object-cover"
-                      />
-                    ) : (
-                      <span className="flex size-8 shrink-0 items-center justify-center">
-                        <MapPin
-                          className="size-5"
-                          style={{ color: color.base }}
-                          strokeWidth={2.25}
-                        />
-                      </span>
-                    )}
+                    <span
+                      className="flex size-8 shrink-0 items-center justify-center"
+                      style={{ color: color.base }}
+                    >
+                      <StopIcon stop={t} className="size-6" />
+                    </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-base font-medium text-ink">
                         {t.label}
