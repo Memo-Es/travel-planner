@@ -26,7 +26,7 @@ import {
   type CalendarEvent,
 } from "@/lib/calendar";
 import { MONTHS_LONG, DAY, fmtRange, ms, toDateInput } from "@/lib/dates";
-import { HOLIDAY_NOTES } from "@/lib/demoData";
+import { HOLIDAY_NOTES } from "@/lib/holidays";
 import { isScheduled, sectionTotal } from "@/lib/tripSections";
 import { defaultTripId, plansByDate } from "@/lib/itinerary";
 import {
@@ -86,6 +86,7 @@ import RightRail from "@/components/planner/RightRail";
 import CalendarView from "@/components/planner/CalendarView";
 import { StopSchedule, editState } from "@/components/planner/StopPanel";
 import DaySheet from "@/components/planner/DaySheet";
+import Onboarding from "@/components/planner/Onboarding";
 import { tripDays, type Plan } from "@/lib/itinerary";
 import TripSettingsModal from "@/components/planner/TripSettingsModal";
 import MobileTabs from "@/components/planner/MobileTabs";
@@ -162,6 +163,9 @@ export default function Planner({
   currentUserId,
   userName,
   justSignedIn,
+  showOnboarding,
+  isSample,
+  ownTeamId,
   initialTrips,
 }: {
   teamId: string;
@@ -174,6 +178,12 @@ export default function Planner({
   currentUserId: string;
   userName: string;
   justSignedIn: boolean;
+  /** A new account's first visit: show the welcome walkthrough. */
+  showOnboarding: boolean;
+  /** This is the sample trip seeded at signup. */
+  isSample: boolean;
+  /** From the sample trip, the user's own trip to switch to. */
+  ownTeamId: string | null;
   initialTrips: TripData[];
 }) {
   const router = useRouter();
@@ -239,6 +249,15 @@ export default function Planner({
   // A ref is mutated immediately, so it closes that race.
   const addingTripRef = useRef(false);
   const [showSignedInToast, setShowSignedInToast] = useState(justSignedIn);
+  // Opened just after the first paint rather than during it: the dialog's
+  // scroll lock measures the page as it opens, and on a phone's first load
+  // the viewport hasn't settled yet, which squeezed the page behind it.
+  const [onboarding, setOnboarding] = useState(false);
+  useEffect(() => {
+    if (!showOnboarding) return;
+    const t = setTimeout(() => setOnboarding(true), 350);
+    return () => clearTimeout(t);
+  }, [showOnboarding]);
   const [placesToast, setPlacesToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1043,6 +1062,7 @@ export default function Planner({
           onClose={closeOverlay}
           showClose={activeOverlay === "links"}
           todayLabel={todayLabel}
+          sampleOwnTeamId={isSample ? ownTeamId : undefined}
         />
       )}
 
@@ -1200,6 +1220,20 @@ export default function Planner({
       )}
 
       <AnimatePresence initial={false}>
+        {onboarding && (
+          <Onboarding
+            key="onboarding"
+            userName={userName}
+            isMobile={isMobile}
+            pals={
+              isSample
+                ? members.filter((m) => m.id !== currentUserId).map((m) => m.name)
+                : []
+            }
+            ownTeamId={ownTeamId}
+            onDone={() => setOnboarding(false)}
+          />
+        )}
         {dayView && (
           <DaySheet
             key="day"

@@ -26,6 +26,10 @@ model User {
   email        String         @unique
   name         String
   passwordHash String
+  /// A pretend travel buddy in a sample trip; can't sign in.
+  isSample     Boolean        @default(false)
+  /// When the welcome walkthrough was finished or skipped.
+  onboardedAt  DateTime?
   createdAt    DateTime       @default(now())
   memberships  Membership[]
   invitesSent  Invite[]       @relation("InviteCreatedBy")
@@ -45,6 +49,8 @@ model Team {
   /// this app has no secrets encryption, the same trade a team accepts by
   /// setting it at all.
   placesApiKey String?
+  /// The sample trip seeded at signup, with pretend travel buddies.
+  isSample     Boolean      @default(false)
   createdAt    DateTime     @default(now())
   memberships  Membership[]
   trips        Trip[]

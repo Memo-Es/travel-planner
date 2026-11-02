@@ -8,7 +8,7 @@ export default async function HomePage() {
   const { team, memberships } = await requireActiveTeam(user.id);
   const justSignedIn = await hasSignedInFlash();
 
-  const [trips, invites, teamMembers] = await Promise.all([
+  const [trips, invites, teamMembers, account] = await Promise.all([
     prisma.trip.findMany({
       where: { teamId: team.id },
       // Chronological, not creation order - a stop added out of sequence
@@ -42,7 +42,13 @@ export default async function HomePage() {
       include: { user: true },
       orderBy: { createdAt: "asc" },
     }),
+    prisma.user.findUnique({ where: { id: user.id }, select: { onboardedAt: true } }),
   ]);
+  // From the sample trip, the way to the user's own (the first that isn't
+  // a sample).
+  const ownTeamId = team.isSample
+    ? (memberships.find((m) => !m.team.isSample)?.teamId ?? null)
+    : null;
 
   const tripData: TripData[] = trips.map((t) => ({
     id: t.id,
@@ -92,6 +98,9 @@ export default async function HomePage() {
       currentUserId={user.id}
       userName={currentMember?.user.name ?? "You"}
       justSignedIn={justSignedIn}
+      showOnboarding={!account?.onboardedAt}
+      isSample={team.isSample}
+      ownTeamId={ownTeamId}
       initialTrips={tripData}
     />
   );

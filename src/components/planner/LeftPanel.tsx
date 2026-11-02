@@ -39,6 +39,7 @@ export default function LeftPanel({
   onClose,
   showClose,
   todayLabel,
+  sampleOwnTeamId,
   detail,
   width,
 }: {
@@ -60,6 +61,8 @@ export default function LeftPanel({
   onClose: () => void;
   showClose: boolean;
   todayLabel: string;
+  /** On the sample trip: the user's own trip to switch to (null if none). */
+  sampleOwnTeamId?: string | null;
   /** The open stop's itinerary, shown beside the list. */
   detail: ReactNode;
   /** How wide the panel grows over the calendar to fit it, on compact
@@ -117,6 +120,21 @@ export default function LeftPanel({
               {status}
             </p>
           )}
+          {sampleOwnTeamId !== undefined &&
+            (sampleOwnTeamId ? (
+              <button
+                type="button"
+                onClick={() => onSwitchTeam(sampleOwnTeamId)}
+                className="focus-inset mt-2 flex w-full items-center justify-between gap-2 rounded-full bg-accent-soft px-4 py-2 text-sm text-accent-ink transition-colors duration-150 hover:bg-accent-soft/70"
+              >
+                <span>Sample trip</span>
+                <span className="font-medium">Start my own →</span>
+              </button>
+            ) : (
+              <p className="mt-2 rounded-full bg-accent-soft px-4 py-2 text-center text-sm text-accent-ink">
+                Sample trip
+              </p>
+            ))}
           {showClose && (
             <Button
               variant="ghost"

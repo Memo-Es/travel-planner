@@ -1,61 +1,172 @@
+import bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 
-/** The Barcelona → Copenhagen demo itinerary from the original Claude Design
- * prototype. Seeded onto every new team so first login isn't empty. */
-export function demoTrips(teamId: string): Prisma.TripCreateManyInput[] {
-  const rows: { id: string; label: string; start: string; end: string; color: string }[] = [
-    { id: "bcn", label: "Barcelona", start: "2026-11-16", end: "2026-11-19", color: "clay" },
-    { id: "par", label: "Paris", start: "2026-11-19", end: "2026-11-22", color: "lavender" },
-    { id: "bel", label: "Belgium", start: "2026-11-22", end: "2026-11-24", color: "khaki" },
-    { id: "ams", label: "Amsterdam", start: "2026-11-24", end: "2026-11-28", color: "sage" },
-    { id: "ham", label: "Hamburg", start: "2026-11-27", end: "2026-11-30", color: "stone" },
-    { id: "cph", label: "Copenhagen", start: "2026-11-30", end: "2026-12-04", color: "lavender" },
-  ];
-  return rows.map((r, i) => ({
-    teamId,
-    label: r.label,
-    color: r.color,
-    start: new Date(r.start),
-    end: new Date(r.end),
-    order: i,
-  }));
-}
+/** Who's on the sample trip: the new user and three pretend travel buddies. */
+type Who = "me" | "sofia" | "kenji" | "ama";
 
-type DemoItem = { section: "STAY" | "TRANSPORT" | "ACTIVITIES"; title: string; url: string; costAmount: number | null };
+const PALS: { key: Exclude<Who, "me">; name: string }[] = [
+  { key: "sofia", name: "Sofía" },
+  { key: "kenji", name: "Kenji" },
+  { key: "ama", name: "Ama" },
+];
 
-export const DEMO_ITEMS_BY_TRIP_LABEL: Record<string, DemoItem[]> = {
-  Barcelona: [
-    { section: "STAY", title: "Casa Bonay, Eixample", url: "https://casabonay.com", costAmount: 410 },
-    { section: "TRANSPORT", title: "Flight MAD → BCN", url: "https://iberia.com", costAmount: 92 },
-  ],
-  Paris: [
-    { section: "STAY", title: "Hôtel du Temps, 9e", url: "https://hotel-du-temps.fr", costAmount: 520 },
-    { section: "TRANSPORT", title: "Navigo pass, 3 days", url: "", costAmount: 31 },
-    { section: "TRANSPORT", title: "Thalys Paris → Brussels", url: "https://sncf-connect.com", costAmount: 58 },
-  ],
-  Belgium: [
-    { section: "STAY", title: "Hotel Amigo, Brussels", url: "", costAmount: 300 },
-    { section: "TRANSPORT", title: "IC Brussels → Amsterdam", url: "https://belgiantrain.be", costAmount: 45 },
-  ],
-  Amsterdam: [
-    { section: "STAY", title: "Volkshotel, Oost", url: "", costAmount: 560 },
-    { section: "TRANSPORT", title: "Airport transfer", url: "https://schiphol.nl", costAmount: 18 },
-  ],
-  Hamburg: [
-    { section: "STAY", title: "25hours HafenCity", url: "https://25hours-hotels.com", costAmount: 390 },
-    { section: "TRANSPORT", title: "Ferry, Elbe harbour", url: "", costAmount: 4 },
-    { section: "TRANSPORT", title: "Train Hamburg → Copenhagen", url: "https://bahn.de", costAmount: 79 },
-  ],
-  Copenhagen: [
-    { section: "STAY", title: "Hotel Sanders", url: "", costAmount: 680 },
-    { section: "TRANSPORT", title: "Flight CPH → MAD", url: "https://sas.se", costAmount: 134 },
-  ],
+type SampleItem = {
+  section: "STAY" | "TRANSPORT" | "ACTIVITIES";
+  title: string;
+  url?: string;
+  costAmount?: number;
+  /** Days after the stop's arrival. */
+  day?: number;
+  time?: string;
+  notes?: string;
+  paidBy?: Who;
+  /** Who signed up for an activity; nobody means everyone splits it. */
+  going?: Who[];
 };
 
-/** Static holiday/note markers shown on the calendar. Not user editable, so
- * they live in code rather than the database. */
-export const HOLIDAY_NOTES = [
-  { id: "note-1", label: "All Saints' Day", start: "2026-11-01", end: "2026-11-01" },
-  { id: "note-2", label: "Day of the Dead", start: "2026-11-02", end: "2026-11-02" },
-  { id: "note-3", label: "Rail pass activates", start: "2026-11-16", end: "2026-11-16" },
+type SampleStop = {
+  label: string;
+  color: string;
+  /** Days after the trip starts. */
+  from: number;
+  nights: number;
+  items: SampleItem[];
+};
+
+/** A Barcelona → Copenhagen trip with bookings, plans and who paid for what,
+ * so a new account opens on something to explore rather than a blank page. */
+const STOPS: SampleStop[] = [
+  {
+    label: "Barcelona", color: "clay", from: 0, nights: 3,
+    items: [
+      { section: "STAY", title: "Casa Bonay, Eixample", url: "https://casabonay.com", costAmount: 410, day: 0, time: "15:00", paidBy: "me" },
+      { section: "TRANSPORT", title: "Flight MAD → BCN", url: "https://iberia.com", costAmount: 92, day: 0, time: "09:40", paidBy: "sofia" },
+      { section: "ACTIVITIES", title: "Sagrada Família, towers tour", costAmount: 120, day: 1, time: "10:00", notes: "Timed entry, bring the QR codes.", paidBy: "kenji", going: ["me", "kenji", "ama"] },
+      { section: "ACTIVITIES", title: "Tapas crawl in El Born", costAmount: 96, day: 1, time: "20:30", paidBy: "ama" },
+      { section: "ACTIVITIES", title: "Bunkers del Carmel at sunset", day: 2, time: "18:15" },
+    ],
+  },
+  {
+    label: "Paris", color: "lavender", from: 3, nights: 3,
+    items: [
+      { section: "STAY", title: "Hôtel du Temps, 9e", url: "https://hotel-du-temps.fr", costAmount: 520, day: 0, time: "16:00", paidBy: "kenji" },
+      { section: "TRANSPORT", title: "Navigo pass, 3 days", costAmount: 31, paidBy: "me" },
+      { section: "TRANSPORT", title: "Thalys Paris → Brussels", url: "https://sncf-connect.com", costAmount: 58, day: 3, time: "11:25", paidBy: "sofia" },
+      { section: "ACTIVITIES", title: "Musée d'Orsay", costAmount: 64, day: 1, time: "09:30", notes: "Enter by Access 1 on the quay.", paidBy: "sofia", going: ["me", "sofia"] },
+      { section: "ACTIVITIES", title: "Picnic at Canal Saint-Martin", day: 1, time: "13:00" },
+      { section: "ACTIVITIES", title: "Dinner at Le Comptoir", costAmount: 180, day: 2, time: "20:00", paidBy: "me" },
+    ],
+  },
+  {
+    label: "Belgium", color: "khaki", from: 6, nights: 2,
+    items: [
+      { section: "STAY", title: "Hotel Amigo, Brussels", costAmount: 300, day: 0, time: "15:00", paidBy: "ama" },
+      { section: "TRANSPORT", title: "IC Brussels → Amsterdam", url: "https://belgiantrain.be", costAmount: 45, day: 2, time: "10:12", paidBy: "kenji" },
+      { section: "ACTIVITIES", title: "Day trip to Bruges", costAmount: 72, day: 1, time: "09:00", paidBy: "ama", going: ["sofia", "kenji", "ama"] },
+    ],
+  },
+  {
+    label: "Amsterdam", color: "sage", from: 8, nights: 4,
+    items: [
+      { section: "STAY", title: "Volkshotel, Oost", costAmount: 560, day: 0, time: "15:00", paidBy: "sofia" },
+      { section: "TRANSPORT", title: "Airport transfer", url: "https://schiphol.nl", costAmount: 18, paidBy: "me" },
+      { section: "ACTIVITIES", title: "Rijksmuseum", costAmount: 88, day: 1, time: "10:00", notes: "Tickets are timed, arrive 15 min early.", paidBy: "me", going: ["me", "sofia", "kenji"] },
+      { section: "ACTIVITIES", title: "Canal boat at golden hour", costAmount: 76, day: 1, time: "17:30", paidBy: "kenji" },
+      { section: "ACTIVITIES", title: "Vondelpark bike loop", day: 2, time: "11:00" },
+      { section: "ACTIVITIES", title: "Indonesian rijsttafel", costAmount: 140, day: 3, time: "19:30", paidBy: "ama" },
+    ],
+  },
+  {
+    label: "Hamburg", color: "stone", from: 12, nights: 2,
+    items: [
+      { section: "STAY", title: "25hours HafenCity", url: "https://25hours-hotels.com", costAmount: 390, day: 0, time: "15:00", paidBy: "me" },
+      { section: "TRANSPORT", title: "Train Hamburg → Copenhagen", url: "https://bahn.de", costAmount: 79, day: 2, time: "09:18", paidBy: "ama" },
+      { section: "ACTIVITIES", title: "Elbphilharmonie plaza", day: 1, time: "11:00" },
+      { section: "ACTIVITIES", title: "Fish market breakfast", costAmount: 48, day: 1, time: "07:30", paidBy: "sofia", going: ["sofia", "ama"] },
+    ],
+  },
+  {
+    label: "Copenhagen", color: "lavender", from: 14, nights: 3,
+    items: [
+      { section: "STAY", title: "Hotel Sanders", costAmount: 680, day: 0, time: "15:00", paidBy: "kenji" },
+      { section: "TRANSPORT", title: "Flight CPH → MAD", url: "https://sas.se", costAmount: 134, day: 3, time: "18:05", paidBy: "me" },
+      { section: "ACTIVITIES", title: "Nyhavn and the Little Mermaid", day: 1, time: "10:30" },
+      { section: "ACTIVITIES", title: "Tivoli Gardens", costAmount: 104, day: 1, time: "17:00", paidBy: "sofia" },
+      { section: "ACTIVITIES", title: "Sauna and harbour swim", costAmount: 60, day: 2, time: "08:00", paidBy: "ama", going: ["me", "ama"] },
+    ],
+  },
 ];
+
+const DAY_MS = 86_400_000;
+
+/** Creates the sample trip workspace for a new user, with its pretend travel
+ * buddies, and returns its id. The trip starts three weeks from today so it
+ * always reads as upcoming. Run inside the signup transaction. */
+export async function seedSampleTrip(
+  tx: Prisma.TransactionClient,
+  userId: string,
+): Promise<string> {
+  const now = new Date();
+  const start = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) + 21 * DAY_MS;
+  const day = (offset: number) => new Date(start + offset * DAY_MS);
+
+  // Pretend buddies can't sign in: their password is random and never kept.
+  const passwordHash = await bcrypt.hash(randomBytes(24).toString("hex"), 10);
+  const people: Record<Who, string> = { me: userId, sofia: "", kenji: "", ama: "" };
+  for (const pal of PALS) {
+    const user = await tx.user.create({
+      data: {
+        name: pal.name,
+        email: `sample-${pal.key}-${randomBytes(8).toString("hex")}@example.invalid`,
+        passwordHash,
+        isSample: true,
+        onboardedAt: now,
+      },
+    });
+    people[pal.key] = user.id;
+  }
+
+  const team = await tx.team.create({
+    data: {
+      name: "Sample trip · Europe",
+      isSample: true,
+      memberships: {
+        create: [
+          { userId, role: "OWNER" },
+          ...PALS.map((p) => ({ userId: people[p.key], role: "MEMBER" as const })),
+        ],
+      },
+    },
+  });
+
+  for (const [order, stop] of STOPS.entries()) {
+    await tx.trip.create({
+      data: {
+        teamId: team.id,
+        label: stop.label,
+        color: stop.color,
+        start: day(stop.from),
+        end: day(stop.from + stop.nights),
+        order,
+        items: {
+          create: stop.items.map((item, i) => ({
+            section: item.section,
+            title: item.title,
+            url: item.url ?? "",
+            costAmount: item.costAmount ?? null,
+            date: item.day === undefined ? null : day(stop.from + item.day),
+            time: item.time ?? null,
+            notes: item.notes ?? null,
+            paidById: item.paidBy ? people[item.paidBy] : null,
+            order: i,
+            attendees: item.going
+              ? { create: item.going.map((w) => ({ userId: people[w] })) }
+              : undefined,
+          })),
+        },
+      },
+    });
+  }
+  return team.id;
+}
