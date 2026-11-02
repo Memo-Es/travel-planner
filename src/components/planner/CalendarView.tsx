@@ -41,7 +41,7 @@ function PlanLine({
   plan,
   all,
   wrap,
-  onOpenTrip,
+  onOpen,
   className,
 }: {
   /** Let a long name run onto a second line, in days wide enough for it. */
@@ -50,13 +50,13 @@ function PlanLine({
   /** On a one-line preview, every plan that day: the rest show as "+n" and
    * all of them in the tooltip and label. */
   all?: Plan[];
-  onOpenTrip: (tripId: string) => void;
+  onOpen: (plan: Plan) => void;
   className?: string;
 }) {
   return (
     <button
       type="button"
-      onClick={() => onOpenTrip(plan.trip.id)}
+      onClick={() => onOpen(plan)}
       title={all?.map((p) => `${p.item.time ?? "—"}  ${p.item.t}`).join("\n")}
       aria-label={
         all &&
@@ -106,6 +106,7 @@ export default function CalendarView({
   width,
   onBarPointerDown,
   onOpenTrip,
+  onOpenPlan,
   onResizeStart,
   plans,
 }: {
@@ -115,6 +116,8 @@ export default function CalendarView({
   plans: Map<string, Plan[]>;
   width: number;
   onOpenTrip: (tripId: string) => void;
+  /** A plan tapped in a day: opens that day's plans with it in focus. */
+  onOpenPlan: (plan: Plan) => void;
   onBarPointerDown: (tripId: string, clientX: number) => void;
   onResizeStart: (
     tripId: string,
@@ -163,7 +166,7 @@ export default function CalendarView({
                   <PlanLine
                     plan={first}
                     all={dayPlans}
-                    onOpenTrip={onOpenTrip}
+                    onOpen={onOpenPlan}
                     className="mb-1 mt-auto"
                   />
                 ) : (
@@ -179,7 +182,7 @@ export default function CalendarView({
                           <PlanLine
                             plan={p}
                             wrap={width / 7 >= 80}
-                            onOpenTrip={onOpenTrip}
+                            onOpen={onOpenPlan}
                           />
                         </li>
                       ))}
