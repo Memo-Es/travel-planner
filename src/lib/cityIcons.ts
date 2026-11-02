@@ -265,7 +265,10 @@ export const CITY_ICONS = {
 
 export type CityIconKey = keyof typeof CITY_ICONS;
 
-/** City names (lowercase, without accents) and the icon each one gets. */
+/** City names (lowercase, without accents) and the icon each one gets. Lets
+ * in a country or demonym where a stop is more likely named for the whole
+ * trip than one city in it ("Hike Danes" for a Denmark hike) - its capital's
+ * icon stands in; only Denmark has one so far, added as it came up. */
 const CITY_MATCHES: [string[], CityIconKey][] = [
   [["paris"], "eiffel"],
   [["rome", "roma"], "colosseum"],
@@ -282,7 +285,7 @@ const CITY_MATCHES: [string[], CityIconKey][] = [
   [["istanbul", "marrakech", "cairo"], "mosque"],
   [["amsterdam", "utrecht", "delft", "bruges", "brugge"], "canalHouse"],
   [["hamburg"], "elbphilharmonie"],
-  [["copenhagen", "kobenhavn"], "littleMermaid"],
+  [["copenhagen", "kobenhavn", "denmark", "danish", "danes"], "littleMermaid"],
   [["barcelona"], "sagradaFamilia"],
   [["madrid"], "puertaDeAlcala"],
   [["san francisco", "london", "lisbon", "lisboa", "budapest"], "bridge"],
