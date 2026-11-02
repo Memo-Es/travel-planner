@@ -154,7 +154,7 @@ export default function FinancePanel({
           <div
             role="group"
             aria-label="Filter by category"
-            className="no-scrollbar -mx-1 flex min-w-0 gap-0.5 overflow-x-auto px-1"
+            className="no-scrollbar -m-1 flex min-w-0 gap-0.5 overflow-x-auto p-1"
           >
             {(["all", ...SECTION_DEFS.map((s) => s.key)] as Filter[]).map(
               (f) => {
@@ -166,7 +166,7 @@ export default function FinancePanel({
                     aria-pressed={selected}
                     onClick={() => setFilter(f)}
                     className={cn(
-                      "relative isolate h-8 shrink-0 whitespace-nowrap rounded-full px-2.5 text-sm font-medium transition-colors duration-150",
+                      "relative isolate h-8 shrink-0 whitespace-nowrap rounded-full px-2.5 text-sm font-medium outline-offset-[-2px] transition-colors duration-150",
                       selected ? "text-ink" : "text-muted-2 hover:text-ink",
                     )}
                   >
@@ -210,7 +210,9 @@ export default function FinancePanel({
           <p
             className={cn(
               "mt-1 font-semibold tabular-nums text-ink",
-              money(active ? active.total : total).length > 11
+              // Sized by the overall total, the biggest figure, so switching
+              // categories doesn't resize it.
+              money(total).length > 11
                 ? "text-3xl"
                 : "text-4xl",
             )}
