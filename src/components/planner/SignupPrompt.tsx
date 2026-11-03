@@ -25,8 +25,7 @@ export default function SignupPrompt({ onClose }: { onClose: () => void }) {
         </AlertDialogTitle>
         <AlertDialogDescription className="mx-auto max-w-sm text-pretty text-sm leading-relaxed text-muted">
           This trip is a shared demo, so nothing you do here is kept. Sign
-          up and it&apos;s yours - your own stops, your own costs, saved for
-          real.
+          up and it&apos;s yours: your own stops and costs, saved for real.
         </AlertDialogDescription>
         <div className="flex flex-col gap-2 pt-2">
           <Button size="lg" asChild>
@@ -35,6 +34,12 @@ export default function SignupPrompt({ onClose }: { onClose: () => void }) {
           <Button size="lg" variant="secondary" onClick={onClose}>
             Keep exploring
           </Button>
+          <p className="pt-1 text-sm text-muted">
+            Already have an account?{" "}
+            <Link href="/login" className="-my-2.5 inline-block py-2.5 font-medium text-ink">
+              Log in
+            </Link>
+          </p>
         </div>
       </AlertDialogContent>
     </AlertDialog>
