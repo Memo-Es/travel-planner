@@ -381,7 +381,7 @@ export function StopSchedule({
 
       <div
         data-drag-scroll
-        className="scroll-quiet -mx-2 mt-5 min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-2 pb-2"
+        className="scroll-quiet -mx-2 mt-5 min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto overscroll-contain px-2 pb-2"
       >
         <Disclosure open={editingDates}>
           <div className="space-y-4 rounded-2xl border border-line bg-white p-4">
@@ -619,7 +619,7 @@ export function StopSchedule({
                 draggable ? (e) => dd.start(e, item, dayOf(item), true) : undefined
               }
               className={cn(
-                "group -mx-2.5 rounded-2xl px-2.5 py-3 transition-[background-color,opacity] duration-300",
+                "group -mx-2 rounded-2xl px-2 py-3 transition-[background-color,opacity] duration-300",
                 flash === item.id ? "bg-accent-soft" : "hover:bg-hover",
                 draggable && "cursor-grab active:cursor-grabbing",
                 dd.dragging === item.id && "opacity-40",
@@ -870,7 +870,7 @@ export function StopSchedule({
                           role="tabpanel"
                           data-drop={day}
                           className={cn(
-                            "-mx-2.5 mt-2 rounded-2xl px-2.5 pt-1 transition-colors duration-150",
+                            "-mx-2 mt-2 rounded-2xl px-2 pt-1 transition-colors duration-150",
                             dd.isOver(day) && "bg-accent-soft",
                           )}
                         >
