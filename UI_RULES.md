@@ -77,6 +77,10 @@ inventing new ones.
   On touch screens every button, tab and pill reaches 44px to the finger via an
   invisible ::after margin (`ui-button`, `tap-target`), calendar bars are taller,
   menu items are 44px, and a booking form's actions stay pinned as it scrolls.
+- Panel headers share one rhythm so their tops line up: a 40px row of controls
+  (Trips: label + settings; Calendar: view switcher + arrows; Finances: category
+  filter; an open stop: dates + menu), then the headline 12px below (trip name,
+  month, the amount with "Total spent" under it).
 - Add rows: the last row of a list is a dashed-square placeholder ("Add stop") in
   gray, not a separate outlined button (`AddRow`).
 - Lists have no dividers: rows are borderless, separated by spacing, with a soft

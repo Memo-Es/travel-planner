@@ -491,8 +491,6 @@ export default function Planner({
       : [dayView.date]
     : [];
   const stepName = CAL_VIEWS.find((v) => v.id === calView)!.step;
-  // A calendar narrowed by an open stop puts its title on a line of its own.
-  const narrowCal = !isMobile && width < 700;
   const viewSwitcher = (
     <div
       role="group"
@@ -1112,11 +1110,16 @@ export default function Planner({
               : " p-5 pt-5 pb-1.5 min-w-0")
           }
         >
-          <header className="flex flex-wrap items-center justify-between gap-3 mb-5">
-            <h1
+          {/* Like the panels either side: a 40px row of controls, then the
+              headline, so the three panels' tops line up. On a phone, where
+              it's alone, the title leads and the view switcher sits below. */}
+          <header className="mb-5">
+            {isMobile ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h1
               className={
                 "m-0 whitespace-nowrap font-medium tabular-nums text-muted-2 " +
-                (isMobile || narrowCal ? "w-full text-2xl" : "text-3xl")
+                (isMobile ? "text-2xl" : "mt-3 text-3xl")
               }
             >
               <TransitionText value={`${calView}-${rangeStart}`}>
@@ -1133,14 +1136,7 @@ export default function Planner({
                   : new Date(rangeEnd).getUTCFullYear()}
               </TransitionText>
             </h1>
-            <div
-              className={
-                "flex min-w-0 flex-wrap items-center gap-1.5 " +
-                (narrowCal ? "w-full justify-between" : "")
-              }
-            >
-              {!isMobile && viewSwitcher}
-              <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5">
                 <Button
                   variant="secondary"
                   size="icon"
@@ -1165,7 +1161,59 @@ export default function Planner({
                   <ChevronRight size={16} />
                 </Button>
               </div>
-            </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex min-h-10 flex-wrap items-center justify-between gap-1.5">
+                  {viewSwitcher}
+                  <div className="flex items-center gap-1.5">
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  aria-label={`Previous ${stepName}`}
+                  onClick={() => setCursor((c) => stepCursor(c, calView, -1))}
+                >
+                  <ChevronLeft size={16} />
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setCursor(cursorAt(Date.now()))}
+                >
+                  Today
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  aria-label={`Next ${stepName}`}
+                  onClick={() => setCursor((c) => stepCursor(c, calView, 1))}
+                >
+                  <ChevronRight size={16} />
+                </Button>
+              </div>
+                </div>
+                <h1
+              className={
+                "m-0 whitespace-nowrap font-medium tabular-nums text-muted-2 " +
+                (isMobile ? "text-2xl" : "mt-3 text-3xl")
+              }
+            >
+              <TransitionText value={`${calView}-${rangeStart}`}>
+                <strong className="font-bold text-ink">
+                  {calView === "month"
+                    ? MONTHS_LONG[cursor.m]
+                    : fmtRange(
+                        toDateInput(rangeStart),
+                        toDateInput(rangeEnd),
+                      )}
+                </strong>{" "}
+                {calView === "month"
+                  ? cursor.y
+                  : new Date(rangeEnd).getUTCFullYear()}
+              </TransitionText>
+            </h1>
+              </>
+            )}
           </header>
           {isMobile && viewSwitcher}
           {isMobile && trip && (
