@@ -153,7 +153,7 @@ export default function DaySheet({
         )}
         <ul
           className={cn(
-            "scroll-quiet -mx-2 mt-4 space-y-1 overflow-y-auto overscroll-contain px-2 pb-1",
+            "scroll-quiet -mx-2 mt-4 space-y-1 overflow-x-hidden overflow-y-auto overscroll-contain px-2 pb-1",
             isMobile ? "max-h-[70dvh]" : "max-h-[calc(100dvh-9rem)]",
           )}
         >
