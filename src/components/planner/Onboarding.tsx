@@ -68,7 +68,7 @@ export default function Onboarding({
 
   const steps = [
     {
-      title: `Welcome, ${firstName(userName)}`,
+      title: demoMode ? "Welcome to Travel Planner" : `Welcome, ${firstName(userName)}`,
       body: "Plan a trip together: where you'll stay, what you'll do each day, and who paid for what.",
       art: (
         <div className="flex items-center justify-center gap-3">
@@ -243,6 +243,12 @@ export default function Onboarding({
                 {pending && <Loader2 className="animate-spin" />}
                 Keep exploring
               </Button>
+              <p className="pt-1 text-center text-sm text-muted">
+                Already have an account?{" "}
+                <Link href="/login" className="-my-2.5 inline-block py-2.5 font-medium text-ink">
+                  Log in
+                </Link>
+              </p>
             </>
           ) : ownTeamId ? (
             <>

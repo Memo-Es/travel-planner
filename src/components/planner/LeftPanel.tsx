@@ -141,7 +141,7 @@ export default function LeftPanel({
                 className="focus-inset tap-target mt-2 flex w-full items-center justify-between gap-2 rounded-full bg-accent-soft px-4 py-2 text-sm text-accent-ink transition-colors duration-150 hover:bg-accent-soft/70"
               >
                 <span>Sample trip</span>
-                <span className="font-medium">Sign up for your own →</span>
+                <span className="font-medium">Sign up →</span>
               </Link>
             ) : (
               <p className="mt-2 rounded-full bg-accent-soft px-4 py-2 text-center text-sm text-accent-ink">
@@ -233,22 +233,30 @@ export default function LeftPanel({
         </nav>
 
         <footer className="mt-auto flex shrink-0 items-center justify-between gap-2 pt-4">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <Avatar name={userName} />
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-medium text-ink">
-                {userName}
+          {/* The demo has nobody signed in to show, just the ways in. */}
+          {!demoMode && (
+            <div className="flex min-w-0 items-center gap-2.5">
+              <Avatar name={userName} />
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-medium text-ink">
+                  {userName}
+                </span>
+                <span className="block truncate text-xs tabular-nums text-muted-2">
+                  {trips.length} {trips.length === 1 ? "stop" : "stops"} ·{" "}
+                  {todayLabel}
+                </span>
               </span>
-              <span className="block truncate text-xs tabular-nums text-muted-2">
-                {trips.length} {trips.length === 1 ? "stop" : "stops"} ·{" "}
-                {todayLabel}
-              </span>
-            </span>
-          </div>
+            </div>
+          )}
           {demoMode ? (
-            <Button asChild size="sm" className="shrink-0">
-              <Link href="/signup">Sign up</Link>
-            </Button>
+            <div className="grid flex-1 grid-cols-2 gap-1.5">
+              <Button asChild variant="secondary">
+                <Link href="/login">Log in</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/signup">Sign up</Link>
+              </Button>
+            </div>
           ) : (
             <form action={logout} className="shrink-0">
               <Button type="submit" variant="secondary" size="sm">
