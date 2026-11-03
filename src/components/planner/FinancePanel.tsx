@@ -166,7 +166,7 @@ export default function FinancePanel({
                     aria-pressed={selected}
                     onClick={() => setFilter(f)}
                     className={cn(
-                      "relative isolate h-8 shrink-0 whitespace-nowrap rounded-full px-2.5 text-sm font-medium focus-inset transition-colors duration-150",
+                      "relative isolate h-8 shrink-0 whitespace-nowrap rounded-full px-2.5 text-sm font-medium focus-inset tap-target transition-colors duration-150",
                       selected ? "text-ink" : "text-muted-2 hover:text-ink",
                     )}
                   >

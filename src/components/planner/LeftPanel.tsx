@@ -130,7 +130,7 @@ export default function LeftPanel({
               <button
                 type="button"
                 onClick={() => onSwitchTeam(sampleOwnTeamId)}
-                className="focus-inset mt-2 flex w-full items-center justify-between gap-2 rounded-full bg-accent-soft px-4 py-2 text-sm text-accent-ink transition-colors duration-150 hover:bg-accent-soft/70"
+                className="focus-inset tap-target mt-2 flex w-full items-center justify-between gap-2 rounded-full bg-accent-soft px-4 py-2 text-sm text-accent-ink transition-colors duration-150 hover:bg-accent-soft/70"
               >
                 <span>Sample trip</span>
                 <span className="font-medium">Start my own →</span>
@@ -138,7 +138,7 @@ export default function LeftPanel({
             ) : demoMode ? (
               <Link
                 href="/signup"
-                className="focus-inset mt-2 flex w-full items-center justify-between gap-2 rounded-full bg-accent-soft px-4 py-2 text-sm text-accent-ink transition-colors duration-150 hover:bg-accent-soft/70"
+                className="focus-inset tap-target mt-2 flex w-full items-center justify-between gap-2 rounded-full bg-accent-soft px-4 py-2 text-sm text-accent-ink transition-colors duration-150 hover:bg-accent-soft/70"
               >
                 <span>Sample trip</span>
                 <span className="font-medium">Sign up for your own →</span>

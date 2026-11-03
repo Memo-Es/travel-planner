@@ -89,7 +89,7 @@ export default function SignupForm({ next }: { next?: string }) {
 
       <p className="text-center text-sm text-muted">
         Already have an account?{" "}
-        <Link href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="font-medium">
+        <Link href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"} className="-my-2.5 inline-block py-2.5 font-medium">
           Sign in
         </Link>
       </p>

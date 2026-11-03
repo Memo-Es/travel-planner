@@ -65,7 +65,7 @@ export default function LoginForm({ next, defaultEmail }: { next?: string; defau
 
       <p className="text-center text-sm text-muted">
         No account?{" "}
-        <Link href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"} className="font-medium">
+        <Link href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"} className="-my-2.5 inline-block py-2.5 font-medium">
           Create one
         </Link>
       </p>
