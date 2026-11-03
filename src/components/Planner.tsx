@@ -467,6 +467,7 @@ export default function Planner({
     () =>
       buildWeeks(cursor, shownEvents, {
         view: calView,
+        touch: isMobile,
         startWeekOn: "Sunday",
         mainWidth: width,
         todayMs,
@@ -475,7 +476,7 @@ export default function Planner({
         ),
         focus: trip ? { start: trip.start, end: trip.end } : null,
       }),
-    [cursor, calView, shownEvents, width, todayMs, shownPlans, trip],
+    [cursor, calView, shownEvents, width, todayMs, shownPlans, trip, isMobile],
   );
 
   const rangeStart = gridStart(cursor, calView, 0);
@@ -511,7 +512,7 @@ export default function Planner({
             setZoomedFrom(null);
           }}
           className={
-            "focus-inset relative isolate h-7 whitespace-nowrap rounded-full px-3 text-sm font-medium transition-colors duration-150 " +
+            "focus-inset tap-target relative isolate h-7 whitespace-nowrap rounded-full px-3 text-sm font-medium transition-colors duration-150 " +
             (isMobile ? "flex-1 " : "") +
             (calView === v.id ? "text-ink" : "text-muted-2 hover:text-ink")
           }
@@ -1052,12 +1053,6 @@ export default function Planner({
         />
       )}
 
-      {isMobile && (
-        <MobileTabs
-          active={mobileTab}
-          onChange={setMobileTab}
-        />
-      )}
 
       {showLeftRail && (
         <LeftRail
@@ -1258,6 +1253,14 @@ export default function Planner({
           onOpenFinances={() =>
             rightTucked ? setItineraryFolded(true) : setOverlay("finances")
           }
+        />
+      )}
+
+      {/* At the bottom on phones, within thumb reach. */}
+      {isMobile && (
+        <MobileTabs
+          active={mobileTab}
+          onChange={setMobileTab}
         />
       )}
 

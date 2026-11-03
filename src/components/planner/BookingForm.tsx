@@ -355,7 +355,8 @@ export default function BookingForm({
           to {MAX_PDF_MB} MB.
         </p>
       )}
-      <div className="flex justify-end gap-2 pt-1">
+      {/* Stays in view at the bottom while a long form scrolls. */}
+      <div className="sticky bottom-0 z-10 -mx-1 flex justify-end gap-2 bg-gradient-to-t from-white from-70% to-transparent px-1 pb-1 pt-4">
         <Button variant="secondary" size="sm" disabled={saving} onClick={onCancel}>
           Cancel
         </Button>

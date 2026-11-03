@@ -65,7 +65,7 @@ function PlanLine({
           .join(", ")}`
       }
       className={cn(
-        "relative z-bar-focus -mx-1 flex min-w-0 gap-1 rounded px-1 py-0.5 text-left text-[11px] leading-4 text-ink-soft transition-colors duration-150 hover:bg-secondary",
+        "relative z-bar-focus -mx-1 flex min-w-0 gap-1 rounded px-1 py-0.5 text-left text-[11px] leading-4 text-ink-soft transition-colors duration-150 hover:bg-secondary [@media(pointer:coarse)]:py-1",
         wrap ? "items-start" : "items-center",
         className,
       )}

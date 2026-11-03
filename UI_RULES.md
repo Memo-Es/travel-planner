@@ -72,6 +72,11 @@ inventing new ones.
   buddies, timed plans, shared costs) and a one-time welcome walkthrough that
   ends in "Start my own trip" or "Explore the sample trip". The sample shows a
   "Sample trip · Start my own" chip in the Trips panel.
+- Phones: the Trips / Calendar / Finances tabs sit at the bottom, in thumb reach.
+  Form fields use 16px text below the sm breakpoint so iOS doesn't zoom on focus.
+  On touch screens every button, tab and pill reaches 44px to the finger via an
+  invisible ::after margin (`ui-button`, `tap-target`), calendar bars are taller,
+  menu items are 44px, and a booking form's actions stay pinned as it scrolls.
 - Add rows: the last row of a list is a dashed-square placeholder ("Add stop") in
   gray, not a separate outlined button (`AddRow`).
 - Lists have no dividers: rows are borderless, separated by spacing, with a soft

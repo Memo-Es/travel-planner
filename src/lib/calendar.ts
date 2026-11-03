@@ -84,6 +84,8 @@ export function buildWeeks(
     view: CalendarView;
     startWeekOn: "Sunday" | "Monday";
     mainWidth: number;
+    /** Touch screens: taller bars, easier to tap. */
+    touch?: boolean;
     todayMs: number;
     /** Plans per day, which get room under the bars. */
     planCounts?: Map<string, number>;
@@ -101,8 +103,8 @@ export function buildWeeks(
   const pillMin = Math.max(52, Math.min(96, Math.round(cellW * 2.4)));
   const pillCols = Math.min(7, Math.max(1, Math.ceil(pillMin / cellW)));
   const band = 24;
-  const pitch = 23;
-  const pillH = 21;
+  const pitch = opts.touch ? 29 : 23;
+  const pillH = opts.touch ? 26 : 21;
 
   const weeks: CalendarWeek[] = [];
 
@@ -200,7 +202,7 @@ export function buildWeeks(
           gap: 5,
           padding: "0 6px",
           boxSizing: "border-box",
-          fontSize: 11.5,
+          fontSize: opts.touch ? 12.5 : 11.5,
           lineHeight: 1,
           color: e.isNote ? "#57534e" : c ? c.ink : ACCENT_INK, // stone-600
           background: e.isNote ? "#f5f5f4" : c ? c.soft : ACCENT_SOFT, // stone-100

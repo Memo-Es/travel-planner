@@ -94,6 +94,23 @@
   .focus-inset:focus-visible {
     outline-offset: -2px;
   }
+  /* On touch screens, buttons, tabs and pills reach at least 44px to the
+     finger without growing visually: an invisible margin takes the tap. */
+  @media (pointer: coarse) {
+    .ui-button:not(.absolute):not(.fixed),
+    .tap-target:not(.absolute):not(.fixed) {
+      position: relative;
+    }
+    /* Grows each side just enough to reach 44px, and never shrinks a
+       control that's already bigger: percentages here are of the
+       control's own height (top, bottom) and width (left, right). */
+    .ui-button::after,
+    .tap-target::after {
+      content: "";
+      position: absolute;
+      inset: min(0px, calc((100% - 44px) / 2));
+    }
+  }
   .scroll-stable {
     scrollbar-gutter: stable;
   }

@@ -444,7 +444,7 @@ export function StopSchedule({
                   aria-label={c.label}
                   aria-pressed={active}
                   title={c.label}
-                  className="flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-hover"
+                  className="tap-target flex size-9 items-center justify-center rounded-lg transition-colors hover:bg-hover"
                 >
                   <span
                     className="flex size-6 items-center justify-center rounded-full"
@@ -562,7 +562,7 @@ export function StopSchedule({
                 tabIndex={active ? 0 : -1}
                 onClick={() => setTab(sec.key)}
                 className={
-                  "focus-inset relative isolate flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-2 text-sm font-medium transition-colors duration-150 " +
+                  "focus-inset tap-target relative isolate flex h-8 min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-2 text-sm font-medium transition-colors duration-150 " +
                   (active ? "text-ink" : "text-muted-2 hover:text-ink")
                 }
               >
@@ -628,7 +628,7 @@ export function StopSchedule({
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
                   <button
-                    className="text-pretty rounded text-left text-base font-medium leading-6 text-ink"
+                    className="tap-target text-pretty rounded text-left text-base font-medium leading-6 text-ink"
                     onClick={() => onStartEdit(sec.key, item.id, editState(item))}
                   >
                     {item.t}
@@ -776,7 +776,12 @@ export function StopSchedule({
                     <div className="mb-2 flex items-center gap-2.5 rounded-2xl bg-secondary py-1.5 pl-3.5 pr-1.5 text-xs text-ink-soft">
                       <GripVertical className="size-3.5 shrink-0 text-muted-2" />
                       <p className="flex-1 text-pretty leading-relaxed">
-                        Drag a plan onto a day above to move it there.
+                        <span className="[@media(pointer:coarse)]:hidden">
+                          Drag a plan onto a day above to move it there.
+                        </span>
+                        <span className="hidden [@media(pointer:coarse)]:inline">
+                          Use ⋯ on a plan to move it to another day.
+                        </span>
                       </p>
                       <Button
                         variant="ghost"
