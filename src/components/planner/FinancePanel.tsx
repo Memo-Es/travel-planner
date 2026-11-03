@@ -150,7 +150,7 @@ export default function FinancePanel({
   return (
     <aside aria-label="Finances" className={card + " p-5 " + positionClass}>
       <div className="scroll-stable scroll-quiet -mx-2 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-2 pb-2">
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex min-h-10 items-center justify-between gap-2">
           <div
             role="group"
             aria-label="Filter by category"
@@ -197,19 +197,12 @@ export default function FinancePanel({
           )}
         </div>
 
-        <header className="mt-6">
-          <h2 className="text-sm font-medium text-ink">
-            <TransitionText value={`${filter}-${stop?.id ?? ""}`}>
-              {active
-                ? `${active.name} spend${stop ? ` in ${stop.label}` : ""}`
-                : stop
-                  ? `Spent in ${stop.label}`
-                  : "Total spent"}
-            </TransitionText>
-          </h2>
+        {/* The amount is the headline, level with the trip name and the
+            month beside it; what it's a total of sits underneath. */}
+        <header className="mt-3">
           <p
             className={cn(
-              "mt-1 font-semibold tabular-nums text-ink",
+              "font-semibold leading-none tabular-nums text-ink",
               // Sized by the overall total, the biggest figure, so switching
               // categories doesn't resize it.
               money(total).length > 11
@@ -222,7 +215,16 @@ export default function FinancePanel({
               format={money}
             />
           </p>
-          <p className="mt-2 text-pretty text-xs leading-relaxed tabular-nums text-muted-2">
+          <h2 className="mt-2.5 text-sm font-medium text-ink">
+            <TransitionText value={`${filter}-${stop?.id ?? ""}`}>
+              {active
+                ? `${active.name} spend${stop ? ` in ${stop.label}` : ""}`
+                : stop
+                  ? `Spent in ${stop.label}`
+                  : "Total spent"}
+            </TransitionText>
+          </h2>
+          <p className="mt-1 text-pretty text-xs leading-relaxed tabular-nums text-muted-2">
             <TransitionText value={`${filter}-${stop?.id ?? ""}`}>
               {active
                 ? `${active.count} ${active.count === 1 ? "expense" : "expenses"} · ${active.share}% of ${money(total)}`

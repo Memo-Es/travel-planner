@@ -289,7 +289,7 @@ export function StopSchedule({
   return (
     <>
       <header className="shrink-0">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex min-h-10 items-center justify-between gap-2">
           {inline ? (
             dateButton
           ) : (
@@ -352,7 +352,11 @@ export function StopSchedule({
           className={
             editingLabel
               ? "sr-only"
-              : "text-balance break-words text-2xl font-semibold text-ink"
+              : cn(
+                  "text-balance break-words text-2xl font-semibold text-ink",
+                  // Inline, level with the trip name beside it.
+                  inline && "mt-3",
+                )
           }
         >
           {trip.label}

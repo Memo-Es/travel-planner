@@ -105,7 +105,7 @@ export default function LeftPanel({
         }
       >
         <header className="shrink-0">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex min-h-10 items-center justify-between gap-2">
             <p className="section-label">Your itinerary</p>
             <Button
               variant="secondary"
@@ -117,7 +117,7 @@ export default function LeftPanel({
               {showClose ? <X /> : <Settings2 />}
             </Button>
           </div>
-          <h2 className="mt-1 text-balance break-words text-2xl font-semibold text-ink">
+          <h2 className="mt-3 text-balance break-words text-2xl font-semibold text-ink">
             {teamName}
           </h2>
           {status && (
