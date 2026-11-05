@@ -49,9 +49,10 @@ inventing new ones.
 - The calendar has Month, 2 weeks and Week views (a text-only segmented control;
   full width under the title on mobile). Week views title the date range, list a
   day's plans under its bars and step by their own length.
-- Month view gives each day one plan line: time and name with "+n". Where a day is
-  under 64px wide (phones, narrow middle column) that line is one dot per plan in
-  its stop's colour, "+n" after three, so no text spills into the next day.
+- Month view gives each day one plan line, sized to the day's measured width so
+  nothing reaches the next day: under 70px (phones) one dot per plan in its
+  stop's colour, "+n" after three; under 100px the time and "+n"; wider, the time,
+  name and "+n". A name only shows with room for a few letters, never cut to one.
 - Opening a stop zooms the calendar to the tightest view that shows it whole
   (week, 2 weeks or month) and gives it the calendar to itself: other stops,
   holidays and their plans are hidden and days outside it are grayed; closing it returns to the
