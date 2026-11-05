@@ -379,18 +379,31 @@ export default function Planner({
   // itinerary away (the stop stays selected) and Finances returns.
   const rightTucked =
     showItinerary && vw - 48 - RIGHT_W - STOP_W < ROOMY_MAIN;
-  const rightCol = rightTucked ? RAIL_W : RIGHT_W;
+  // On compact screens both sides start as rails and open one at a time,
+  // pushing the calendar over rather than covering it.
   const activeOverlay = isCompact ? overlay : null;
+  const rightCol = isCompact
+    ? activeOverlay === "finances" ? RIGHT_W : RAIL_W
+    : rightTucked ? RAIL_W : RIGHT_W;
 
-  // An open stop's itinerary sits beside the stops list. On wide screens the
-  // left column grows to fit it and the calendar narrows (keeping at least
-  // MIN_OPEN_MAIN); on compact ones the panel grows over the calendar beside
-  // the rail. On mobile the stop takes the Trips tab instead.
-  const stopWidth = isCompact
-    ? Math.max(LEFT_W, Math.min(STOP_W, vw - (RAIL_W + 20) - (RAIL_W + 24)))
-    : Math.max(LEFT_W, Math.min(STOP_W, vw - 48 - rightCol - MIN_OPEN_MAIN));
-  const leftCol = showItinerary ? stopWidth : LEFT_W;
-  const width = mainWidth(vw, mode, leftCol, rightCol, RAIL_W);
+  // An open stop's itinerary sits beside the stops list: the left column
+  // grows to fit it and the calendar narrows, keeping at least
+  // MIN_OPEN_MAIN. On mobile the stop takes the Trips tab instead.
+  const stopWidth = Math.max(
+    LEFT_W,
+    Math.min(STOP_W, vw - 48 - rightCol - MIN_OPEN_MAIN),
+  );
+  // Compact screens have no room for the list beside it, so an open stop's
+  // itinerary takes the column alone (its back button returns to the list).
+  const stopAloneWidth = Math.max(
+    LEFT_W,
+    Math.min(STOP_W - LEFT_W, vw - 48 - RAIL_W - MIN_OPEN_MAIN),
+  );
+  const stopAlone = (isMobile || isCompact) && !!trip;
+  const leftCol = isCompact
+    ? activeOverlay === "links" ? (trip ? stopAloneWidth : LEFT_W) : RAIL_W
+    : showItinerary ? stopWidth : LEFT_W;
+  const width = mainWidth(vw, isMobile ? "mobile" : "full", leftCol, rightCol, RAIL_W);
   // The left panel opens the days of the last stop you opened, falling back to the stop
   // happening now (or next).
   const itineraryTrip = trips.some((t) => t.id === itineraryTripId)
@@ -949,14 +962,12 @@ export default function Planner({
   const shellStyle = isMobile
     ? undefined
     : {
-        gridTemplateColumns: isCompact
-          ? `${RAIL_W}px minmax(0,1fr) ${RAIL_W}px`
-          : `${leftCol}px minmax(0,1fr) ${rightCol}px`,
+        gridTemplateColumns: `${leftCol}px minmax(0,1fr) ${rightCol}px`,
       };
 
-  const showBackdrop = !!activeOverlay;
-  const showLeftRail = isCompact;
-  const showRightRail = isCompact || rightTucked;
+  const showLeftRail = isCompact && activeOverlay !== "links";
+  const showRightRail =
+    (isCompact && activeOverlay !== "finances") || rightTucked;
   const showLeftPanel = isMobile
     ? mobileTab === "links"
     : mode === "full" || activeOverlay === "links";
@@ -1043,13 +1054,6 @@ export default function Planner({
         </AlertDialogContent>
       </AlertDialog>
 
-      {showBackdrop && (
-        <div
-          aria-hidden="true"
-          onClick={closeOverlay}
-          className="absolute inset-0 z-backdrop bg-ink/15"
-        />
-      )}
 
 
       {showLeftRail && (
@@ -1060,15 +1064,17 @@ export default function Planner({
         />
       )}
 
-      {showLeftPanel && isMobile && trip && (
-        <aside aria-label={trip.label} className={CARD + " flex-1 min-h-0 p-5"}>
+      {showLeftPanel && stopAlone && trip && (
+        <aside
+          aria-label={trip.label}
+          className={CARD + (isMobile ? " flex-1 min-h-0 p-5" : " min-h-0 min-w-0 p-5")}
+        >
           {stopSchedule(trip, false)}
         </aside>
       )}
-      {showLeftPanel && !(isMobile && trip) && (
+      {showLeftPanel && !stopAlone && (
         <LeftPanel
           card={CARD}
-          overlay={activeOverlay === "links"}
           isMobile={isMobile}
           trips={trips}
           selectedTripId={itineraryTrip}
@@ -1086,11 +1092,10 @@ export default function Planner({
                 : closeDrawer()
           }
           detail={
-            trip && !isMobile && (isCompact || showItinerary)
+            trip && showItinerary
               ? stopSchedule(trip, true)
               : null
           }
-          width={isCompact ? stopWidth : null}
           onAddTrip={handleAddTrip}
           addingTrip={addingTrip}
           onClose={closeOverlay}
@@ -1275,7 +1280,6 @@ export default function Planner({
       {showRightPanel && (
         <FinancePanel
           card={CARD}
-          overlay={activeOverlay === "finances"}
           isMobile={isMobile}
           trips={trips}
           stop={trip}

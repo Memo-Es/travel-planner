@@ -30,7 +30,6 @@ const EPS = 0.005;
 
 export default function FinancePanel({
   card,
-  overlay,
   isMobile,
   trips: allTrips,
   stop,
@@ -45,7 +44,6 @@ export default function FinancePanel({
   currentUserId,
 }: {
   card: string;
-  overlay: boolean;
   isMobile: boolean;
   trips: TripData[];
   /** The open stop, which narrows Finances to its bookings. */
@@ -77,9 +75,7 @@ export default function FinancePanel({
         },
   };
   const ids = useId();
-  const overlayBox =
-    "absolute bottom-3 right-[74px] top-3 z-panel w-[320px] shadow-overlay";
-  const positionClass = overlay ? overlayBox : isMobile ? "flex-1 min-h-0" : "";
+  const positionClass = isMobile ? "flex-1 min-h-0" : "";
   const money = (value: number) => formatTotal(value, currency);
 
   const costed = (item: ItemData) => item.costAmount !== null;
@@ -205,9 +201,7 @@ export default function FinancePanel({
               "font-semibold leading-none tabular-nums text-ink",
               // Sized by the overall total, the biggest figure, so switching
               // categories doesn't resize it.
-              money(total).length > 11
-                ? "text-3xl"
-                : "text-4xl",
+              money(total).length > 11 ? "text-3xl" : "text-4xl",
             )}
           >
             <AnimatedNumber

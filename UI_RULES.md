@@ -49,6 +49,9 @@ inventing new ones.
 - The calendar has Month, 2 weeks and Week views (a text-only segmented control;
   full width under the title on mobile). Week views title the date range, list a
   day's plans under its bars and step by their own length.
+- Month view gives each day one plan line: time and name with "+n". Where a day is
+  under 64px wide (phones, narrow middle column) that line is one dot per plan in
+  its stop's colour, "+n" after three, so no text spills into the next day.
 - Opening a stop zooms the calendar to the tightest view that shows it whole
   (week, 2 weeks or month) and gives it the calendar to itself: other stops,
   holidays and their plans are hidden and days outside it are grayed; closing it returns to the
@@ -118,8 +121,12 @@ inventing new ones.
   440px), and on monitors too small to keep the calendar roomy (640px) Finances
   tucks into its rail. The rail swaps them back: the itinerary folds away (the stop
   stays selected and Finances shows its costs) and clicking the stop unfolds it.
-  On compact screens it grows over the calendar. Finances narrows to the
-  stop's costs; there is no stop drawer.
+  On compact screens (under ~1240px) both sides start as rails and open one at a
+  time, pushing the calendar over, never covering it with a backdrop: Trips or
+  Finances takes its column, and the other side stays a rail. An open stop's
+  itinerary takes the Trips column alone there (no room for the list beside it);
+  its back button returns to the list. Finances narrows to the stop's costs;
+  there is no stop drawer.
 - Control feedback uses 150ms transitions; overlays use 200ms. Honor reduced motion.
   Animate only `transform` and `opacity`, with the standard `easeOut` curve.
 - Keep frequent actions immediate. Do not add decorative or looping animations.
