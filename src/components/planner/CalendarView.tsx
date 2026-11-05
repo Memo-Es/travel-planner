@@ -13,6 +13,11 @@ import { cn } from "@/lib/utils";
 
 const WEEKDAYS_FULL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAYS_SHORT = ["S", "M", "T", "W", "T", "F", "S"];
+/** Below this day width (phones) a time crowds the next day, so a day's
+ * plans show as dots instead. */
+const COMPACT_DAY_W = 64;
+/** Dots a compact day shows before "+n". */
+const COMPACT_DOTS = 3;
 
 const handleStyle = {
   position: "absolute" as const,
@@ -29,11 +34,7 @@ function Bar({
   interactive,
   ...props
 }: { interactive: boolean } & React.HTMLAttributes<HTMLElement>) {
-  return interactive ? (
-    <button type="button" {...props} />
-  ) : (
-    <div {...props} />
-  );
+  return interactive ? <button type="button" {...props} /> : <div {...props} />;
 }
 
 /** One plan in a day: its stop's dot, time and name. */
@@ -41,11 +42,15 @@ function PlanLine({
   plan,
   all,
   wrap,
+  compact,
   onOpen,
   className,
 }: {
   /** Let a long name run onto a second line, in days wide enough for it. */
   wrap?: boolean;
+  /** Days too narrow for a time (phones): one dot per plan, in its stop's
+   * colour, and "+n" past a few. */
+  compact?: boolean;
   plan: Plan;
   /** On a one-line preview, every plan that day: the rest show as "+n" and
    * all of them in the tooltip and label. */
@@ -70,31 +75,55 @@ function PlanLine({
         className,
       )}
     >
-      <span
-        aria-hidden="true"
-        className={cn("size-1.5 shrink-0 rounded-full", wrap && "mt-[5px]")}
-        style={{ background: stopColor(plan.trip.color).base }}
-      />
-      {wrap ? (
-        // Time and name flow as one text, so a long name wraps under the time.
-        <span className="line-clamp-2 min-w-0 break-words">
-          {plan.item.time && (
-            <span className="font-medium tabular-nums">{plan.item.time} </span>
+      {compact && all ? (
+        <span
+          aria-hidden="true"
+          className="flex min-w-0 items-center gap-[3px] py-[5px]"
+        >
+          {all.slice(0, COMPACT_DOTS).map((p) => (
+            <span
+              key={p.item.id}
+              className="size-1.5 shrink-0 rounded-full"
+              style={{ background: stopColor(p.trip.color).base }}
+            />
+          ))}
+          {all.length > COMPACT_DOTS && (
+            <span className="ml-0.5 shrink-0 text-[10px] leading-none text-muted">
+              +{all.length - COMPACT_DOTS}
+            </span>
           )}
-          {plan.item.t}
         </span>
       ) : (
         <>
-          {plan.item.time && (
-            <span className="shrink-0 font-medium tabular-nums">
-              {plan.item.time}
+          <span
+            aria-hidden="true"
+            className={cn("size-1.5 shrink-0 rounded-full", wrap && "mt-[5px]")}
+            style={{ background: stopColor(plan.trip.color).base }}
+          />
+          {wrap ? (
+            // Time and name flow as one text, so a long name wraps under the time.
+            <span className="line-clamp-2 min-w-0 break-words">
+              {plan.item.time && (
+                <span className="font-medium tabular-nums">
+                  {plan.item.time}{" "}
+                </span>
+              )}
+              {plan.item.t}
             </span>
+          ) : (
+            <>
+              {plan.item.time && (
+                <span className="shrink-0 font-medium tabular-nums">
+                  {plan.item.time}
+                </span>
+              )}
+              <span className="min-w-0 truncate">{plan.item.t}</span>
+            </>
           )}
-          <span className="min-w-0 truncate">{plan.item.t}</span>
+          {all && all.length > 1 && (
+            <span className="shrink-0 text-muted">+{all.length - 1}</span>
+          )}
         </>
-      )}
-      {all && all.length > 1 && (
-        <span className="shrink-0 text-muted">+{all.length - 1}</span>
       )}
     </button>
   );
@@ -166,6 +195,7 @@ export default function CalendarView({
                   <PlanLine
                     plan={first}
                     all={dayPlans}
+                    compact={width / 7 < COMPACT_DAY_W}
                     onOpen={onOpenPlan}
                     className="mb-1 mt-auto"
                   />
