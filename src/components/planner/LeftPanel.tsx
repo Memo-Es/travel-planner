@@ -5,12 +5,8 @@ import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   AnimatedBackground,
-  accordionSpring,
 } from "@/components/motion/primitives";
-import {
-  X,
-  Settings2,
-} from "lucide-react";
+import { X, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { NativeSelect } from "@/components/ui/input";
@@ -20,11 +16,10 @@ import { statusFor } from "@/lib/tripStatus";
 import { AddRow } from "@/components/planner/AddRow";
 import { StopIcon } from "@/components/planner/StopIcon";
 import { logout } from "@/actions/team";
-import { LEFT_W, stopColor } from "@/lib/theme";
+import { stopColor } from "@/lib/theme";
 
 export default function LeftPanel({
   card,
-  overlay,
   isMobile,
   trips,
   selectedTripId,
@@ -43,10 +38,8 @@ export default function LeftPanel({
   sampleOwnTeamId,
   demoMode,
   detail,
-  width,
 }: {
   card: string;
-  overlay: boolean;
   isMobile: boolean;
   trips: TripData[];
   selectedTripId: string | null;
@@ -70,14 +63,10 @@ export default function LeftPanel({
   demoMode?: boolean;
   /** The open stop's itinerary, shown beside the list. */
   detail: ReactNode;
-  /** How wide the panel grows over the calendar to fit it, on compact
-   * screens; null where its grid column makes room instead. */
-  width: number | null;
 }) {
   const highlightId = useId();
   const reduce = !!useReducedMotion();
-  const overlayBox = "absolute bottom-3 left-[74px] top-3 z-panel shadow-overlay";
-  const positionClass = overlay ? overlayBox : isMobile ? "flex-1 min-h-0" : "";
+  const positionClass = isMobile ? "flex-1 min-h-0" : "";
 
   // The whole itinerary, first arrival to last departure.
   const status = trips.length
@@ -90,18 +79,12 @@ export default function LeftPanel({
   return (
     <motion.aside
       aria-label="Trips"
-      initial={false}
-      animate={
-        width === null || isMobile
-          ? undefined
-          : { width: detail ? width : LEFT_W }
-      }
-      transition={reduce ? { duration: 0 } : accordionSpring}
       className={card + " !flex-row p-5 " + positionClass}
     >
       <div
         className={
-          "flex min-h-0 flex-col " + (isMobile ? "flex-1" : "w-[232px] shrink-0")
+          "flex min-h-0 flex-col " +
+          (isMobile ? "flex-1" : "w-[232px] shrink-0")
         }
       >
         <header className="shrink-0">

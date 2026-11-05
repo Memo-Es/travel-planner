@@ -121,8 +121,12 @@ inventing new ones.
   440px), and on monitors too small to keep the calendar roomy (640px) Finances
   tucks into its rail. The rail swaps them back: the itinerary folds away (the stop
   stays selected and Finances shows its costs) and clicking the stop unfolds it.
-  On compact screens it grows over the calendar. Finances narrows to the
-  stop's costs; there is no stop drawer.
+  On compact screens (under ~1240px) both sides start as rails and open one at a
+  time, pushing the calendar over, never covering it with a backdrop: Trips or
+  Finances takes its column, and the other side stays a rail. An open stop's
+  itinerary takes the Trips column alone there (no room for the list beside it);
+  its back button returns to the list. Finances narrows to the stop's costs;
+  there is no stop drawer.
 - Control feedback uses 150ms transitions; overlays use 200ms. Honor reduced motion.
   Animate only `transform` and `opacity`, with the standard `easeOut` curve.
 - Keep frequent actions immediate. Do not add decorative or looping animations.
