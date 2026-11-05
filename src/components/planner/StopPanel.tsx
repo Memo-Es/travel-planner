@@ -139,12 +139,15 @@ export function StopSchedule({
   useEffect(() => {
     if (!inline) backRef.current?.focus({ preventScroll: true });
   }, [inline]);
-  const [editingDates, setEditingDates] = useState(false);
+  // The stop's own details (name and dates) are edited together in one
+  // form under the header.
+  const [editingStop, setEditingStop] = useState(false);
   const [startDraft, setStartDraft] = useState(trip.start);
   const [endDraft, setEndDraft] = useState(trip.end);
-  const [editingLabel, setEditingLabel] = useState(false);
   const [labelDraft, setLabelDraft] = useState(trip.label);
   const datesValid = !!startDraft && !!endDraft && endDraft >= startDraft;
+  const labelValid = labelDraft.trim().length > 0;
+  const nameRef = useRef<HTMLInputElement>(null);
   // One section at a time. Editing a plan from elsewhere (the left panel,
   // Finances) opens its section.
   const [tab, setTab] = useState<ItemSectionKey>(editing?.key ?? "activities");
@@ -259,10 +262,22 @@ export function StopSchedule({
       ?.focus();
   }
 
-  function saveLabel() {
-    const trimmed = labelDraft.trim();
-    if (trimmed && trimmed !== trip.label) onRename(trip.id, trimmed);
-    setEditingLabel(false);
+  function openEditStop() {
+    if (editingStop) return setEditingStop(false);
+    setLabelDraft(trip.label);
+    setStartDraft(trip.start);
+    setEndDraft(trip.end);
+    setEditingStop(true);
+    // After the form has opened.
+    setTimeout(() => nameRef.current?.focus(), 60);
+  }
+  function saveStop() {
+    if (!datesValid || !labelValid) return;
+    const label = labelDraft.trim();
+    if (label !== trip.label) onRename(trip.id, label);
+    if (startDraft !== trip.start || endDraft !== trip.end)
+      onUpdateDates(trip.id, startDraft, endDraft);
+    setEditingStop(false);
   }
 
   const dateButton = (
@@ -270,13 +285,9 @@ export function StopSchedule({
       variant="ghost"
       size="sm"
       className="-ml-2.5 h-7 min-w-0 max-w-full px-2.5 font-medium tabular-nums text-muted-2"
-      aria-expanded={editingDates}
-      aria-label={`Change dates, ${fmtRange(trip.start, trip.end)}`}
-      onClick={() => {
-        setStartDraft(trip.start);
-        setEndDraft(trip.end);
-        setEditingDates((v) => !v);
-      }}
+      aria-expanded={editingStop}
+      aria-label={`Edit stop, ${fmtRange(trip.start, trip.end)}`}
+      onClick={openEditStop}
     >
       <CalendarDays />
       <span className="truncate">
@@ -305,6 +316,15 @@ export function StopSchedule({
             </Button>
           )}
           <div className="-mr-1 flex shrink-0 gap-1.5">
+            <Button
+              variant={editingStop ? "accent" : "secondary"}
+              size="sm"
+              aria-expanded={editingStop}
+              onClick={openEditStop}
+            >
+              <Pencil />
+              Edit
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -316,14 +336,9 @@ export function StopSchedule({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onSelect={() => {
-                    setLabelDraft(trip.label);
-                    setEditingLabel(true);
-                  }}
-                >
+                <DropdownMenuItem onSelect={openEditStop}>
                   <Pencil />
-                  Rename stop
+                  Edit name and dates
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   destructive
@@ -349,35 +364,14 @@ export function StopSchedule({
         {!inline && <div className="mt-4">{dateButton}</div>}
         <h2
           id={`${tabsId}-title`}
-          className={
-            editingLabel
-              ? "sr-only"
-              : cn(
-                  "text-balance break-words text-2xl font-semibold text-ink",
-                  // Inline, level with the trip name beside it.
-                  inline && "mt-3",
-                )
-          }
+          className={cn(
+            "text-balance break-words text-2xl font-semibold text-ink",
+            // Inline, level with the trip name beside it.
+            inline && "mt-3",
+          )}
         >
           {trip.label}
         </h2>
-        {editingLabel && (
-          <Input
-            className="mt-1"
-            aria-label="Stop name"
-            value={labelDraft}
-            onChange={(e) => setLabelDraft(e.target.value)}
-            autoFocus
-            onBlur={saveLabel}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") e.currentTarget.blur();
-              if (e.key === "Escape") {
-                e.stopPropagation();
-                setEditingLabel(false);
-              }
-            }}
-          />
-        )}
         <p className="mt-4 rounded-full bg-secondary px-4 py-2.5 text-center text-sm font-medium tabular-nums text-ink">
           {statusFor(trip.start, trip.end)}
         </p>
@@ -387,8 +381,30 @@ export function StopSchedule({
         data-drag-scroll
         className="scroll-quiet -mx-2 mt-5 min-h-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto overscroll-contain px-2 pb-2"
       >
-        <Disclosure open={editingDates}>
-          <div className="space-y-4 rounded-2xl border border-line bg-white p-4">
+        <Disclosure open={editingStop}>
+          <form
+            aria-label="Edit stop"
+            className="space-y-4 rounded-2xl border border-line bg-white p-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              saveStop();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                e.stopPropagation();
+                setEditingStop(false);
+              }
+            }}
+          >
+            <label className="block min-w-0 space-y-1.5">
+              <span className="field-label">Name</span>
+              <Input
+                ref={nameRef}
+                value={labelDraft}
+                onChange={(e) => setLabelDraft(e.target.value)}
+                aria-invalid={!labelValid}
+              />
+            </label>
             <div className="grid grid-cols-2 gap-3">
               <label className="block min-w-0 space-y-1.5">
                 <span className="field-label">Arrival</span>
@@ -406,12 +422,17 @@ export function StopSchedule({
                   value={endDraft}
                   onChange={(e) => setEndDraft(e.target.value)}
                   aria-invalid={!datesValid}
-                  aria-describedby={!datesValid ? "date-error" : undefined}
+                  aria-describedby={!datesValid ? `${tabsId}-date-error` : undefined}
                 />
               </label>
             </div>
-            {!datesValid && (
-              <p id="date-error" className="field-error" role="alert">
+            {datesValid ? (
+              <p className="text-sm tabular-nums text-muted-2" aria-live="polite">
+                {fmtRange(startDraft, endDraft)} ·{" "}
+                {nightsBetween(startDraft, endDraft)} {nightsBetween(startDraft, endDraft) === 1 ? "night" : "nights"}
+              </p>
+            ) : (
+              <p id={`${tabsId}-date-error`} className="field-error" role="alert">
                 Choose a departure on or after arrival.
               </p>
             )}
@@ -419,22 +440,19 @@ export function StopSchedule({
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => setEditingDates(false)}
+                onClick={() => setEditingStop(false)}
               >
                 Cancel
               </Button>
               <Button
+                type="submit"
                 size="sm"
-                disabled={!datesValid}
-                onClick={() => {
-                  onUpdateDates(trip.id, startDraft, endDraft);
-                  setEditingDates(false);
-                }}
+                disabled={!datesValid || !labelValid}
               >
-                Save dates
+                Save
               </Button>
             </div>
-          </div>
+          </form>
         </Disclosure>
         <fieldset className="min-w-0">
           <legend className="field-label mb-2">Calendar color</legend>

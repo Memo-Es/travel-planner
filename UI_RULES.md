@@ -61,6 +61,10 @@ inventing new ones.
   day's plans in a bottom sheet (with the stop's day tabs); on wider screens, the itinerary beside the
   calendar on that plan's day. Either way the tapped plan is highlighted and
   scrolled into view.
+- A stop's own details are edited from its header: a visible Edit button (also the
+  date line and the ⋯ menu) opens one form under the header with its name, arrival
+  and departure, showing the night count as the dates change. Save or Cancel;
+  Escape cancels. Colour and icon are set directly below it.
 - Plan rows read: title, time, notes, link and PDF chips, then Join, with one ⋯
   menu (edit, move to a day, remove). A stop's activities show one day at a
   time behind day tabs, which also take a dragged plan.
