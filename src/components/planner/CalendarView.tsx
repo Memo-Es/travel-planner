@@ -1,6 +1,7 @@
 "use client";
 
 import type * as React from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Hotel, Plane } from "lucide-react";
 import {
   VIEW_PLANS,
@@ -13,10 +14,16 @@ import { cn } from "@/lib/utils";
 
 const WEEKDAYS_FULL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAYS_SHORT = ["S", "M", "T", "W", "T", "F", "S"];
-/** Below this day width (phones) a time crowds the next day, so a day's
- * plans show as dots instead. */
-const COMPACT_DAY_W = 64;
-/** Dots a compact day shows before "+n". */
+/** How much of a month day's plan line fits, by day width: dots alone
+ * (phones), the time and "+n", or the time, name and "+n". A name cut to a
+ * letter or two is noise, so it only shows with room to read. */
+type Density = "dots" | "time" | "full";
+const TIME_DAY_W = 70;
+const NAME_DAY_W = 100;
+function densityFor(dayW: number): Density {
+  return dayW < TIME_DAY_W ? "dots" : dayW < NAME_DAY_W ? "time" : "full";
+}
+/** Dots a day shows before "+n". */
 const COMPACT_DOTS = 3;
 
 const handleStyle = {
@@ -42,15 +49,15 @@ function PlanLine({
   plan,
   all,
   wrap,
-  compact,
+  density = "full",
   onOpen,
   className,
 }: {
   /** Let a long name run onto a second line, in days wide enough for it. */
   wrap?: boolean;
-  /** Days too narrow for a time (phones): one dot per plan, in its stop's
-   * colour, and "+n" past a few. */
-  compact?: boolean;
+  /** "dots": one per plan in its stop's colour, "+n" past a few. "time":
+   * the time (or the name, for a plan without one) and "+n". */
+  density?: Density;
   plan: Plan;
   /** On a one-line preview, every plan that day: the rest show as "+n" and
    * all of them in the tooltip and label. */
@@ -75,7 +82,7 @@ function PlanLine({
         className,
       )}
     >
-      {compact && all ? (
+      {density === "dots" && all ? (
         <span
           aria-hidden="true"
           className="flex min-w-0 items-center gap-[3px] py-[5px]"
@@ -117,7 +124,9 @@ function PlanLine({
                   {plan.item.time}
                 </span>
               )}
-              <span className="min-w-0 truncate">{plan.item.t}</span>
+              {(density === "full" || !plan.item.time) && (
+                <span className="min-w-0 truncate">{plan.item.t}</span>
+              )}
             </>
           )}
           {all && all.length > 1 && (
@@ -154,11 +163,26 @@ export default function CalendarView({
     clientX: number,
   ) => void;
 }) {
-  const weekdays = width / 7 < 48 ? WEEKDAYS_SHORT : WEEKDAYS_FULL;
+  // The real width of a day, measured, so what fits in it is decided on
+  // what's there; the panel's width (minus its padding) until it's measured.
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [measuredDayW, setMeasuredDayW] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setMeasuredDayW(el.clientWidth / 7));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const dayW = measuredDayW ?? width / 7;
+  const weekdays = dayW < 48 ? WEEKDAYS_SHORT : WEEKDAYS_FULL;
   const maxPlans = VIEW_PLANS[view];
 
   return (
-    <div className="scroll-quiet flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden">
+    <div
+      ref={gridRef}
+      className="scroll-quiet flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden"
+    >
       <div
         className="sticky top-0 z-sticky grid border-b border-line-soft bg-white pb-2"
         style={{ gridTemplateColumns: "repeat(7,minmax(0,1fr))" }}
@@ -195,7 +219,7 @@ export default function CalendarView({
                   <PlanLine
                     plan={first}
                     all={dayPlans}
-                    compact={width / 7 < COMPACT_DAY_W}
+                    density={densityFor(dayW)}
                     onOpen={onOpenPlan}
                     className="mb-1 mt-auto"
                   />
@@ -211,7 +235,7 @@ export default function CalendarView({
                         <li key={p.item.id} className="flex min-w-0 flex-col">
                           <PlanLine
                             plan={p}
-                            wrap={width / 7 >= 80}
+                            wrap={dayW >= 80}
                             onOpen={onOpenPlan}
                           />
                         </li>
