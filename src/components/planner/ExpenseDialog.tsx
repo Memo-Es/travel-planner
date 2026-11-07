@@ -104,7 +104,7 @@ export default function ExpenseDialog({
       }}
     >
       <DialogContent
-        placement={isMobile ? "bottom" : "center"}
+        placement={isMobile ? "bottom" : "right"}
         aria-describedby={`${id}-description`}
       >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line-soft pb-4">
