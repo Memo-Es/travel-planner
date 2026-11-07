@@ -367,6 +367,23 @@ export default function Planner({
     startTransition(() => router.refresh());
   }
 
+  // Server Actions only refresh the page for the person who ran one; a
+  // teammate's own tab, left open, never hears about it. Pick up what they
+  // added the moment this tab is looked at again, rather than leaving a
+  // stale trip on screen until something else happens to refresh it.
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible") refresh();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const mode = layoutMode(vw, LEFT_W, RIGHT_W, MIN_MAIN);
   const isMobile = mode === "mobile";
   const isCompact = mode === "compact";

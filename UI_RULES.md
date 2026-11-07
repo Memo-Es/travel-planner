@@ -168,6 +168,11 @@ They use Motion for React alongside the existing Radix accessibility behavior.
 - Sliding selection highlights use a short, damped spring, scoped to each list.
 - Inline forms fade and nudge in (opacity/transform only; never height). Exiting
   fields become inert so keyboard users cannot tab into content that is disappearing.
+- With no stop open and more than one stop costed, Finances' stop list offers a
+  By stop / All expenses toggle: by stop totals each one, all expenses lists every
+  costed item across the whole trip with which stop it's under, so nothing is only
+  reachable by opening that stop first. Tapping a row jumps to its stop and opens
+  it for editing, same as a stop's own expense rows do.
 - Accordions (Finances' stop list and balance card) follow Motion Primitives'
   Accordion: `AccordionBody` animates height and opacity together on a no-bounce
   spring (~350ms), so one card closing while the other opens trades space instead
