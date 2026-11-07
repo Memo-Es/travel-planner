@@ -5,7 +5,12 @@ import { z, ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { lookupDestinationPhoto } from "@/lib/photo";
 import { removeFile } from "@/lib/storage";
-import { CORS_HEADERS, MCP_PATH, originOf, verifyAccessToken } from "@/lib/oauth";
+import {
+  CORS_HEADERS,
+  MCP_PATH,
+  originOf,
+  verifyAccessToken,
+} from "@/lib/oauth";
 import { checkPlace, resolvePlacesKey } from "@/lib/places";
 import { recordCheckPlace } from "@/lib/places-usage";
 import {
@@ -15,6 +20,7 @@ import {
   itemAccess,
   moveItemToDay,
   setAttendance,
+  setPlanCost,
   stopAccess,
   stopLabelSchema,
   teamAccess,
@@ -42,7 +48,11 @@ const SECTIONS = {
   transport: "TRANSPORT",
   activity: "ACTIVITIES",
 } as const;
-const SECTION_NAMES = { STAY: "stay", TRANSPORT: "transport", ACTIVITIES: "activity" } as const;
+const SECTION_NAMES = {
+  STAY: "stay",
+  TRANSPORT: "transport",
+  ACTIVITIES: "activity",
+} as const;
 
 const day = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -51,7 +61,10 @@ function result(message: string, data?: unknown) {
     content: [
       {
         type: "text" as const,
-        text: data === undefined ? message : `${message}\n\n${JSON.stringify(data, null, 2)}`,
+        text:
+          data === undefined
+            ? message
+            : `${message}\n\n${JSON.stringify(data, null, 2)}`,
       },
     ],
   };
@@ -66,7 +79,9 @@ function tool<A>(fn: (args: A) => Promise<ReturnType<typeof result>>) {
     } catch (error) {
       const message =
         error instanceof ZodError
-          ? error.issues.map((i) => `${i.path.join(".") || "input"}: ${i.message}`).join("; ")
+          ? error.issues
+              .map((i) => `${i.path.join(".") || "input"}: ${i.message}`)
+              .join("; ")
           : error instanceof Error
             ? error.message
             : "Something went wrong";
@@ -75,7 +90,10 @@ function tool<A>(fn: (args: A) => Promise<ReturnType<typeof result>>) {
   };
 }
 
-function inStop(date: string | null, stop: { start: Date; end: Date; label: string }) {
+function inStop(
+  date: string | null,
+  stop: { start: Date; end: Date; label: string },
+) {
   if (date && (date < day(stop.start) || date > day(stop.end))) {
     throw new Error(
       `${date} is outside ${stop.label} (${day(stop.start)} to ${day(stop.end)}). Use a day of the stop, or change the stop's dates with update_stop first.`,
@@ -122,6 +140,7 @@ function buildServer(userId: string) {
                         orderBy: { createdAt: "asc" },
                         select: { user: { select: { name: true } } },
                       },
+                      expenses: { select: { amount: true } },
                     },
                   },
                 },
@@ -131,7 +150,9 @@ function buildServer(userId: string) {
         },
       });
       if (trip_id && memberships.length === 0) {
-        throw new Error("No trip with that id, or this person isn't part of it");
+        throw new Error(
+          "No trip with that id, or this person isn't part of it",
+        );
       }
       const trips = memberships.map(({ team }) => ({
         trip_id: team.id,
@@ -152,7 +173,12 @@ function buildServer(userId: string) {
             title: item.title,
             date: item.date ? day(item.date) : null,
             time: item.time,
-            cost: item.costAmount,
+            // A single number for a tool that only ever meant "this plan
+            // cost X" - a person may since have logged several expenses on
+            // it by hand, which this totals rather than lists.
+            cost: item.expenses.length
+              ? item.expenses.reduce((sum, e) => sum + e.amount, 0)
+              : null,
             link: item.url || null,
             notes: item.notes,
             attachments: item._count.attachments,
@@ -181,27 +207,37 @@ function buildServer(userId: string) {
         color: colorSchema.optional().describe("Defaults to the first color"),
       },
     },
-    tool(async (args: { trip_id: string; name: string; start: string; end: string; color?: string }) => {
-      await teamAccess(userId, args.trip_id);
-      const label = stopLabelSchema.parse(args.name);
-      const start = dateStringSchema.parse(args.start);
-      const end = dateStringSchema.parse(args.end);
-      if (end < start) throw new Error("end can't be before start");
-      const count = await prisma.trip.count({ where: { teamId: args.trip_id } });
-      const stop = await prisma.trip.create({
-        data: {
-          teamId: args.trip_id,
-          label,
-          start: new Date(start),
-          end: new Date(end),
-          color: args.color ? colorSchema.parse(args.color) : null,
-          photoUrl: await lookupDestinationPhoto(label),
-          order: count,
-        },
-      });
-      revalidatePath("/");
-      return result(`Added ${label}`, { stop_id: stop.id });
-    }),
+    tool(
+      async (args: {
+        trip_id: string;
+        name: string;
+        start: string;
+        end: string;
+        color?: string;
+      }) => {
+        await teamAccess(userId, args.trip_id);
+        const label = stopLabelSchema.parse(args.name);
+        const start = dateStringSchema.parse(args.start);
+        const end = dateStringSchema.parse(args.end);
+        if (end < start) throw new Error("end can't be before start");
+        const count = await prisma.trip.count({
+          where: { teamId: args.trip_id },
+        });
+        const stop = await prisma.trip.create({
+          data: {
+            teamId: args.trip_id,
+            label,
+            start: new Date(start),
+            end: new Date(end),
+            color: args.color ? colorSchema.parse(args.color) : null,
+            photoUrl: await lookupDestinationPhoto(label),
+            order: count,
+          },
+        });
+        revalidatePath("/");
+        return result(`Added ${label}`, { stop_id: stop.id });
+      },
+    ),
   );
 
   server.registerTool(
@@ -219,25 +255,38 @@ function buildServer(userId: string) {
       },
       annotations: { idempotentHint: true },
     },
-    tool(async (args: { stop_id: string; name?: string; start?: string; end?: string; color?: string }) => {
-      const stop = await stopAccess(userId, args.stop_id);
-      const start = dateStringSchema.parse(args.start ?? day(stop.start));
-      const end = dateStringSchema.parse(args.end ?? day(stop.end));
-      if (end < start) throw new Error("end can't be before start");
-      const label = args.name === undefined ? stop.label : stopLabelSchema.parse(args.name);
-      await prisma.trip.update({
-        where: { id: stop.id },
-        data: {
-          label,
-          start: new Date(start),
-          end: new Date(end),
-          ...(args.color ? { color: colorSchema.parse(args.color) } : {}),
-          ...(label !== stop.label ? { photoUrl: await lookupDestinationPhoto(label) } : {}),
-        },
-      });
-      revalidatePath("/");
-      return result(`Updated ${label}`);
-    }),
+    tool(
+      async (args: {
+        stop_id: string;
+        name?: string;
+        start?: string;
+        end?: string;
+        color?: string;
+      }) => {
+        const stop = await stopAccess(userId, args.stop_id);
+        const start = dateStringSchema.parse(args.start ?? day(stop.start));
+        const end = dateStringSchema.parse(args.end ?? day(stop.end));
+        if (end < start) throw new Error("end can't be before start");
+        const label =
+          args.name === undefined
+            ? stop.label
+            : stopLabelSchema.parse(args.name);
+        await prisma.trip.update({
+          where: { id: stop.id },
+          data: {
+            label,
+            start: new Date(start),
+            end: new Date(end),
+            ...(args.color ? { color: colorSchema.parse(args.color) } : {}),
+            ...(label !== stop.label
+              ? { photoUrl: await lookupDestinationPhoto(label) }
+              : {}),
+          },
+        });
+        revalidatePath("/");
+        return result(`Updated ${label}`);
+      },
+    ),
   );
 
   server.registerTool(
@@ -249,38 +298,52 @@ function buildServer(userId: string) {
       inputSchema: {
         stop_id: z.string(),
         section: z.enum(["stay", "transport", "activity"]),
-        title: z.string().describe('e.g. "Sagrada Familia" or "Train to Porto"'),
+        title: z
+          .string()
+          .describe('e.g. "Sagrada Familia" or "Train to Porto"'),
         date: z.string().optional().describe("Day within the stop, YYYY-MM-DD"),
-        time: z.string().optional().describe("Local start time, HH:mm, needs a date"),
+        time: z
+          .string()
+          .optional()
+          .describe("Local start time, HH:mm, needs a date"),
         cost: z.number().optional().describe("In the trip's currency"),
         link: z.string().optional().describe("Booking or info page, http(s)"),
-        notes: z.string().optional().describe("A short note, e.g. booking details or a reminder"),
+        notes: z
+          .string()
+          .optional()
+          .describe("A short note, e.g. booking details or a reminder"),
       },
     },
-    tool(async (args: {
-      stop_id: string;
-      section: keyof typeof SECTIONS;
-      title: string;
-      date?: string;
-      time?: string;
-      cost?: number;
-      link?: string;
-      notes?: string;
-    }) => {
-      const stop = await stopAccess(userId, args.stop_id);
-      inStop(args.date ?? null, stop);
-      if (args.time && !args.date) throw new Error("A time needs a date");
-      const id = await addItemToStop(stop.id, SECTIONS[args.section], {
-        title: args.title,
-        url: args.link ?? "",
-        costAmount: args.cost ?? null,
-        date: args.date ?? null,
-        time: args.time ?? null,
-        notes: args.notes ?? null,
-      });
-      revalidatePath("/");
-      return result(`Added ${args.title.trim()} to ${stop.label}`, { plan_id: id });
-    }),
+    tool(
+      async (args: {
+        stop_id: string;
+        section: keyof typeof SECTIONS;
+        title: string;
+        date?: string;
+        time?: string;
+        cost?: number;
+        link?: string;
+        notes?: string;
+      }) => {
+        const stop = await stopAccess(userId, args.stop_id);
+        inStop(args.date ?? null, stop);
+        if (args.time && !args.date) throw new Error("A time needs a date");
+        const id = await addItemToStop(stop.id, SECTIONS[args.section], {
+          title: args.title,
+          url: args.link ?? "",
+          date: args.date ?? null,
+          time: args.time ?? null,
+          notes: args.notes ?? null,
+        });
+        if (args.cost !== undefined) {
+          await setPlanCost(stop.id, id, args.title, args.cost ?? null);
+        }
+        revalidatePath("/");
+        return result(`Added ${args.title.trim()} to ${stop.label}`, {
+          plan_id: id,
+        });
+      },
+    ),
   );
 
   server.registerTool(
@@ -296,36 +359,50 @@ function buildServer(userId: string) {
         time: timeStringSchema.nullable().optional(),
         cost: z.number().nullable().optional(),
         link: z.string().nullable().optional(),
-        notes: z.string().nullable().optional().describe("Pass null to clear it"),
+        notes: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Pass null to clear it"),
       },
       annotations: { idempotentHint: true },
     },
-    tool(async (args: {
-      plan_id: string;
-      title?: string;
-      date?: string | null;
-      time?: string | null;
-      cost?: number | null;
-      link?: string | null;
-      notes?: string | null;
-    }) => {
-      const item = await itemAccess(userId, args.plan_id);
-      const date = args.date === undefined ? (item.date ? day(item.date) : null) : args.date;
-      inStop(date, item.trip);
-      const time = args.time === undefined ? item.time : args.time;
-      if (args.time && !date) throw new Error("A time needs a date");
-      const data = toItemData({
-        title: args.title ?? item.title,
-        url: args.link === undefined ? item.url : (args.link ?? ""),
-        costAmount: args.cost === undefined ? item.costAmount : args.cost,
-        date,
-        time,
-        notes: args.notes === undefined ? item.notes : args.notes,
-      });
-      await prisma.tripItem.update({ where: { id: item.id }, data });
-      revalidatePath("/");
-      return result(`Updated ${data.title}`);
-    }),
+    tool(
+      async (args: {
+        plan_id: string;
+        title?: string;
+        date?: string | null;
+        time?: string | null;
+        cost?: number | null;
+        link?: string | null;
+        notes?: string | null;
+      }) => {
+        const item = await itemAccess(userId, args.plan_id);
+        const date =
+          args.date === undefined
+            ? item.date
+              ? day(item.date)
+              : null
+            : args.date;
+        inStop(date, item.trip);
+        const time = args.time === undefined ? item.time : args.time;
+        if (args.time && !date) throw new Error("A time needs a date");
+        const title = args.title ?? item.title;
+        const data = toItemData({
+          title,
+          url: args.link === undefined ? item.url : (args.link ?? ""),
+          date,
+          time,
+          notes: args.notes === undefined ? item.notes : args.notes,
+        });
+        await prisma.tripItem.update({ where: { id: item.id }, data });
+        if (args.cost !== undefined) {
+          await setPlanCost(item.tripId, item.id, title, args.cost);
+        }
+        revalidatePath("/");
+        return result(`Updated ${data.title}`);
+      },
+    ),
   );
 
   server.registerTool(
@@ -336,17 +413,21 @@ function buildServer(userId: string) {
         "Moves a plan to another day of its stop, keeping its time, or to no day with date null, which also clears the time.",
       inputSchema: {
         plan_id: z.string(),
-        date: dateStringSchema.nullable().describe("Day within the stop, YYYY-MM-DD, or null"),
+        date: dateStringSchema
+          .nullable()
+          .describe("Day within the stop, YYYY-MM-DD, or null"),
       },
       annotations: { idempotentHint: true },
     },
-    tool(async ({ plan_id, date }: { plan_id: string; date: string | null }) => {
-      const item = await itemAccess(userId, plan_id);
-      inStop(date, item.trip);
-      await moveItemToDay(item.id, date);
-      revalidatePath("/");
-      return result(`Moved ${item.title} to ${date ?? "no day"}`);
-    }),
+    tool(
+      async ({ plan_id, date }: { plan_id: string; date: string | null }) => {
+        const item = await itemAccess(userId, plan_id);
+        inStop(date, item.trip);
+        await moveItemToDay(item.id, date);
+        revalidatePath("/");
+        return result(`Moved ${item.title} to ${date ?? "no day"}`);
+      },
+    ),
   );
 
   server.registerTool(
@@ -365,7 +446,9 @@ function buildServer(userId: string) {
       const item = await itemAccess(userId, plan_id);
       await setAttendance(userId, item.id, going);
       revalidatePath("/");
-      return result(going ? `Going to ${item.title}` : `Not going to ${item.title}`);
+      return result(
+        going ? `Going to ${item.title}` : `Not going to ${item.title}`,
+      );
     }),
   );
 
@@ -376,7 +459,11 @@ function buildServer(userId: string) {
       description:
         "Looks up a real place by name (put the city or area in the query, e.g. \"Disfrutar, Barcelona\") and returns up to 3 matches, each with whether it's open right now, its hours, phone number, rating, price level and a hint on how to book it. Use this before telling someone a place is open, holding a reservation, or recommending somewhere, rather than relying on what you already know about it, since that can be wrong or out of date. Needs trip_id, so it can use that trip's own Places key - there's no shared one. If the trip hasn't set one (Trip settings has a Place lookups section for it), says so plainly instead of guessing. Each trip gets 1,000 free lookups a month from Google; once a response says it's getting close to that, mention it to the person rather than keep calling quietly.",
       inputSchema: {
-        query: z.string().describe('The place and its city or area, e.g. "Disfrutar, Barcelona"'),
+        query: z
+          .string()
+          .describe(
+            'The place and its city or area, e.g. "Disfrutar, Barcelona"',
+          ),
         trip_id: z.string().describe("The trip whose own Places key to use"),
       },
       annotations: { readOnlyHint: true },

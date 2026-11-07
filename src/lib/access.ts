@@ -16,6 +16,21 @@ export async function requireItemAccess(itemId: string) {
   return item;
 }
 
+/** Loads an expense and verifies the signed-in user belongs to its team. */
+export async function requireExpenseAccess(expenseId: string) {
+  const user = await requireUser();
+  const expense = await prisma.expense.findUnique({
+    where: { id: expenseId },
+    include: { trip: true },
+  });
+  if (!expense) throw new Error("Expense not found");
+  const membership = await prisma.membership.findUnique({
+    where: { userId_teamId: { userId: user.id, teamId: expense.trip.teamId } },
+  });
+  if (!membership) throw new Error("Not a member of this team");
+  return expense;
+}
+
 /** Loads an attachment (without its bytes) and verifies team membership. */
 export async function requireAttachmentAccess(attachmentId: string) {
   const user = await requireUser();

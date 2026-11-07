@@ -1,9 +1,21 @@
 import type { ItemData, ItemSectionKey } from "@/lib/types";
 
-export const SECTION_DEFS: { key: ItemSectionKey; name: string; placeholder: string }[] = [
+export const SECTION_DEFS: {
+  key: ItemSectionKey;
+  name: string;
+  placeholder: string;
+}[] = [
   { key: "stay", name: "Stay", placeholder: "Lodging / hotel name" },
-  { key: "transport", name: "Transport", placeholder: "Flight, train or transfer" },
-  { key: "activities", name: "Activities", placeholder: "Activity or reservation" },
+  {
+    key: "transport",
+    name: "Transport",
+    placeholder: "Flight, train or transfer",
+  },
+  {
+    key: "activities",
+    name: "Activities",
+    placeholder: "Activity or reservation",
+  },
 ];
 
 /** A booking reads as confirmed once it has a name and a link to show for
@@ -13,8 +25,12 @@ export function isScheduled(item: ItemData): boolean {
   return !!(item.t.trim() && item.url.trim());
 }
 
+export function itemTotal(item: ItemData): number {
+  return item.expenses.reduce((sum, e) => sum + e.amount, 0);
+}
+
 export function sectionTotal(items: ItemData[]): number {
-  return items.reduce((sum, item) => sum + (item.costAmount ?? 0), 0);
+  return items.reduce((sum, item) => sum + itemTotal(item), 0);
 }
 
 export function hostFromUrl(url: string): string {

@@ -1,5 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import type { AttachmentData, ItemData, Person, TripData } from "@/lib/types";
+import type {
+  AttachmentData,
+  ExpenseData,
+  ItemData,
+  Person,
+  TripData,
+} from "@/lib/types";
 
 /** A team's stops, shaped for the planner UI - the query and mapping both
  * the signed-in home page and the anonymous public demo use, so there's
@@ -23,8 +29,18 @@ export async function loadTripData(teamId: string): Promise<TripData[]> {
             orderBy: { createdAt: "asc" },
             select: { user: { select: { id: true, name: true } } },
           },
-          paidBy: { select: { id: true, name: true } },
+          expenses: {
+            orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+            include: { paidBy: { select: { id: true, name: true } } },
+          },
         },
+      },
+      // A plan's own costs come through with it, above; these are the
+      // trip's expenses that aren't for any one of them.
+      expenses: {
+        where: { itemId: null },
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+        include: { paidBy: { select: { id: true, name: true } } },
       },
     },
   });
@@ -40,31 +56,44 @@ export async function loadTripData(teamId: string): Promise<TripData[]> {
     stay: t.items.filter((i) => i.section === "STAY").map(toItem),
     transport: t.items.filter((i) => i.section === "TRANSPORT").map(toItem),
     activities: t.items.filter((i) => i.section === "ACTIVITIES").map(toItem),
+    miscExpenses: t.expenses.map(toExpense),
   }));
+}
+
+function toExpense(e: {
+  id: string;
+  title: string;
+  amount: number;
+  paidBy: Person | null;
+}): ExpenseData {
+  return { id: e.id, title: e.title, amount: e.amount, paidBy: e.paidBy };
 }
 
 function toItem(i: {
   id: string;
   title: string;
   url: string;
-  costAmount: number | null;
   date: Date | null;
   time: string | null;
   notes: string | null;
   attachments: AttachmentData[];
   attendees: { user: Person }[];
-  paidBy: Person | null;
+  expenses: {
+    id: string;
+    title: string;
+    amount: number;
+    paidBy: Person | null;
+  }[];
 }): ItemData {
   return {
     id: i.id,
     t: i.title,
     url: i.url,
-    costAmount: i.costAmount,
+    expenses: i.expenses.map(toExpense),
     date: i.date ? i.date.toISOString().slice(0, 10) : null,
     time: i.time,
     attachments: i.attachments,
     going: i.attendees.map((a) => a.user),
     notes: i.notes,
-    paidBy: i.paidBy,
   };
 }

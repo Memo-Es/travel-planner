@@ -4,19 +4,27 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/team";
 import { lookupDestinationPhoto } from "@/lib/photo";
-import { requireAttachmentAccess, requireItemAccess } from "@/lib/access";
+import {
+  requireAttachmentAccess,
+  requireExpenseAccess,
+  requireItemAccess,
+} from "@/lib/access";
 import { removeFile } from "@/lib/storage";
 import { CITY_ICONS } from "@/lib/cityIcons";
 import {
+  addExpenseRecord,
   addItemToStop,
   colorSchema,
   dateStringSchema,
+  deleteExpenseRecord,
   moveItemToDay,
   setAttendance,
   stopAccess,
   stopLabelSchema,
   teamAccess,
   toItemData,
+  updateExpenseRecord,
+  type ExpenseInput,
   type ItemInput,
 } from "@/lib/planner";
 
@@ -62,7 +70,10 @@ export async function updateTripLabel(tripId: string, label: string) {
   await requireTripAccess(tripId);
   const trimmed = stopLabelSchema.parse(label);
   const photoUrl = await lookupDestinationPhoto(trimmed);
-  await prisma.trip.update({ where: { id: tripId }, data: { label: trimmed, photoUrl } });
+  await prisma.trip.update({
+    where: { id: tripId },
+    data: { label: trimmed, photoUrl },
+  });
   revalidatePath("/");
 }
 
@@ -84,7 +95,11 @@ export async function updateTripIcon(tripId: string, icon: string | null) {
   revalidatePath("/");
 }
 
-export async function updateStopDates(tripId: string, start: string, end: string) {
+export async function updateStopDates(
+  tripId: string,
+  start: string,
+  end: string,
+) {
   await requireTripAccess(tripId);
   const s = dateStringSchema.parse(start);
   const e = dateStringSchema.parse(end);
@@ -146,5 +161,31 @@ export async function deleteAttachment(attachmentId: string) {
   if (!attachment) return;
   await prisma.attachment.delete({ where: { id: attachmentId } });
   await removeFile(attachment).catch(() => {});
+  revalidatePath("/");
+}
+
+/** Adds a cost to a stop - on a plan when `itemId` is given, loose on the
+ * stop otherwise. */
+export async function addExpense(
+  tripId: string,
+  itemId: string | null,
+  input: ExpenseInput,
+) {
+  await requireTripAccess(tripId);
+  if (itemId) await requireItemAccess(itemId);
+  const id = await addExpenseRecord(tripId, itemId, input);
+  revalidatePath("/");
+  return id;
+}
+
+export async function updateExpense(expenseId: string, input: ExpenseInput) {
+  await requireExpenseAccess(expenseId);
+  await updateExpenseRecord(expenseId, input);
+  revalidatePath("/");
+}
+
+export async function deleteExpense(expenseId: string) {
+  await requireExpenseAccess(expenseId);
+  await deleteExpenseRecord(expenseId);
   revalidatePath("/");
 }

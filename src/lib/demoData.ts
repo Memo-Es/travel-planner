@@ -38,62 +38,287 @@ type SampleStop = {
  * so a new account opens on something to explore rather than a blank page. */
 const STOPS: SampleStop[] = [
   {
-    label: "Barcelona", color: "clay", from: 0, nights: 3,
+    label: "Barcelona",
+    color: "clay",
+    from: 0,
+    nights: 3,
     items: [
-      { section: "STAY", title: "Casa Bonay, Eixample", url: "https://casabonay.com", costAmount: 410, day: 0, time: "15:00", paidBy: "me" },
-      { section: "TRANSPORT", title: "Flight MAD → BCN", url: "https://iberia.com", costAmount: 92, day: 0, time: "09:40", paidBy: "sofia" },
-      { section: "ACTIVITIES", title: "Sagrada Família, towers tour", costAmount: 120, day: 1, time: "10:00", notes: "Timed entry, bring the QR codes.", paidBy: "kenji", going: ["me", "kenji", "ama"] },
-      { section: "ACTIVITIES", title: "Tapas crawl in El Born", costAmount: 96, day: 1, time: "20:30", paidBy: "ama" },
-      { section: "ACTIVITIES", title: "Bunkers del Carmel at sunset", day: 2, time: "18:15" },
+      {
+        section: "STAY",
+        title: "Casa Bonay, Eixample",
+        url: "https://casabonay.com",
+        costAmount: 410,
+        day: 0,
+        time: "15:00",
+        paidBy: "me",
+      },
+      {
+        section: "TRANSPORT",
+        title: "Flight MAD → BCN",
+        url: "https://iberia.com",
+        costAmount: 92,
+        day: 0,
+        time: "09:40",
+        paidBy: "sofia",
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Sagrada Família, towers tour",
+        costAmount: 120,
+        day: 1,
+        time: "10:00",
+        notes: "Timed entry, bring the QR codes.",
+        paidBy: "kenji",
+        going: ["me", "kenji", "ama"],
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Tapas crawl in El Born",
+        costAmount: 96,
+        day: 1,
+        time: "20:30",
+        paidBy: "ama",
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Bunkers del Carmel at sunset",
+        day: 2,
+        time: "18:15",
+      },
     ],
   },
   {
-    label: "Paris", color: "lavender", from: 3, nights: 3,
+    label: "Paris",
+    color: "lavender",
+    from: 3,
+    nights: 3,
     items: [
-      { section: "STAY", title: "Hôtel du Temps, 9e", url: "https://hotel-du-temps.fr", costAmount: 520, day: 0, time: "16:00", paidBy: "kenji" },
-      { section: "TRANSPORT", title: "Navigo pass, 3 days", costAmount: 31, paidBy: "me" },
-      { section: "TRANSPORT", title: "Thalys Paris → Brussels", url: "https://sncf-connect.com", costAmount: 58, day: 3, time: "11:25", paidBy: "sofia" },
-      { section: "ACTIVITIES", title: "Musée d'Orsay", costAmount: 64, day: 1, time: "09:30", notes: "Enter by Access 1 on the quay.", paidBy: "sofia", going: ["me", "sofia"] },
-      { section: "ACTIVITIES", title: "Picnic at Canal Saint-Martin", day: 1, time: "13:00" },
-      { section: "ACTIVITIES", title: "Dinner at Le Comptoir", costAmount: 180, day: 2, time: "20:00", paidBy: "me" },
+      {
+        section: "STAY",
+        title: "Hôtel du Temps, 9e",
+        url: "https://hotel-du-temps.fr",
+        costAmount: 520,
+        day: 0,
+        time: "16:00",
+        paidBy: "kenji",
+      },
+      {
+        section: "TRANSPORT",
+        title: "Navigo pass, 3 days",
+        costAmount: 31,
+        paidBy: "me",
+      },
+      {
+        section: "TRANSPORT",
+        title: "Thalys Paris → Brussels",
+        url: "https://sncf-connect.com",
+        costAmount: 58,
+        day: 3,
+        time: "11:25",
+        paidBy: "sofia",
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Musée d'Orsay",
+        costAmount: 64,
+        day: 1,
+        time: "09:30",
+        notes: "Enter by Access 1 on the quay.",
+        paidBy: "sofia",
+        going: ["me", "sofia"],
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Picnic at Canal Saint-Martin",
+        day: 1,
+        time: "13:00",
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Dinner at Le Comptoir",
+        costAmount: 180,
+        day: 2,
+        time: "20:00",
+        paidBy: "me",
+      },
     ],
   },
   {
-    label: "Belgium", color: "khaki", from: 6, nights: 2,
+    label: "Belgium",
+    color: "khaki",
+    from: 6,
+    nights: 2,
     items: [
-      { section: "STAY", title: "Hotel Amigo, Brussels", costAmount: 300, day: 0, time: "15:00", paidBy: "ama" },
-      { section: "TRANSPORT", title: "IC Brussels → Amsterdam", url: "https://belgiantrain.be", costAmount: 45, day: 2, time: "10:12", paidBy: "kenji" },
-      { section: "ACTIVITIES", title: "Day trip to Bruges", costAmount: 72, day: 1, time: "09:00", paidBy: "ama", going: ["sofia", "kenji", "ama"] },
+      {
+        section: "STAY",
+        title: "Hotel Amigo, Brussels",
+        costAmount: 300,
+        day: 0,
+        time: "15:00",
+        paidBy: "ama",
+      },
+      {
+        section: "TRANSPORT",
+        title: "IC Brussels → Amsterdam",
+        url: "https://belgiantrain.be",
+        costAmount: 45,
+        day: 2,
+        time: "10:12",
+        paidBy: "kenji",
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Day trip to Bruges",
+        costAmount: 72,
+        day: 1,
+        time: "09:00",
+        paidBy: "ama",
+        going: ["sofia", "kenji", "ama"],
+      },
     ],
   },
   {
-    label: "Amsterdam", color: "sage", from: 8, nights: 4,
+    label: "Amsterdam",
+    color: "sage",
+    from: 8,
+    nights: 4,
     items: [
-      { section: "STAY", title: "Volkshotel, Oost", costAmount: 560, day: 0, time: "15:00", paidBy: "sofia" },
-      { section: "TRANSPORT", title: "Airport transfer", url: "https://schiphol.nl", costAmount: 18, paidBy: "me" },
-      { section: "ACTIVITIES", title: "Rijksmuseum", costAmount: 88, day: 1, time: "10:00", notes: "Tickets are timed, arrive 15 min early.", paidBy: "me", going: ["me", "sofia", "kenji"] },
-      { section: "ACTIVITIES", title: "Canal boat at golden hour", costAmount: 76, day: 1, time: "17:30", paidBy: "kenji" },
-      { section: "ACTIVITIES", title: "Vondelpark bike loop", day: 2, time: "11:00" },
-      { section: "ACTIVITIES", title: "Indonesian rijsttafel", costAmount: 140, day: 3, time: "19:30", paidBy: "ama" },
+      {
+        section: "STAY",
+        title: "Volkshotel, Oost",
+        costAmount: 560,
+        day: 0,
+        time: "15:00",
+        paidBy: "sofia",
+      },
+      {
+        section: "TRANSPORT",
+        title: "Airport transfer",
+        url: "https://schiphol.nl",
+        costAmount: 18,
+        paidBy: "me",
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Rijksmuseum",
+        costAmount: 88,
+        day: 1,
+        time: "10:00",
+        notes: "Tickets are timed, arrive 15 min early.",
+        paidBy: "me",
+        going: ["me", "sofia", "kenji"],
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Canal boat at golden hour",
+        costAmount: 76,
+        day: 1,
+        time: "17:30",
+        paidBy: "kenji",
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Vondelpark bike loop",
+        day: 2,
+        time: "11:00",
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Indonesian rijsttafel",
+        costAmount: 140,
+        day: 3,
+        time: "19:30",
+        paidBy: "ama",
+      },
     ],
   },
   {
-    label: "Hamburg", color: "stone", from: 12, nights: 2,
+    label: "Hamburg",
+    color: "stone",
+    from: 12,
+    nights: 2,
     items: [
-      { section: "STAY", title: "25hours HafenCity", url: "https://25hours-hotels.com", costAmount: 390, day: 0, time: "15:00", paidBy: "me" },
-      { section: "TRANSPORT", title: "Train Hamburg → Copenhagen", url: "https://bahn.de", costAmount: 79, day: 2, time: "09:18", paidBy: "ama" },
-      { section: "ACTIVITIES", title: "Elbphilharmonie plaza", day: 1, time: "11:00" },
-      { section: "ACTIVITIES", title: "Fish market breakfast", costAmount: 48, day: 1, time: "07:30", paidBy: "sofia", going: ["sofia", "ama"] },
+      {
+        section: "STAY",
+        title: "25hours HafenCity",
+        url: "https://25hours-hotels.com",
+        costAmount: 390,
+        day: 0,
+        time: "15:00",
+        paidBy: "me",
+      },
+      {
+        section: "TRANSPORT",
+        title: "Train Hamburg → Copenhagen",
+        url: "https://bahn.de",
+        costAmount: 79,
+        day: 2,
+        time: "09:18",
+        paidBy: "ama",
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Elbphilharmonie plaza",
+        day: 1,
+        time: "11:00",
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Fish market breakfast",
+        costAmount: 48,
+        day: 1,
+        time: "07:30",
+        paidBy: "sofia",
+        going: ["sofia", "ama"],
+      },
     ],
   },
   {
-    label: "Copenhagen", color: "lavender", from: 14, nights: 3,
+    label: "Copenhagen",
+    color: "lavender",
+    from: 14,
+    nights: 3,
     items: [
-      { section: "STAY", title: "Hotel Sanders", costAmount: 680, day: 0, time: "15:00", paidBy: "kenji" },
-      { section: "TRANSPORT", title: "Flight CPH → MAD", url: "https://sas.se", costAmount: 134, day: 3, time: "18:05", paidBy: "me" },
-      { section: "ACTIVITIES", title: "Nyhavn and the Little Mermaid", day: 1, time: "10:30" },
-      { section: "ACTIVITIES", title: "Tivoli Gardens", costAmount: 104, day: 1, time: "17:00", paidBy: "sofia" },
-      { section: "ACTIVITIES", title: "Sauna and harbour swim", costAmount: 60, day: 2, time: "08:00", paidBy: "ama", going: ["me", "ama"] },
+      {
+        section: "STAY",
+        title: "Hotel Sanders",
+        costAmount: 680,
+        day: 0,
+        time: "15:00",
+        paidBy: "kenji",
+      },
+      {
+        section: "TRANSPORT",
+        title: "Flight CPH → MAD",
+        url: "https://sas.se",
+        costAmount: 134,
+        day: 3,
+        time: "18:05",
+        paidBy: "me",
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Nyhavn and the Little Mermaid",
+        day: 1,
+        time: "10:30",
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Tivoli Gardens",
+        costAmount: 104,
+        day: 1,
+        time: "17:00",
+        paidBy: "sofia",
+      },
+      {
+        section: "ACTIVITIES",
+        title: "Sauna and harbour swim",
+        costAmount: 60,
+        day: 2,
+        time: "08:00",
+        paidBy: "ama",
+        going: ["me", "ama"],
+      },
     ],
   },
 ];
@@ -115,7 +340,9 @@ export async function seedSampleTrip(
   options: { isPublicDemo?: boolean } = {},
 ): Promise<{ teamId: string; meId: string }> {
   const now = new Date();
-  const start = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) + 21 * DAY_MS;
+  const start =
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) +
+    21 * DAY_MS;
   const day = (offset: number) => new Date(start + offset * DAY_MS);
 
   // Pretend buddies can't sign in: their password is random and never kept.
@@ -133,7 +360,12 @@ export async function seedSampleTrip(
     });
     meId = me.id;
   }
-  const people: Record<Who, string> = { me: meId, sofia: "", kenji: "", ama: "" };
+  const people: Record<Who, string> = {
+    me: meId,
+    sofia: "",
+    kenji: "",
+    ama: "",
+  };
   for (const pal of PALS) {
     const user = await tx.user.create({
       data: {
@@ -155,14 +387,21 @@ export async function seedSampleTrip(
       memberships: {
         create: [
           { userId: meId, role: "OWNER" },
-          ...PALS.map((p) => ({ userId: people[p.key], role: "MEMBER" as const })),
+          ...PALS.map((p) => ({
+            userId: people[p.key],
+            role: "MEMBER" as const,
+          })),
         ],
       },
     },
   });
 
   for (const [order, stop] of STOPS.entries()) {
-    await tx.trip.create({
+    // Expenses are their own rows, with both a tripId and an itemId to set -
+    // one nested create can only fill in the direct parent (the item), so
+    // the trip and its items are created first and the costs follow once
+    // their ids exist.
+    const trip = await tx.trip.create({
       data: {
         teamId: team.id,
         label: stop.label,
@@ -175,11 +414,9 @@ export async function seedSampleTrip(
             section: item.section,
             title: item.title,
             url: item.url ?? "",
-            costAmount: item.costAmount ?? null,
             date: item.day === undefined ? null : day(stop.from + item.day),
             time: item.time ?? null,
             notes: item.notes ?? null,
-            paidById: item.paidBy ? people[item.paidBy] : null,
             order: i,
             attendees: item.going
               ? { create: item.going.map((w) => ({ userId: people[w] })) }
@@ -187,7 +424,22 @@ export async function seedSampleTrip(
           })),
         },
       },
+      include: { items: true },
     });
+    const expenses = stop.items.flatMap((item, i) =>
+      item.costAmount === undefined
+        ? []
+        : [
+            {
+              tripId: trip.id,
+              itemId: trip.items[i].id,
+              title: item.title,
+              amount: item.costAmount,
+              paidById: item.paidBy ? people[item.paidBy] : null,
+            },
+          ],
+    );
+    if (expenses.length) await tx.expense.createMany({ data: expenses });
   }
   return { teamId: team.id, meId };
 }

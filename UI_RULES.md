@@ -168,11 +168,19 @@ They use Motion for React alongside the existing Radix accessibility behavior.
 - Sliding selection highlights use a short, damped spring, scoped to each list.
 - Inline forms fade and nudge in (opacity/transform only; never height). Exiting
   fields become inert so keyboard users cannot tab into content that is disappearing.
+- An expense is its own thing, not a field on a booking: a plan can carry zero,
+  one or several (a museum ticket and the taxi there are two expenses on one
+  activity), and a cost can also sit loose on a stop with no plan behind it at
+  all (a tip, a shared snack). Adding or editing one is always the same small
+  dialog (name, amount, paid by), reached from Finances' "Add expense" button or
+  by tapping an expense row; a booking's own form (name, link, day, time, notes,
+  documents) has no cost field at all.
 - With no stop open and more than one stop costed, Finances' stop list offers a
-  By stop / All expenses toggle: by stop totals each one, all expenses lists every
-  costed item across the whole trip with which stop it's under, so nothing is only
-  reachable by opening that stop first. Tapping a row jumps to its stop and opens
-  it for editing, same as a stop's own expense rows do.
+  By stop / All expenses toggle: by stop totals each one, all expenses lists
+  every expense across the whole trip with which stop and plan it's under (or
+  "Not on a plan"), so nothing is only reachable by opening that stop first.
+  Tapping a row opens that expense for editing, same as a stop's own expense
+  rows do.
 - Accordions (Finances' stop list and balance card) follow Motion Primitives'
   Accordion: `AccordionBody` animates height and opacity together on a no-bounce
   spring (~350ms), so one card closing while the other opens trades space instead

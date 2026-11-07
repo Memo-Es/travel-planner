@@ -34,12 +34,6 @@ export const itemSchema = z.object({
       (v) => v === "" || /^https?:\/\//i.test(v),
       "Link must start with http:// or https://",
     ),
-  costAmount: z
-    .number()
-    .nonnegative("Cost can't be negative")
-    .finite()
-    .max(10_000_000)
-    .nullable(),
   date: dateStringSchema.nullable(),
   time: timeStringSchema.nullable(),
   notes: z
@@ -49,11 +43,22 @@ export const itemSchema = z.object({
     .nullable()
     .optional()
     .transform((v) => (v ? v : null)),
+});
+
+export const expenseSchema = z.object({
+  title: z.string().trim().min(1, "Name is required").max(120),
+  amount: z
+    .number()
+    .positive("Amount must be more than 0")
+    .finite()
+    .max(10_000_000),
   /** Who fronted the money, for splitting costs. Optional and left out
    * entirely by the MCP tools, which never set or change it - this is a
    * human-bookkeeping field, not something an agent decides. */
   paidById: z.string().nullable().optional(),
 });
+
+export type ExpenseInput = z.input<typeof expenseSchema>;
 
 export type ItemInput = z.input<typeof itemSchema>;
 
@@ -91,6 +96,72 @@ export async function itemAccess(userId: string, itemId: string) {
   if (!item) throw new Error("Item not found");
   await teamAccess(userId, item.trip.teamId);
   return item;
+}
+
+export async function expenseAccess(userId: string, expenseId: string) {
+  const expense = await prisma.expense.findUnique({
+    where: { id: expenseId },
+    include: { trip: true },
+  });
+  if (!expense) throw new Error("Expense not found");
+  await teamAccess(userId, expense.trip.teamId);
+  return expense;
+}
+
+/** Adds a cost to a stop - on a plan when `itemId` is given, loose on the
+ * stop otherwise. */
+export async function addExpenseRecord(
+  tripId: string,
+  itemId: string | null,
+  input: ExpenseInput,
+) {
+  const parsed = expenseSchema.parse(input);
+  const count = await prisma.expense.count({ where: { tripId, itemId } });
+  const expense = await prisma.expense.create({
+    data: { tripId, itemId, order: count, ...parsed },
+    select: { id: true },
+  });
+  return expense.id;
+}
+
+export async function updateExpenseRecord(
+  expenseId: string,
+  input: ExpenseInput,
+) {
+  const parsed = expenseSchema.parse(input);
+  await prisma.expense.update({ where: { id: expenseId }, data: parsed });
+}
+
+export async function deleteExpenseRecord(expenseId: string) {
+  await prisma.expense.delete({ where: { id: expenseId } });
+}
+
+/** The MCP `cost` field is a single number per plan, kept for AI tools that
+ * only ever meant "this plan cost X" and never multiple expenses or who
+ * paid - a human adds those from the app. A cost of null clears it; a
+ * number upserts into the FIRST expense already on the plan (if a person has
+ * since added several by hand, only that one moves), or creates one titled
+ * after the plan. */
+export async function setPlanCost(
+  tripId: string,
+  itemId: string,
+  title: string,
+  amount: number | null,
+) {
+  const [first] = await prisma.expense.findMany({
+    where: { itemId },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    take: 1,
+  });
+  if (amount === null) {
+    if (first) await prisma.expense.delete({ where: { id: first.id } });
+    return;
+  }
+  if (first) {
+    await prisma.expense.update({ where: { id: first.id }, data: { amount } });
+  } else {
+    await prisma.expense.create({ data: { tripId, itemId, title, amount } });
+  }
 }
 
 export async function addItemToStop(
