@@ -60,6 +60,11 @@ export default function FinancePanel({
 }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [open, setOpen] = useState<Section>("stops");
+  // With no stop open, "by stop" only totals each one - a cost filed under
+  // a stop nobody has opened is otherwise invisible from here. This lists
+  // every expense across the whole trip instead, each one still opening
+  // for editing.
+  const [flat, setFlat] = useState(false);
   const reduce = !!useReducedMotion();
   const spring = reduce ? { duration: 0 } : accordionSpring;
   // Stop rows enter and leave like accordion bodies when the filter changes.
@@ -106,12 +111,23 @@ export default function FinancePanel({
       subtotal: sum(keys.flatMap((k) => trip[k]).filter(costed)),
     }))
     .filter((s) => s.subtotal > 0);
-  // With a stop open, its bookings take the place of the stop list.
+  // With a stop open, its bookings take the place of the stop list. With
+  // none open and the flat view on, every trip's does - same shape, one
+  // more field for which stop a row belongs to.
   const expenses = stop
     ? keys.flatMap((key) =>
         stop[key].filter(costed).map((item) => ({ key, item })),
       )
     : [];
+  const allExpenses = !stop
+    ? trips.flatMap((trip) =>
+        keys.flatMap((key) =>
+          trip[key].filter(costed).map((item) => ({ trip, key, item })),
+        ),
+      )
+    : [];
+  const showFlatToggle = !stop && stops.length > 1;
+  const isFlatList = !!stop || flat;
   const rows = stop
     ? expenses.map(({ key, item }) => ({
         id: item.id,
@@ -120,13 +136,26 @@ export default function FinancePanel({
         value: item.costAmount ?? 0,
         onClick: () => onEditItem(key, item),
       }))
-    : stops.map(({ trip, subtotal }) => ({
-        id: trip.id,
-        label: trip.label,
-        detail: null,
-        value: subtotal,
-        onClick: () => onOpenStop(trip),
-      }));
+    : flat
+      ? allExpenses.map(({ trip, key, item }) => ({
+          id: item.id,
+          label: item.t,
+          detail: `${trip.label} · ${SECTION_DEFS.find((d) => d.key === key)!.name}`,
+          value: item.costAmount ?? 0,
+          // Jump to the item's own stop first, so the edit form that
+          // opens belongs to a stop that's actually on screen.
+          onClick: () => {
+            onOpenStop(trip);
+            onEditItem(key, item);
+          },
+        }))
+      : stops.map(({ trip, subtotal }) => ({
+          id: trip.id,
+          label: trip.label,
+          detail: null,
+          value: subtotal,
+          onClick: () => onOpenStop(trip),
+        }));
 
   // Who owes who is settled across the whole trip, not per stop.
   const showBalances = hasPaidExpenses(allTrips);
@@ -252,13 +281,13 @@ export default function FinancePanel({
                   section === "stops" ? "text-ink" : "text-muted",
                 )}
               >
-                {stop ? "Expenses" : "Expenses by stop"}
+                {isFlatList ? "Expenses" : "Expenses by stop"}
                 {showBalances && (
                   <span className="flex items-center gap-2.5">
                     {section !== "stops" && (
                       <span className="text-xs font-normal tabular-nums text-muted-2">
                         {rows.length}{" "}
-                        {stop
+                        {isFlatList
                           ? rows.length === 1
                             ? "expense"
                             : "expenses"
@@ -278,6 +307,37 @@ export default function FinancePanel({
               labelledBy={`${ids}-stops-head`}
               className="px-4 pb-2"
             >
+              {showFlatToggle && (
+                <div
+                  role="group"
+                  aria-label="Group expenses by"
+                  className="-mt-1 mb-2 flex gap-0.5"
+                >
+                  {([false, true] as const).map((v) => {
+                    const selected = flat === v;
+                    return (
+                      <button
+                        key={String(v)}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => setFlat(v)}
+                        className={cn(
+                          "relative isolate h-7 shrink-0 rounded-full px-2.5 text-xs font-medium focus-inset tap-target transition-colors duration-150",
+                          selected ? "text-ink" : "text-muted-2 hover:text-ink",
+                        )}
+                      >
+                        {selected && (
+                          <AnimatedBackground
+                            layoutId={`${ids}-group`}
+                            className="bg-secondary"
+                          />
+                        )}
+                        {v ? "All expenses" : "By stop"}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <ul className="border-t border-dotted border-stone-300">
                 <AnimatePresence initial={false}>
                   {rows.map((row) => (
