@@ -13,6 +13,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { SettleUpList } from "@/components/planner/SettleUpList";
 import type {
+  ExpenseData,
   ItemData,
   ItemSectionKey,
   MemberOption,
@@ -26,6 +27,13 @@ import { cn } from "@/lib/utils";
 type Filter = "all" | ItemSectionKey;
 type Section = "stops" | "balance";
 
+/** One expense, with enough of where it lives to show and to edit it. */
+type ExpenseRow = {
+  trip: TripData;
+  item: ItemData | null;
+  expense: ExpenseData;
+};
+
 const EPS = 0.005;
 
 export default function FinancePanel({
@@ -35,7 +43,7 @@ export default function FinancePanel({
   stop,
   currency,
   onOpenStop,
-  onEditItem,
+  onEditExpense,
   onAddExpense,
   canAddExpense,
   onClose,
@@ -50,7 +58,11 @@ export default function FinancePanel({
   stop: TripData | null;
   currency: string;
   onOpenStop: (trip: TripData) => void;
-  onEditItem: (key: ItemSectionKey, item: ItemData) => void;
+  onEditExpense: (
+    trip: TripData,
+    item: ItemData | null,
+    expense: ExpenseData,
+  ) => void;
   onAddExpense: () => void;
   canAddExpense: boolean;
   onClose: () => void;
@@ -83,71 +95,72 @@ export default function FinancePanel({
   const positionClass = isMobile ? "flex-1 min-h-0" : "";
   const money = (value: number) => formatTotal(value, currency);
 
-  const costed = (item: ItemData) => item.costAmount !== null;
-  const sum = (items: ItemData[]) =>
-    items.reduce((n, i) => n + (i.costAmount ?? 0), 0);
   const trips = stop ? [stop] : allTrips;
-  const total = sum(
-    trips.flatMap((t) => [...t.stay, ...t.transport, ...t.activities]),
-  );
+
+  const active = filter === "all" ? null : filter;
+  const keys: ItemSectionKey[] = active
+    ? [active]
+    : ["stay", "transport", "activities"];
+
+  // Every expense in scope for a trip: its plans' own, across the given
+  // sections, plus whatever isn't on a plan at all - and a loose cost has no
+  // section to belong to, so it only ever shows up under "All".
+  function rowsFor(trip: TripData, sections: ItemSectionKey[]): ExpenseRow[] {
+    const fromItems = sections.flatMap((k) =>
+      trip[k].flatMap((item) =>
+        item.expenses.map((expense) => ({ trip, item, expense })),
+      ),
+    );
+    const misc = active
+      ? []
+      : trip.miscExpenses.map((expense) => ({ trip, item: null, expense }));
+    return [...fromItems, ...misc];
+  }
+  const sum = (rows: ExpenseRow[]) =>
+    rows.reduce((n, r) => n + r.expense.amount, 0);
+
+  const total = sum(trips.flatMap((t) => rowsFor(t, keys)));
   const categories = SECTION_DEFS.map((sec) => {
-    const items = trips.flatMap((t) => t[sec.key]).filter(costed);
-    const value = sum(items);
+    const rows = trips.flatMap((t) => rowsFor(t, [sec.key]));
+    const value = sum(rows);
     return {
       ...sec,
-      count: items.length,
+      count: rows.length,
       total: value,
       share: total > 0 ? Math.round((value / total) * 100) : 0,
     };
   });
-  const active =
-    filter === "all" ? null : categories.find((c) => c.key === filter)!;
-  const keys: ItemSectionKey[] = active
-    ? [active.key]
-    : ["stay", "transport", "activities"];
   const stops = trips
-    .map((trip) => ({
-      trip,
-      subtotal: sum(keys.flatMap((k) => trip[k]).filter(costed)),
-    }))
+    .map((trip) => ({ trip, subtotal: sum(rowsFor(trip, keys)) }))
     .filter((s) => s.subtotal > 0);
-  // With a stop open, its bookings take the place of the stop list. With
-  // none open and the flat view on, every trip's does - same shape, one
-  // more field for which stop a row belongs to.
-  const expenses = stop
-    ? keys.flatMap((key) =>
-        stop[key].filter(costed).map((item) => ({ key, item })),
-      )
-    : [];
-  const allExpenses = !stop
-    ? trips.flatMap((trip) =>
-        keys.flatMap((key) =>
-          trip[key].filter(costed).map((item) => ({ trip, key, item })),
-        ),
-      )
+  // With a stop open, its own expenses take the place of the stop list.
+  // With none open and the flat view on, every trip's does - same shape,
+  // one more field for which stop and plan a row belongs to.
+  const expenseRows = stop ? rowsFor(stop, keys) : [];
+  const allExpenseRows = !stop
+    ? trips.flatMap((trip) => rowsFor(trip, keys))
     : [];
   const showFlatToggle = !stop && stops.length > 1;
   const isFlatList = !!stop || flat;
+  const detailFor = (r: ExpenseRow, withStop: boolean) => {
+    const plan = r.item ? r.item.t : "Not on a plan";
+    return withStop ? `${r.trip.label} · ${plan}` : plan;
+  };
   const rows = stop
-    ? expenses.map(({ key, item }) => ({
-        id: item.id,
-        label: item.t,
-        detail: SECTION_DEFS.find((d) => d.key === key)!.name,
-        value: item.costAmount ?? 0,
-        onClick: () => onEditItem(key, item),
+    ? expenseRows.map((r) => ({
+        id: r.expense.id,
+        label: r.expense.title,
+        detail: detailFor(r, false),
+        value: r.expense.amount,
+        onClick: () => onEditExpense(r.trip, r.item, r.expense),
       }))
     : flat
-      ? allExpenses.map(({ trip, key, item }) => ({
-          id: item.id,
-          label: item.t,
-          detail: `${trip.label} · ${SECTION_DEFS.find((d) => d.key === key)!.name}`,
-          value: item.costAmount ?? 0,
-          // Jump to the item's own stop first, so the edit form that
-          // opens belongs to a stop that's actually on screen.
-          onClick: () => {
-            onOpenStop(trip);
-            onEditItem(key, item);
-          },
+      ? allExpenseRows.map((r) => ({
+          id: r.expense.id,
+          label: r.expense.title,
+          detail: detailFor(r, true),
+          value: r.expense.amount,
+          onClick: () => onEditExpense(r.trip, r.item, r.expense),
         }))
       : stops.map(({ trip, subtotal }) => ({
           id: trip.id,
@@ -171,6 +184,7 @@ export default function FinancePanel({
         : ["You're settled up", "text-ink"];
   // With nothing to settle there's no second card, so stops stay open.
   const section: Section = showBalances ? open : "stops";
+  const activeCat = active ? categories.find((c) => c.key === active)! : null;
 
   return (
     <aside aria-label="Finances" className={card + " p-5 " + positionClass}>
@@ -234,14 +248,14 @@ export default function FinancePanel({
             )}
           >
             <AnimatedNumber
-              value={active ? active.total : total}
+              value={activeCat ? activeCat.total : total}
               format={money}
             />
           </p>
           <h2 className="mt-2.5 text-sm font-medium text-ink">
             <TransitionText value={`${filter}-${stop?.id ?? ""}`}>
-              {active
-                ? `${active.name} spend${stop ? ` in ${stop.label}` : ""}`
+              {activeCat
+                ? `${activeCat.name} spend${stop ? ` in ${stop.label}` : ""}`
                 : stop
                   ? `Spent in ${stop.label}`
                   : "Total spent"}
@@ -249,8 +263,8 @@ export default function FinancePanel({
           </h2>
           <p className="mt-1 text-pretty text-xs leading-relaxed tabular-nums text-muted-2">
             <TransitionText value={`${filter}-${stop?.id ?? ""}`}>
-              {active
-                ? `${active.count} ${active.count === 1 ? "expense" : "expenses"} · ${active.share}% of ${money(total)}`
+              {activeCat
+                ? `${activeCat.count} ${activeCat.count === 1 ? "expense" : "expenses"} · ${activeCat.share}% of ${money(total)}`
                 : total > 0
                   ? categories
                       .filter((c) => c.total > 0)
@@ -378,8 +392,8 @@ export default function FinancePanel({
                       className="overflow-hidden"
                     >
                       <p className="py-4 text-pretty text-xs leading-relaxed text-muted">
-                        {active
-                          ? `No ${active.name.toLowerCase()} costs yet.`
+                        {activeCat
+                          ? `No ${activeCat.name.toLowerCase()} costs yet.`
                           : stop
                             ? `Costs on ${stop.label}'s bookings add up here.`
                             : "Costs on stays, transport and activities add up here."}

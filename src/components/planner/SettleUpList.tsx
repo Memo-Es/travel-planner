@@ -57,7 +57,11 @@ export function SettleUpList({
                   {net < 0 ? "You" : name}
                 </span>
                 <span className="block truncate text-xs text-muted">
-                  {even ? `You and ${name} are even` : net < 0 ? `pay ${name}` : "pays you"}
+                  {even
+                    ? `You and ${name} are even`
+                    : net < 0
+                      ? `pay ${name}`
+                      : "pays you"}
                 </span>
               </span>
               <span className="flex shrink-0 items-center gap-1 rounded-full bg-hover-2 py-1 pl-2.5 pr-1.5 text-sm tabular-nums text-ink">
@@ -78,15 +82,17 @@ export function SettleUpList({
             >
               <ul className="space-y-3 pb-3 pt-1">
                 {lines.map((l) => (
-                  <li key={l.item.id}>
+                  <li key={l.expense.id}>
                     <div className="flex items-baseline gap-3">
                       <span className="min-w-0 flex-1 text-pretty text-sm leading-5 text-ink">
-                        {l.item.t}
+                        {l.expense.title}
                       </span>
                       <span
                         className={cn(
                           "shrink-0 text-sm tabular-nums",
-                          l.amount > 0 ? "text-task-green-ink" : "text-destructive",
+                          l.amount > 0
+                            ? "text-task-green-ink"
+                            : "text-destructive",
                         )}
                       >
                         {l.amount > 0 ? "+" : "−"}
@@ -95,15 +101,15 @@ export function SettleUpList({
                     </div>
                     <p className="mt-0.5 text-xs tabular-nums text-muted-2">
                       {l.paidBy.id === currentUserId ? "You" : name} paid{" "}
-                      {money(l.item.costAmount ?? 0)} · split {l.splitCount}{" "}
+                      {money(l.expense.amount)} · split {l.splitCount}{" "}
                       {l.splitCount === 1 ? "way" : "ways"}
                     </p>
                   </li>
                 ))}
                 <li className="text-pretty pt-0.5 text-xs leading-relaxed text-muted">
                   Each cost is split evenly between whoever joined it, or
-                  everyone if nobody did. {name}&apos;s shares of what you
-                  paid, minus your shares of what {name} paid.
+                  everyone if nobody did. {name}&apos;s shares of what you paid,
+                  minus your shares of what {name} paid.
                 </li>
               </ul>
             </AccordionBody>

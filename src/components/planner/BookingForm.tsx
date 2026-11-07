@@ -5,8 +5,7 @@ import { FileText, Paperclip, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect, Textarea } from "@/components/ui/input";
 import { fmtDay } from "@/lib/itinerary";
-import type { AttachmentData, MemberOption } from "@/lib/types";
-import { currencySymbol } from "@/lib/currency";
+import type { AttachmentData } from "@/lib/types";
 import {
   MAX_PDF_MB,
   attachmentHref,
@@ -17,15 +16,12 @@ import {
 export type BookingFormState = {
   t: string;
   url: string;
-  cost: string;
   /** "YYYY-MM-DD" or "" when the plan has no day yet. */
   date: string;
   /** "HH:mm" or "" for any time that day. */
   time: string;
   /** A short free-text note, "" for none. */
   notes: string;
-  /** Who fronted the money - a member's user id, or "" for nobody yet. */
-  paidBy: string;
   /** New PDFs to upload on save. */
   files: File[];
   /** Existing attachments staged for removal on save. */
@@ -35,11 +31,9 @@ export type BookingFormState = {
 export const EMPTY_BOOKING_FORM: BookingFormState = {
   t: "",
   url: "",
-  cost: "",
   date: "",
   time: "",
   notes: "",
-  paidBy: "",
   files: [],
   removeIds: [],
 };
@@ -52,7 +46,6 @@ export default function BookingForm({
   saving,
   onSave,
   onCancel,
-  currency,
   placeholder,
   submitLabel,
   existing = [],
@@ -60,7 +53,6 @@ export default function BookingForm({
   framed = true,
   before,
   days,
-  members,
 }: {
   form: BookingFormState;
   onChange: (f: BookingFormState) => void;
@@ -69,7 +61,6 @@ export default function BookingForm({
   saving: boolean;
   onSave: () => void;
   onCancel: () => void;
-  currency: string;
   placeholder: string;
   submitLabel: string;
   existing?: AttachmentData[];
@@ -80,8 +71,6 @@ export default function BookingForm({
   before?: ReactNode;
   /** The stop's days; when given, the plan can be placed on a day and time. */
   days?: string[];
-  /** Who can be picked as having paid for this booking. */
-  members: MemberOption[];
 }) {
   const id = useId();
   const errorId = `${id}-error`;
@@ -204,47 +193,17 @@ export default function BookingForm({
           </label>
         </div>
       )}
-      <div className="grid grid-cols-[minmax(0,1fr)_8rem] gap-3">
-        <label className="block min-w-0 space-y-1.5">
-          <span className="field-label">Booking link</span>
-          <Input
-            value={form.url}
-            onChange={(e) => onChange({ ...form, url: e.target.value })}
-            onKeyDown={handleKeyDown}
-            placeholder="https://…"
-            inputMode="url"
-            aria-invalid={!!error?.startsWith("Link") || undefined}
-            aria-describedby={error ? errorId : undefined}
-          />
-        </label>
-        <label className="block space-y-1.5">
-          <span className="field-label">Cost ({currencySymbol(currency)})</span>
-          <Input
-            value={form.cost}
-            onChange={(e) => onChange({ ...form, cost: e.target.value })}
-            onKeyDown={handleKeyDown}
-            placeholder="0.00"
-            inputMode="decimal"
-            className="tabular-nums"
-            aria-invalid={!!error?.startsWith("Cost") || undefined}
-            aria-describedby={error ? errorId : hintId}
-          />
-        </label>
-      </div>
-
       <label className="block space-y-1.5">
-        <span className="field-label">Paid by</span>
-        <NativeSelect
-          value={form.paidBy}
-          onChange={(e) => onChange({ ...form, paidBy: e.target.value })}
-        >
-          <option value="">Nobody yet</option>
-          {members.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
-            </option>
-          ))}
-        </NativeSelect>
+        <span className="field-label">Booking link</span>
+        <Input
+          value={form.url}
+          onChange={(e) => onChange({ ...form, url: e.target.value })}
+          onKeyDown={handleKeyDown}
+          placeholder="https://…"
+          inputMode="url"
+          aria-invalid={!!error?.startsWith("Link") || undefined}
+          aria-describedby={error ? errorId : undefined}
+        />
       </label>
 
       <div className="space-y-1.5">
@@ -351,13 +310,18 @@ export default function BookingForm({
           id={hintId}
           className="text-pretty text-xs leading-relaxed text-muted"
         >
-          Add a name and link to mark this booking as scheduled. PDFs up
-          to {MAX_PDF_MB} MB.
+          Add a name and link to mark this booking as scheduled. PDFs up to{" "}
+          {MAX_PDF_MB} MB.
         </p>
       )}
       {/* Stays in view at the bottom while a long form scrolls. */}
       <div className="sticky bottom-0 z-10 -mx-1 flex justify-end gap-2 bg-gradient-to-t from-white from-70% to-transparent px-1 pb-1 pt-4">
-        <Button variant="secondary" size="sm" disabled={saving} onClick={onCancel}>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={saving}
+          onClick={onCancel}
+        >
           Cancel
         </Button>
         <Button size="sm" disabled={saving} onClick={onSave}>

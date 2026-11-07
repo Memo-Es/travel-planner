@@ -36,7 +36,7 @@ model User {
   oauthCodes   OAuthCode[]
   oauthGrants  OAuthGrant[]
   attending    ItemAttendee[]
-  paidItems    TripItem[]     @relation("TripItemPaidBy")
+  paidExpenses Expense[]      @relation("ExpensePaidBy")
 }
 
 model Team {
@@ -101,6 +101,7 @@ model Trip {
   order     Int        @default(0)
   createdAt DateTime   @default(now())
   items     TripItem[]
+  expenses  Expense[]
 
   @@index([teamId])
 }
@@ -112,7 +113,6 @@ model TripItem {
   section     ItemSection
   title       String
   url         String         @default("")
-  costAmount  Float?
   // When a plan happens: a calendar day at the destination, plus an optional
   // local "HH:mm" time. Kept as wall-clock values so they never shift.
   date        DateTime?      @db.Date
@@ -120,16 +120,45 @@ model TripItem {
   /// A short note on the plan — booking details, a reminder, anything that
   /// doesn't belong in the title.
   notes       String?
-  /// Who fronted the money for this booking, for splitting costs - see
-  /// lib/balances.ts. SetNull rather than Cascade: losing track of who
-  /// paid shouldn't delete the booking or its cost.
-  paidBy      User?          @relation("TripItemPaidBy", fields: [paidById], references: [id], onDelete: SetNull)
-  paidById    String?
   order       Int            @default(0)
   attachments Attachment[]
   attendees   ItemAttendee[]
+  /// What this plan cost - zero, one or several. A booking's own price lives
+  /// here as much as a loose cost on an activity does: an item may or may
+  /// not have one, and can have more than one (an entry ticket and a taxi
+  /// to get there), so it's never a field on the plan itself. See Expense.
+  expenses    Expense[]
 
   @@index([tripId])
+}
+
+/// A cost on the trip: an amount, who fronted it, and - optionally - the
+/// plan it was for. Its own object rather than fields on TripItem, because a
+/// plan can carry none, one or several (a museum ticket and the taxi there
+/// are two expenses on one activity), and a cost doesn't always have a plan
+/// behind it at all - a tip, a shared snack, cash from an ATM. See
+/// lib/balances.ts for how it's split.
+model Expense {
+  id        String   @id @default(cuid())
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId    String
+  /// The plan this cost belongs to, if it belongs to one. Cascade, not
+  /// SetNull: deleting the plan it was for should take its costs with it,
+  /// the same way deleting a stop already takes its plans.
+  item      TripItem? @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId    String?
+  title     String
+  amount    Float
+  /// Who fronted the money, for splitting costs - see lib/balances.ts.
+  /// SetNull rather than Cascade: losing track of who paid shouldn't delete
+  /// the expense itself.
+  paidBy    User?    @relation("ExpensePaidBy", fields: [paidById], references: [id], onDelete: SetNull)
+  paidById  String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([tripId])
+  @@index([itemId])
 }
 
 /// Someone on the trip who signed up for a plan, so a group can split up:

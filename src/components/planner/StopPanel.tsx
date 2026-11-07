@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  AnimatedBackground,
-  Disclosure,
-} from "@/components/motion/primitives";
+import { AnimatedBackground, Disclosure } from "@/components/motion/primitives";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   Trash2,
@@ -19,7 +16,7 @@ import {
   Copy,
   ArrowUpRight,
 } from "lucide-react";
-import type { TripData, ItemSectionKey, ItemData, MemberOption, Person } from "@/lib/types";
+import type { TripData, ItemSectionKey, ItemData, Person } from "@/lib/types";
 import { fmtRange, nightsBetween } from "@/lib/dates";
 import { statusFor } from "@/lib/tripStatus";
 import { AddRow } from "@/components/planner/AddRow";
@@ -57,11 +54,9 @@ export function editState(item: ItemData): FormState {
   return {
     t: item.t,
     url: item.url,
-    cost: item.costAmount === null ? "" : String(item.costAmount),
     date: item.date ?? "",
     time: item.time ?? "",
     notes: item.notes ?? "",
-    paidBy: item.paidBy?.id ?? "",
     files: [],
     removeIds: [],
   };
@@ -69,7 +64,6 @@ export function editState(item: ItemData): FormState {
 
 type ScheduleProps = {
   trip: TripData;
-  currency: string;
   editing: Editing;
   form: FormState;
   formError: string | null;
@@ -97,7 +91,6 @@ type ScheduleProps = {
   /** The signed in person, who can sign up for activities. */
   me: Person;
   onSetGoing: (itemId: string, going: boolean) => Promise<void>;
-  members: MemberOption[];
   /** A plan picked on the calendar: its day opens and it's highlighted.
    * The counter re-runs it when the same plan is picked again. */
   focusPlan?: { id: string; n: number } | null;
@@ -109,7 +102,6 @@ type ScheduleProps = {
 export function StopSchedule({
   inline = false,
   trip,
-  currency,
   editing,
   form,
   formError,
@@ -130,7 +122,6 @@ export function StopSchedule({
   onMoveItem,
   me,
   onSetGoing,
-  members,
   focusPlan,
 }: ScheduleProps & { inline?: boolean }) {
   const dd = useDayDrag(trip, onMoveItem);
@@ -422,17 +413,27 @@ export function StopSchedule({
                   value={endDraft}
                   onChange={(e) => setEndDraft(e.target.value)}
                   aria-invalid={!datesValid}
-                  aria-describedby={!datesValid ? `${tabsId}-date-error` : undefined}
+                  aria-describedby={
+                    !datesValid ? `${tabsId}-date-error` : undefined
+                  }
                 />
               </label>
             </div>
             {datesValid ? (
-              <p className="text-sm tabular-nums text-muted-2" aria-live="polite">
+              <p
+                className="text-sm tabular-nums text-muted-2"
+                aria-live="polite"
+              >
                 {fmtRange(startDraft, endDraft)} ·{" "}
-                {nightsBetween(startDraft, endDraft)} {nightsBetween(startDraft, endDraft) === 1 ? "night" : "nights"}
+                {nightsBetween(startDraft, endDraft)}{" "}
+                {nightsBetween(startDraft, endDraft) === 1 ? "night" : "nights"}
               </p>
             ) : (
-              <p id={`${tabsId}-date-error`} className="field-error" role="alert">
+              <p
+                id={`${tabsId}-date-error`}
+                className="field-error"
+                role="alert"
+              >
                 Choose a departure on or after arrival.
               </p>
             )}
@@ -524,11 +525,13 @@ export function StopSchedule({
           </div>
           <Disclosure open={pickingIcon}>
             <div className="-ml-1.5 mt-2 flex flex-wrap gap-0.5">
-              {([null, "pin", ...(Object.keys(CITY_ICONS) as CityIconKey[])] as (
-                | CityIconKey
-                | "pin"
-                | null
-              )[]).map((key) => {
+              {(
+                [
+                  null,
+                  "pin",
+                  ...(Object.keys(CITY_ICONS) as CityIconKey[]),
+                ] as (CityIconKey | "pin" | null)[]
+              ).map((key) => {
                 const active = trip.icon === key;
                 const label =
                   key === null
@@ -546,7 +549,9 @@ export function StopSchedule({
                     title={label}
                     className={cn(
                       "flex size-10 items-center justify-center rounded-xl transition-colors duration-150",
-                      active ? "bg-secondary text-ink" : "text-muted hover:bg-hover hover:text-ink",
+                      active
+                        ? "bg-secondary text-ink"
+                        : "text-muted hover:bg-hover hover:text-ink",
                     )}
                   >
                     {key === null ? (
@@ -554,7 +559,10 @@ export function StopSchedule({
                         Auto
                       </span>
                     ) : (
-                      <StopIcon icon={key === "pin" ? null : key} className="size-6" />
+                      <StopIcon
+                        icon={key === "pin" ? null : key}
+                        className="size-6"
+                      />
                     )}
                   </button>
                 );
@@ -614,14 +622,12 @@ export function StopSchedule({
               saving={saving}
               onSave={onSaveForm}
               onCancel={onCancelForm}
-              currency={currency}
               placeholder={sec.placeholder}
               submitLabel={label}
               existing={existing}
               days={
                 PLANNED_SECTIONS.includes(sec.key) ? tripDays(trip) : undefined
               }
-              members={members}
             />
           );
           const draggable = sec.key === "activities";
@@ -638,7 +644,9 @@ export function StopSchedule({
               id={`${tabsId}-plan-${item.id}`}
               data-drag-row={draggable || undefined}
               onPointerDown={
-                draggable ? (e) => dd.start(e, item, dayOf(item), true) : undefined
+                draggable
+                  ? (e) => dd.start(e, item, dayOf(item), true)
+                  : undefined
               }
               className={cn(
                 "group -mx-2 rounded-2xl px-2 py-3 transition-[background-color,opacity] duration-300",
@@ -651,7 +659,9 @@ export function StopSchedule({
                 <div className="min-w-0 flex-1">
                   <button
                     className="tap-target text-pretty rounded text-left text-base font-medium leading-6 text-ink"
-                    onClick={() => onStartEdit(sec.key, item.id, editState(item))}
+                    onClick={() =>
+                      onStartEdit(sec.key, item.id, editState(item))
+                    }
                   >
                     {item.t}
                   </button>
@@ -701,7 +711,9 @@ export function StopSchedule({
                             <span className="flex-1 tabular-nums">
                               {to === UNDATED ? "No day yet" : fmtDay(to)}
                             </span>
-                            {to === dayOf(item) && <Check aria-label="Current day" />}
+                            {to === dayOf(item) && (
+                              <Check aria-label="Current day" />
+                            )}
                           </DropdownMenuItem>
                         ))}
                       </>
@@ -731,7 +743,9 @@ export function StopSchedule({
                         rel="noreferrer"
                         className="flex min-w-0 items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-ink-soft transition-colors duration-150 hover:bg-hover-2 hover:text-ink"
                       >
-                        <span className="truncate">{hostFromUrl(item.url)}</span>
+                        <span className="truncate">
+                          {hostFromUrl(item.url)}
+                        </span>
                         <ArrowUpRight className="size-3 shrink-0" />
                         <span className="sr-only"> (opens in a new tab)</span>
                       </a>
@@ -747,7 +761,10 @@ export function StopSchedule({
                       >
                         <FileText className="size-3.5 shrink-0 text-muted-2" />
                         <span className="truncate">{a.name}</span>
-                        <span className="sr-only"> (PDF, opens in a new tab)</span>
+                        <span className="sr-only">
+                          {" "}
+                          (PDF, opens in a new tab)
+                        </span>
                       </a>
                     </li>
                   ))}
@@ -849,7 +866,9 @@ export function StopSchedule({
                               (p) => p.key === "activities",
                             ).length;
                             const [weekday, num] =
-                              d === UNDATED ? ["No", "day"] : fmtDay(d).split(" ");
+                              d === UNDATED
+                                ? ["No", "day"]
+                                : fmtDay(d).split(" ");
                             return (
                               <button
                                 key={d}
@@ -861,7 +880,9 @@ export function StopSchedule({
                                 onClick={() => setDay(d)}
                                 className={cn(
                                   "focus-inset relative isolate flex w-12 shrink-0 flex-col items-center rounded-2xl py-1.5 transition-colors duration-150",
-                                  selected ? "text-ink" : "text-muted-2 hover:text-ink",
+                                  selected
+                                    ? "text-ink"
+                                    : "text-muted-2 hover:text-ink",
                                   dd.isOver(d) && "bg-accent-soft",
                                 )}
                               >

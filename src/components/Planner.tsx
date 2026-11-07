@@ -13,7 +13,9 @@ import type {
   TeamOption,
   InviteData,
   MemberOption,
+  ItemData,
   ItemSectionKey,
+  ExpenseData,
 } from "@/lib/types";
 import {
   buildWeeks,
@@ -52,6 +54,9 @@ import {
   updateTripColor,
   updateTripIcon,
   deleteAttachment,
+  addExpense,
+  updateExpense,
+  deleteExpense,
 } from "@/actions/trips";
 import { uploadPdf } from "@/lib/uploads";
 import {
@@ -76,6 +81,7 @@ import LeftPanel from "@/components/planner/LeftPanel";
 import LeftRail from "@/components/planner/LeftRail";
 import FinancePanel from "@/components/planner/FinancePanel";
 import ExpenseDialog, {
+  expenseFormFor,
   type ExpenseFormState,
 } from "@/components/planner/ExpenseDialog";
 import {
@@ -108,18 +114,22 @@ function validateBooking(f: BookingFormState): string | null {
   if (!f.t.trim()) return "Name is required.";
   if (f.url.trim() && !/^https?:\/\//i.test(f.url.trim()))
     return "Link must start with http:// or https://";
-  const cost = parseCost(f.cost);
-  if (f.cost.trim() && cost === null)
-    return "Cost must be a number, like 120 or 89.50.";
-  if (cost !== null && cost < 0) return "Cost can't be negative.";
   return null;
 }
 
-function parseCost(raw: string): number | null {
+function parseAmount(raw: string): number | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
   const n = Number(trimmed.replace(",", "."));
   return Number.isFinite(n) ? n : null;
+}
+
+function validateExpense(f: ExpenseFormState): string | null {
+  if (!f.title.trim()) return "Name is required.";
+  const amount = parseAmount(f.amount);
+  if (amount === null) return "Amount must be a number, like 120 or 89.50.";
+  if (amount <= 0) return "Amount must be more than 0.";
+  return null;
 }
 
 const CARD =
@@ -255,9 +265,12 @@ export default function Planner({
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [expenseDefaults, setExpenseDefaults] = useState<{
     tripId: string | null;
-    key: ItemSectionKey;
-    date: string;
-  }>({ tripId: null, key: "stay", date: "" });
+    /** The plan this expense is on, "" for the stop itself. */
+    itemId: string;
+    /** The expense being edited, or null when adding one. */
+    editingId: string | null;
+    initial: ExpenseFormState | null;
+  }>({ tripId: null, itemId: "", editingId: null, initial: null });
   const [itineraryTripId, setItineraryTripId] = useState<string | null>(null);
   const [expenseError, setExpenseError] = useState<string | null>(null);
   const [expenseSaving, setExpenseSaving] = useState(false);
@@ -394,14 +407,17 @@ export default function Planner({
   // On smaller monitors the itinerary tucks Finances into its rail, so the
   // calendar keeps a usable width. The rail swaps them back: it folds the
   // itinerary away (the stop stays selected) and Finances returns.
-  const rightTucked =
-    showItinerary && vw - 48 - RIGHT_W - STOP_W < ROOMY_MAIN;
+  const rightTucked = showItinerary && vw - 48 - RIGHT_W - STOP_W < ROOMY_MAIN;
   // On compact screens both sides start as rails and open one at a time,
   // pushing the calendar over rather than covering it.
   const activeOverlay = isCompact ? overlay : null;
   const rightCol = isCompact
-    ? activeOverlay === "finances" ? RIGHT_W : RAIL_W
-    : rightTucked ? RAIL_W : RIGHT_W;
+    ? activeOverlay === "finances"
+      ? RIGHT_W
+      : RAIL_W
+    : rightTucked
+      ? RAIL_W
+      : RIGHT_W;
 
   // An open stop's itinerary sits beside the stops list: the left column
   // grows to fit it and the calendar narrows, keeping at least
@@ -418,9 +434,21 @@ export default function Planner({
   );
   const stopAlone = (isMobile || isCompact) && !!trip;
   const leftCol = isCompact
-    ? activeOverlay === "links" ? (trip ? stopAloneWidth : LEFT_W) : RAIL_W
-    : showItinerary ? stopWidth : LEFT_W;
-  const width = mainWidth(vw, isMobile ? "mobile" : "full", leftCol, rightCol, RAIL_W);
+    ? activeOverlay === "links"
+      ? trip
+        ? stopAloneWidth
+        : LEFT_W
+      : RAIL_W
+    : showItinerary
+      ? stopWidth
+      : LEFT_W;
+  const width = mainWidth(
+    vw,
+    isMobile ? "mobile" : "full",
+    leftCol,
+    rightCol,
+    RAIL_W,
+  );
   // The left panel opens the days of the last stop you opened, falling back to the stop
   // happening now (or next).
   const itineraryTrip = trips.some((t) => t.id === itineraryTripId)
@@ -515,11 +543,7 @@ export default function Planner({
   const dayStop = dayView
     ? trips.find((t) => t.id === dayView.tripId)
     : undefined;
-  const dayDays = dayView
-    ? dayStop
-      ? tripDays(dayStop)
-      : [dayView.date]
-    : [];
+  const dayDays = dayView ? (dayStop ? tripDays(dayStop) : [dayView.date]) : [];
   const stepName = CAL_VIEWS.find((v) => v.id === calView)!.step;
   const viewSwitcher = (
     <div
@@ -673,11 +697,9 @@ export default function Planner({
     const payload = {
       title: f.t.trim(),
       url: f.url.trim(),
-      costAmount: parseCost(f.cost),
       date: f.date || null,
       time: f.date && f.time ? f.time : null,
       notes: f.notes.trim() || null,
-      paidById: f.paidBy || null,
     };
     let itemId = target.itemId;
     if (itemId === null)
@@ -712,14 +734,47 @@ export default function Planner({
     );
   }
 
-  async function saveExpense(f: ExpenseFormState) {
+  /** Opens the expense dialog to add one, optionally pre-selecting a stop
+   * and a plan on it. */
+  function openAddExpense(tripId?: string | null, itemId = "") {
+    setExpenseDefaults({
+      tripId: tripId ?? null,
+      itemId,
+      editingId: null,
+      initial: null,
+    });
+    setExpenseError(null);
+    setExpenseOpen(true);
+  }
+
+  /** Opens the expense dialog on an existing expense, with Delete. */
+  function openEditExpense(
+    trip: TripData,
+    item: ItemData | null,
+    expense: ExpenseData,
+  ) {
+    setExpenseDefaults({
+      tripId: trip.id,
+      itemId: item?.id ?? "",
+      editingId: expense.id,
+      initial: expenseFormFor(expense),
+    });
+    setExpenseError(null);
+    setExpenseOpen(true);
+  }
+
+  async function saveExpenseForm(
+    f: ExpenseFormState,
+    tripId: string,
+    itemId: string | null,
+  ) {
     if (savingRef.current) return;
-    const problem = validateBooking(f);
+    const problem = validateExpense(f);
     if (problem) {
       setExpenseError(problem);
       return;
     }
-    if (!trips.some((t) => t.id === f.tripId)) {
+    if (!trips.some((t) => t.id === tripId)) {
       setExpenseError("Choose a stop for this expense.");
       return;
     }
@@ -727,17 +782,19 @@ export default function Planner({
     savingRef.current = true;
     setExpenseSaving(true);
     setExpenseError(null);
+    const payload = {
+      title: f.title.trim(),
+      amount: parseAmount(f.amount)!,
+      paidById: f.paidBy || null,
+    };
     try {
-      const { itemId, failed, uploadError } = await persistBooking(
-        { tripId: f.tripId, key: f.key, itemId: null },
-        f,
-      );
-      setExpenseOpen(false);
-      if (failed.length) {
-        const t = trips.find((x) => x.id === f.tripId);
-        if (t) jumpToTrip(t);
-        keepFailedUploads(f.key, itemId, f, failed, uploadError);
+      if (expenseDefaults.editingId) {
+        await updateExpense(expenseDefaults.editingId, payload);
+      } else {
+        await addExpense(tripId, itemId, payload);
       }
+      refresh();
+      setExpenseOpen(false);
     } catch {
       setExpenseError("The expense could not be saved. Please try again.");
     } finally {
@@ -746,20 +803,22 @@ export default function Planner({
     }
   }
 
-  function openExpense(defaults: {
-    tripId?: string | null;
-    key?: ItemSectionKey;
-    date?: string;
-  } = {}) {
-    setExpenseDefaults({
-      tripId: defaults.tripId ?? null,
-      key: defaults.key ?? "stay",
-      date: defaults.date ?? "",
-    });
-    setExpenseError(null);
-    setExpenseOpen(true);
+  async function deleteExpenseForm() {
+    if (!expenseDefaults.editingId || savingRef.current) return;
+    if (demoGate()) return;
+    savingRef.current = true;
+    setExpenseSaving(true);
+    try {
+      await deleteExpense(expenseDefaults.editingId);
+      refresh();
+      setExpenseOpen(false);
+    } catch {
+      setExpenseError("The expense could not be removed. Please try again.");
+    } finally {
+      savingRef.current = false;
+      setExpenseSaving(false);
+    }
   }
-
 
   function onFormChange(f: FormState) {
     setForm(f);
@@ -969,7 +1028,8 @@ export default function Planner({
       sum +
       sectionTotal(t.stay) +
       sectionTotal(t.transport) +
-      sectionTotal(t.activities),
+      sectionTotal(t.activities) +
+      t.miscExpenses.reduce((n, e) => n + e.amount, 0),
     0,
   );
 
@@ -997,8 +1057,7 @@ export default function Planner({
       key={t.id}
       inline={inline}
       focusPlan={focusPlan}
-          trip={t}
-      currency={teamCurrency}
+      trip={t}
       editing={editing}
       form={form}
       formError={formError}
@@ -1022,7 +1081,6 @@ export default function Planner({
       onMoveItem={handleMoveItem}
       me={{ id: currentUserId, name: userName }}
       onSetGoing={handleSetGoing}
-      members={members}
     />
   );
 
@@ -1071,8 +1129,6 @@ export default function Planner({
         </AlertDialogContent>
       </AlertDialog>
 
-
-
       {showLeftRail && (
         <LeftRail
           trips={trips}
@@ -1084,7 +1140,9 @@ export default function Planner({
       {showLeftPanel && stopAlone && trip && (
         <aside
           aria-label={trip.label}
-          className={CARD + (isMobile ? " flex-1 min-h-0 p-5" : " min-h-0 min-w-0 p-5")}
+          className={
+            CARD + (isMobile ? " flex-1 min-h-0 p-5" : " min-h-0 min-w-0 p-5")
+          }
         >
           {stopSchedule(trip, false)}
         </aside>
@@ -1108,11 +1166,7 @@ export default function Planner({
                 ? setItineraryFolded(false)
                 : closeDrawer()
           }
-          detail={
-            trip && showItinerary
-              ? stopSchedule(trip, true)
-              : null
-          }
+          detail={trip && showItinerary ? stopSchedule(trip, true) : null}
           onAddTrip={handleAddTrip}
           addingTrip={addingTrip}
           onClose={closeOverlay}
@@ -1139,101 +1193,105 @@ export default function Planner({
             {isMobile ? (
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h1
-              className={
-                "m-0 whitespace-nowrap font-medium tabular-nums text-muted-2 " +
-                (isMobile ? "text-2xl" : "mt-3 text-3xl")
-              }
-            >
-              <TransitionText value={`${calView}-${rangeStart}`}>
-                <strong className="font-bold text-ink">
-                  {calView === "month"
-                    ? MONTHS_LONG[cursor.m]
-                    : fmtRange(
-                        toDateInput(rangeStart),
-                        toDateInput(rangeEnd),
-                      )}
-                </strong>{" "}
-                {calView === "month"
-                  ? cursor.y
-                  : new Date(rangeEnd).getUTCFullYear()}
-              </TransitionText>
-            </h1>
+                  className={
+                    "m-0 whitespace-nowrap font-medium tabular-nums text-muted-2 " +
+                    (isMobile ? "text-2xl" : "mt-3 text-3xl")
+                  }
+                >
+                  <TransitionText value={`${calView}-${rangeStart}`}>
+                    <strong className="font-bold text-ink">
+                      {calView === "month"
+                        ? MONTHS_LONG[cursor.m]
+                        : fmtRange(
+                            toDateInput(rangeStart),
+                            toDateInput(rangeEnd),
+                          )}
+                    </strong>{" "}
+                    {calView === "month"
+                      ? cursor.y
+                      : new Date(rangeEnd).getUTCFullYear()}
+                  </TransitionText>
+                </h1>
                 <div className="flex items-center gap-1.5">
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  aria-label={`Previous ${stepName}`}
-                  onClick={() => setCursor((c) => stepCursor(c, calView, -1))}
-                >
-                  <ChevronLeft size={16} />
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setCursor(cursorAt(Date.now()))}
-                >
-                  Today
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  aria-label={`Next ${stepName}`}
-                  onClick={() => setCursor((c) => stepCursor(c, calView, 1))}
-                >
-                  <ChevronRight size={16} />
-                </Button>
-              </div>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    aria-label={`Previous ${stepName}`}
+                    onClick={() => setCursor((c) => stepCursor(c, calView, -1))}
+                  >
+                    <ChevronLeft size={16} />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setCursor(cursorAt(Date.now()))}
+                  >
+                    Today
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    aria-label={`Next ${stepName}`}
+                    onClick={() => setCursor((c) => stepCursor(c, calView, 1))}
+                  >
+                    <ChevronRight size={16} />
+                  </Button>
+                </div>
               </div>
             ) : (
               <>
                 <div className="flex min-h-10 flex-wrap items-center justify-between gap-1.5">
                   {viewSwitcher}
                   <div className="flex items-center gap-1.5">
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  aria-label={`Previous ${stepName}`}
-                  onClick={() => setCursor((c) => stepCursor(c, calView, -1))}
-                >
-                  <ChevronLeft size={16} />
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setCursor(cursorAt(Date.now()))}
-                >
-                  Today
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  aria-label={`Next ${stepName}`}
-                  onClick={() => setCursor((c) => stepCursor(c, calView, 1))}
-                >
-                  <ChevronRight size={16} />
-                </Button>
-              </div>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      aria-label={`Previous ${stepName}`}
+                      onClick={() =>
+                        setCursor((c) => stepCursor(c, calView, -1))
+                      }
+                    >
+                      <ChevronLeft size={16} />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setCursor(cursorAt(Date.now()))}
+                    >
+                      Today
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      aria-label={`Next ${stepName}`}
+                      onClick={() =>
+                        setCursor((c) => stepCursor(c, calView, 1))
+                      }
+                    >
+                      <ChevronRight size={16} />
+                    </Button>
+                  </div>
                 </div>
                 <h1
-              className={
-                "m-0 whitespace-nowrap font-medium tabular-nums text-muted-2 " +
-                (isMobile ? "text-2xl" : "mt-3 text-3xl")
-              }
-            >
-              <TransitionText value={`${calView}-${rangeStart}`}>
-                <strong className="font-bold text-ink">
-                  {calView === "month"
-                    ? MONTHS_LONG[cursor.m]
-                    : fmtRange(
-                        toDateInput(rangeStart),
-                        toDateInput(rangeEnd),
-                      )}
-                </strong>{" "}
-                {calView === "month"
-                  ? cursor.y
-                  : new Date(rangeEnd).getUTCFullYear()}
-              </TransitionText>
-            </h1>
+                  className={
+                    "m-0 whitespace-nowrap font-medium tabular-nums text-muted-2 " +
+                    (isMobile ? "text-2xl" : "mt-3 text-3xl")
+                  }
+                >
+                  <TransitionText value={`${calView}-${rangeStart}`}>
+                    <strong className="font-bold text-ink">
+                      {calView === "month"
+                        ? MONTHS_LONG[cursor.m]
+                        : fmtRange(
+                            toDateInput(rangeStart),
+                            toDateInput(rangeEnd),
+                          )}
+                    </strong>{" "}
+                    {calView === "month"
+                      ? cursor.y
+                      : new Date(rangeEnd).getUTCFullYear()}
+                  </TransitionText>
+                </h1>
               </>
             )}
           </header>
@@ -1302,11 +1360,8 @@ export default function Planner({
           stop={trip}
           currency={teamCurrency}
           onOpenStop={(t) => jumpToTrip(t)}
-          onEditItem={(key, item) => {
-            startEdit(key, item.id, editState(item));
-            if (isMobile) setMobileTab("links");
-          }}
-          onAddExpense={() => openExpense({ tripId: openTripId })}
+          onEditExpense={openEditExpense}
+          onAddExpense={() => openAddExpense(openTripId)}
           canAddExpense={trips.length > 0}
           onClose={closeOverlay}
           showClose={!!activeOverlay}
@@ -1326,12 +1381,7 @@ export default function Planner({
       )}
 
       {/* At the bottom on phones, within thumb reach. */}
-      {isMobile && (
-        <MobileTabs
-          active={mobileTab}
-          onChange={setMobileTab}
-        />
-      )}
+      {isMobile && <MobileTabs active={mobileTab} onChange={setMobileTab} />}
 
       <AnimatePresence initial={false}>
         {onboarding && (
@@ -1341,7 +1391,9 @@ export default function Planner({
             isMobile={isMobile}
             pals={
               isSample
-                ? members.filter((m) => m.id !== currentUserId).map((m) => m.name)
+                ? members
+                    .filter((m) => m.id !== currentUserId)
+                    .map((m) => m.name)
                 : []
             }
             ownTeamId={ownTeamId}
@@ -1375,15 +1427,17 @@ export default function Planner({
             defaultTripId={
               expenseDefaults.tripId ?? openTripId ?? trips[0]?.id ?? ""
             }
-            defaultKey={expenseDefaults.key}
-            defaultDate={expenseDefaults.date}
+            itemId={expenseDefaults.itemId}
+            editing={!!expenseDefaults.editingId}
+            initial={expenseDefaults.initial ?? undefined}
             members={members}
             currency={teamCurrency}
             isMobile={isMobile}
             error={expenseError}
             onError={setExpenseError}
             saving={expenseSaving}
-            onSave={saveExpense}
+            onSave={saveExpenseForm}
+            onDelete={deleteExpenseForm}
             onClose={() => {
               if (!expenseSaving) setExpenseOpen(false);
             }}
