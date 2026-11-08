@@ -358,16 +358,16 @@ export default function FinancePanel({
                   })}
                 </div>
               )}
-              <ul className="border-t border-dotted border-stone-300">
+              <ul>
                 <AnimatePresence initial={false}>
                   {isFlatList &&
                     rows.map((row) => (
                       <motion.li
                         key={row.id}
                         {...rowMotion}
-                        className="-mx-2 overflow-hidden [&:last-child>div]:border-b-0"
+                        className="-mx-2 overflow-hidden"
                       >
-                        <div className="mx-2 border-b border-dotted border-stone-300">
+                        <div className="mx-2">
                           <button
                             type="button"
                             onClick={row.onClick}
@@ -399,9 +399,9 @@ export default function FinancePanel({
                         <motion.li
                           key={group.trip.id}
                           {...rowMotion}
-                          className="-mx-2 overflow-hidden [&:last-child>div]:border-b-0"
+                          className="-mx-2 overflow-hidden"
                         >
-                          <div className="mx-2 border-b border-dotted border-stone-300">
+                          <div className="mx-2">
                             <button
                               type="button"
                               aria-expanded={expanded}
@@ -427,12 +427,9 @@ export default function FinancePanel({
                               />
                             </button>
                             <AccordionBody open={expanded} className="pb-1.5">
-                              <ul className="border-t border-dotted border-stone-200">
+                              <ul>
                                 {group.expenseRows.map((r) => (
-                                  <li
-                                    key={r.expense.id}
-                                    className="border-b border-dotted border-stone-200 last:border-b-0"
-                                  >
+                                  <li key={r.expense.id}>
                                     <button
                                       type="button"
                                       onClick={() =>
