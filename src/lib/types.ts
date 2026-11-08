@@ -22,6 +22,8 @@ export type ItemData = {
   date: string | null;
   /** Local start time, "HH:mm", if it has one. */
   time: string | null;
+  /** Local finish time, "HH:mm" - only ever set alongside a start time. */
+  endTime: string | null;
   attachments: AttachmentData[];
   /** Who signed up to go, in the order they joined. */
   going: Person[];

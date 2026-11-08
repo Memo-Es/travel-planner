@@ -27,6 +27,16 @@ export function fmtDay(date: string): string {
   return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS_SHORT[d.getUTCMonth()]}`;
 }
 
+/** "10:00", "10:00–11:30", or null for no start time at all - an end time
+ * never shows without the start it belongs to. */
+export function fmtTimeRange(
+  time: string | null,
+  endTime: string | null,
+): string | null {
+  if (!time) return null;
+  return endTime ? `${time}–${endTime}` : time;
+}
+
 /** Timed plans first in time order; untimed ones keep their saved order. */
 export function byTime(a: Plan, b: Plan): number {
   if (a.item.time && b.item.time) return a.item.time.localeCompare(b.item.time);
@@ -72,7 +82,8 @@ export function dayShareText(
     lines.push("Free day");
   } else {
     for (const { item } of plans) {
-      lines.push(item.time ? `${item.time} ${item.t}` : item.t);
+      const when = fmtTimeRange(item.time, item.endTime);
+      lines.push(when ? `${when} ${item.t}` : item.t);
     }
   }
   return lines.join("\n");

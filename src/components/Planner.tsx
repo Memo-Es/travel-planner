@@ -114,6 +114,8 @@ function validateBooking(f: BookingFormState): string | null {
   if (!f.t.trim()) return "Name is required.";
   if (f.url.trim() && !/^https?:\/\//i.test(f.url.trim()))
     return "Link must start with http:// or https://";
+  if (f.endTime && f.time && f.endTime <= f.time)
+    return "End time must be after start time.";
   return null;
 }
 
@@ -699,6 +701,7 @@ export default function Planner({
       url: f.url.trim(),
       date: f.date || null,
       time: f.date && f.time ? f.time : null,
+      endTime: f.date && f.time && f.endTime ? f.endTime : null,
       notes: f.notes.trim() || null,
     };
     let itemId = target.itemId;

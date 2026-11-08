@@ -25,6 +25,7 @@ import {
   PLANNED_SECTIONS,
   dayShareText,
   fmtDay,
+  fmtTimeRange,
   freeParts,
   itineraryFor,
   tripDays,
@@ -56,6 +57,7 @@ export function editState(item: ItemData): FormState {
     url: item.url,
     date: item.date ?? "",
     time: item.time ?? "",
+    endTime: item.endTime ?? "",
     notes: item.notes ?? "",
     files: [],
     removeIds: [],
@@ -631,13 +633,15 @@ export function StopSchedule({
             />
           );
           const draggable = sec.key === "activities";
-          const when = (item: ItemData) =>
+          const when = (item: ItemData) => {
+            const range = fmtTimeRange(item.time, item.endTime);
             // Activities are already grouped under their day.
-            sec.key === "activities"
-              ? item.time
+            return sec.key === "activities"
+              ? range
               : item.date
-                ? `${fmtDay(item.date)}${item.time ? ` · ${item.time}` : ""}`
+                ? `${fmtDay(item.date)}${range ? ` · ${range}` : ""}`
                 : null;
+          };
           const renderRow = (item: ItemData) => (
             <article
               key={item.id}

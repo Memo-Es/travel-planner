@@ -24,26 +24,34 @@ export const stopLabelSchema = z
 const colorIds = STOP_COLORS.map((c) => c.id) as [string, ...string[]];
 export const colorSchema = z.enum(colorIds);
 
-export const itemSchema = z.object({
-  title: z.string().trim().min(1, "Name is required").max(120),
-  url: z
-    .string()
-    .trim()
-    .max(500)
-    .refine(
-      (v) => v === "" || /^https?:\/\//i.test(v),
-      "Link must start with http:// or https://",
-    ),
-  date: dateStringSchema.nullable(),
-  time: timeStringSchema.nullable(),
-  notes: z
-    .string()
-    .trim()
-    .max(2000, "Notes can't be longer than 2000 characters")
-    .nullable()
-    .optional()
-    .transform((v) => (v ? v : null)),
-});
+export const itemSchema = z
+  .object({
+    title: z.string().trim().min(1, "Name is required").max(120),
+    url: z
+      .string()
+      .trim()
+      .max(500)
+      .refine(
+        (v) => v === "" || /^https?:\/\//i.test(v),
+        "Link must start with http:// or https://",
+      ),
+    date: dateStringSchema.nullable(),
+    time: timeStringSchema.nullable(),
+    /** The finish, alongside `time` - a plan can have a start with no
+     * known finish, but never a finish with no start. */
+    endTime: timeStringSchema.nullable().optional(),
+    notes: z
+      .string()
+      .trim()
+      .max(2000, "Notes can't be longer than 2000 characters")
+      .nullable()
+      .optional()
+      .transform((v) => (v ? v : null)),
+  })
+  .refine((v) => !v.endTime || !v.time || v.endTime > v.time, {
+    message: "End time must be after start time",
+    path: ["endTime"],
+  });
 
 export const expenseSchema = z.object({
   title: z.string().trim().min(1, "Name is required").max(120),
@@ -62,13 +70,16 @@ export type ExpenseInput = z.input<typeof expenseSchema>;
 
 export type ItemInput = z.input<typeof itemSchema>;
 
-/** A time only makes sense on a day, so a time without a date is dropped. */
+/** A time only makes sense on a day, and an end time only alongside a start
+ * - each drops with whatever it depends on. */
 export function toItemData(input: ItemInput) {
-  const { date, time, ...rest } = itemSchema.parse(input);
+  const { date, time, endTime, ...rest } = itemSchema.parse(input);
+  const keptTime = date ? time : null;
   return {
     ...rest,
     date: date ? new Date(date) : null,
-    time: date ? time : null,
+    time: keptTime,
+    endTime: keptTime ? (endTime ?? null) : null,
   };
 }
 
@@ -195,12 +206,14 @@ export async function setAttendance(
   }
 }
 
-/** Moves a plan to another day of its stop, keeping its time. Moving it to
- * no day clears the time too, since a time only makes sense on a day. */
+/** Moves a plan to another day of its stop, keeping its time (and end time).
+ * Moving it to no day clears both, since a time only makes sense on a day. */
 export async function moveItemToDay(itemId: string, date: string | null) {
   const day = dateStringSchema.nullable().parse(date);
   await prisma.tripItem.update({
     where: { id: itemId },
-    data: day ? { date: new Date(day) } : { date: null, time: null },
+    data: day
+      ? { date: new Date(day) }
+      : { date: null, time: null, endTime: null },
   });
 }
