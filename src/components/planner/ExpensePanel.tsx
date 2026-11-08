@@ -38,7 +38,6 @@ export const EMPTY_EXPENSE_FORM: ExpenseFormState = {
  * the grid rather than floating a drawer over the page - the same card, the
  * same slot, swapped in place. On mobile that's the Finances tab itself. */
 export default function ExpensePanel({
-  card,
   trips,
   defaultTripId,
   /** The plan this expense is on, or "" for the stop itself. Locked once
@@ -48,7 +47,6 @@ export default function ExpensePanel({
   editing = false,
   initial,
   currency,
-  isMobile,
   error,
   onError,
   saving,
@@ -57,7 +55,6 @@ export default function ExpensePanel({
   onClose,
   members,
 }: {
-  card: string;
   trips: TripData[];
   defaultTripId: string;
   itemId?: string;
@@ -67,7 +64,6 @@ export default function ExpensePanel({
   /** The expense's current values, when editing one. */
   initial?: ExpenseFormState;
   currency: string;
-  isMobile: boolean;
   error: string | null;
   onError: (message: string | null) => void;
   saving: boolean;
@@ -88,7 +84,6 @@ export default function ExpensePanel({
     ? [...trip.stay, ...trip.transport, ...trip.activities]
     : [];
   const title = editing ? "Edit expense" : "Add expense";
-  const positionClass = isMobile ? "flex-1 min-h-0" : "";
 
   function handleKeyDown(e: KeyboardEvent) {
     if (e.key === "Enter" && !saving) {
@@ -98,7 +93,7 @@ export default function ExpensePanel({
   }
 
   return (
-    <aside aria-label={title} className={card + " p-5 " + positionClass}>
+    <>
       <div className="scroll-stable scroll-quiet -mx-2 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-2 pb-2">
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line-soft pb-4">
           <div>
@@ -244,6 +239,6 @@ export default function ExpensePanel({
           </Button>
         </div>
       </div>
-    </aside>
+    </>
   );
 }

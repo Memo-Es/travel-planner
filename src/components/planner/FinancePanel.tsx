@@ -37,8 +37,6 @@ type ExpenseRow = {
 const EPS = 0.005;
 
 export default function FinancePanel({
-  card,
-  isMobile,
   trips: allTrips,
   stop,
   currency,
@@ -50,8 +48,6 @@ export default function FinancePanel({
   members,
   currentUserId,
 }: {
-  card: string;
-  isMobile: boolean;
   trips: TripData[];
   /** The open stop, which narrows Finances to its bookings. */
   stop: TripData | null;
@@ -103,7 +99,6 @@ export default function FinancePanel({
         },
   };
   const ids = useId();
-  const positionClass = isMobile ? "flex-1 min-h-0" : "";
   const money = (value: number) => formatTotal(value, currency);
 
   const trips = scopeStop ? [scopeStop] : allTrips;
@@ -234,7 +229,7 @@ export default function FinancePanel({
   const activeCat = active ? categories.find((c) => c.key === active)! : null;
 
   return (
-    <aside aria-label="Finances" className={card + " p-5 " + positionClass}>
+    <>
       <div className="scroll-stable scroll-quiet -mx-2 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-2 pb-2">
         <div className="flex min-h-10 items-center justify-between gap-2">
           <div
@@ -636,7 +631,7 @@ export default function FinancePanel({
           </p>
         )}
       </div>
-    </aside>
+    </>
   );
 }
 
