@@ -42,7 +42,6 @@ export default function FinancePanel({
   trips: allTrips,
   stop,
   currency,
-  onOpenStop,
   onEditExpense,
   onAddExpense,
   canAddExpense,
@@ -57,7 +56,6 @@ export default function FinancePanel({
   /** The open stop, which narrows Finances to its bookings. */
   stop: TripData | null;
   currency: string;
-  onOpenStop: (trip: TripData) => void;
   onEditExpense: (
     trip: TripData,
     item: ItemData | null,
@@ -77,6 +75,9 @@ export default function FinancePanel({
   // every expense across the whole trip instead, each one still opening
   // for editing.
   const [flat, setFlat] = useState(false);
+  // A stop's row expands in place to show its own expenses rather than
+  // jumping the whole app over to that stop - Finances stays put.
+  const [expandedStopId, setExpandedStopId] = useState<string | null>(null);
   const reduce = !!useReducedMotion();
   const spring = reduce ? { duration: 0 } : accordionSpring;
   // Stop rows enter and leave like accordion bodies when the filter changes.
@@ -162,13 +163,18 @@ export default function FinancePanel({
           value: r.expense.amount,
           onClick: () => onEditExpense(r.trip, r.item, r.expense),
         }))
-      : stops.map(({ trip, subtotal }) => ({
-          id: trip.id,
-          label: trip.label,
-          detail: null,
-          value: subtotal,
-          onClick: () => onOpenStop(trip),
-        }));
+      : [];
+  // "By stop", unfolded: each stop carries its own expenses, shown inline
+  // when that stop's row is toggled open rather than by navigating there.
+  const stopGroups =
+    !stop && !flat
+      ? stops.map(({ trip, subtotal }) => ({
+          trip,
+          subtotal,
+          expenseRows: rowsFor(trip, keys),
+        }))
+      : [];
+  const stopRowCount = isFlatList ? rows.length : stopGroups.length;
 
   // Who owes who is settled across the whole trip, not per stop.
   const showBalances = hasPaidExpenses(allTrips);
@@ -300,12 +306,12 @@ export default function FinancePanel({
                   <span className="flex items-center gap-2.5">
                     {section !== "stops" && (
                       <span className="text-xs font-normal tabular-nums text-muted-2">
-                        {rows.length}{" "}
+                        {stopRowCount}{" "}
                         {isFlatList
-                          ? rows.length === 1
+                          ? stopRowCount === 1
                             ? "expense"
                             : "expenses"
-                          : rows.length === 1
+                          : stopRowCount === 1
                             ? "stop"
                             : "stops"}
                       </span>
@@ -354,38 +360,114 @@ export default function FinancePanel({
               )}
               <ul className="border-t border-dotted border-stone-300">
                 <AnimatePresence initial={false}>
-                  {rows.map((row) => (
-                    <motion.li
-                      key={row.id}
-                      {...rowMotion}
-                      className="-mx-2 overflow-hidden [&:last-child>div]:border-b-0"
-                    >
-                      <div className="mx-2 border-b border-dotted border-stone-300">
-                        <button
-                          type="button"
-                          onClick={row.onClick}
-                          className="focus-inset -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl px-2 py-3.5 text-left transition-colors duration-150 hover:bg-hover-2/60"
-                        >
-                          <span className="min-w-0 flex-1">
-                            <span className="line-clamp-2 break-words text-sm font-semibold text-ink">
-                              {row.label}
-                            </span>
-                            {row.detail && (
-                              <span className="block truncate text-xs text-muted-2">
-                                {row.detail}
+                  {isFlatList &&
+                    rows.map((row) => (
+                      <motion.li
+                        key={row.id}
+                        {...rowMotion}
+                        className="-mx-2 overflow-hidden [&:last-child>div]:border-b-0"
+                      >
+                        <div className="mx-2 border-b border-dotted border-stone-300">
+                          <button
+                            type="button"
+                            onClick={row.onClick}
+                            className="focus-inset -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl px-2 py-3.5 text-left transition-colors duration-150 hover:bg-hover-2/60"
+                          >
+                            <span className="min-w-0 flex-1">
+                              <span className="line-clamp-2 break-words text-sm font-semibold text-ink">
+                                {row.label}
                               </span>
-                            )}
-                          </span>
-                          <AnimatedNumber
-                            value={row.value}
-                            format={money}
-                            className="shrink-0 text-sm text-muted-2"
-                          />
-                        </button>
-                      </div>
-                    </motion.li>
-                  ))}
-                  {rows.length === 0 && (
+                              {row.detail && (
+                                <span className="block truncate text-xs text-muted-2">
+                                  {row.detail}
+                                </span>
+                              )}
+                            </span>
+                            <AnimatedNumber
+                              value={row.value}
+                              format={money}
+                              className="shrink-0 text-sm text-muted-2"
+                            />
+                          </button>
+                        </div>
+                      </motion.li>
+                    ))}
+                  {!isFlatList &&
+                    stopGroups.map((group) => {
+                      const expanded = expandedStopId === group.trip.id;
+                      return (
+                        <motion.li
+                          key={group.trip.id}
+                          {...rowMotion}
+                          className="-mx-2 overflow-hidden [&:last-child>div]:border-b-0"
+                        >
+                          <div className="mx-2 border-b border-dotted border-stone-300">
+                            <button
+                              type="button"
+                              aria-expanded={expanded}
+                              onClick={() =>
+                                setExpandedStopId(expanded ? null : group.trip.id)
+                              }
+                              className="focus-inset -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl px-2 py-3.5 text-left transition-colors duration-150 hover:bg-hover-2/60"
+                            >
+                              <span className="line-clamp-2 min-w-0 flex-1 break-words text-sm font-semibold text-ink">
+                                {group.trip.label}
+                              </span>
+                              <AnimatedNumber
+                                value={group.subtotal}
+                                format={money}
+                                className="shrink-0 text-sm text-muted-2"
+                              />
+                              <ChevronDown
+                                aria-hidden="true"
+                                className={cn(
+                                  "size-4 shrink-0 text-muted-2 transition-transform duration-150",
+                                  expanded && "rotate-180",
+                                )}
+                              />
+                            </button>
+                            <AccordionBody open={expanded} className="pb-1.5">
+                              <ul className="border-t border-dotted border-stone-200">
+                                {group.expenseRows.map((r) => (
+                                  <li
+                                    key={r.expense.id}
+                                    className="border-b border-dotted border-stone-200 last:border-b-0"
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        onEditExpense(r.trip, r.item, r.expense)
+                                      }
+                                      className="focus-inset flex w-full items-center gap-3 rounded-xl py-3 pl-3 pr-1 text-left transition-colors duration-150 hover:bg-hover-2/60"
+                                    >
+                                      <span className="min-w-0 flex-1">
+                                        <span className="line-clamp-2 break-words text-sm font-medium text-ink">
+                                          {r.expense.title}
+                                        </span>
+                                        <span className="block truncate text-xs text-muted-2">
+                                          {detailFor(r, false)}
+                                        </span>
+                                      </span>
+                                      <AnimatedNumber
+                                        value={r.expense.amount}
+                                        format={money}
+                                        className="shrink-0 text-sm text-muted-2"
+                                      />
+                                    </button>
+                                  </li>
+                                ))}
+                                {group.expenseRows.length === 0 && (
+                                  <li className="py-3 pl-3 text-xs text-muted">
+                                    No expenses yet.
+                                  </li>
+                                )}
+                              </ul>
+                            </AccordionBody>
+                          </div>
+                        </motion.li>
+                      );
+                    })}
+                  {stopRowCount === 0 && (
                     <motion.li
                       key="empty"
                       {...rowMotion}

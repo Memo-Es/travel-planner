@@ -4,12 +4,6 @@ import { useId, useState, type KeyboardEvent } from "react";
 import { Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import type { ExpenseData, MemberOption, TripData } from "@/lib/types";
 import { currencySymbol } from "@/lib/currency";
 import { fmtRange } from "@/lib/dates";
@@ -38,8 +32,13 @@ export const EMPTY_EXPENSE_FORM: ExpenseFormState = {
 /** Adds a cost to a stop, or edits one already there - on a plan, or loose
  * on the stop when none is picked. The same small form either way; editing
  * adds a Delete button and locks the stop (an expense's trip never
- * changes, only which of its plans it's on, or none). */
-export default function ExpenseDialog({
+ * changes, only which of its plans it's on, or none).
+ *
+ * It's only ever opened from Finances, so it takes Finances' own column in
+ * the grid rather than floating a drawer over the page - the same card, the
+ * same slot, swapped in place. On mobile that's the Finances tab itself. */
+export default function ExpensePanel({
+  card,
   trips,
   defaultTripId,
   /** The plan this expense is on, or "" for the stop itself. Locked once
@@ -58,6 +57,7 @@ export default function ExpenseDialog({
   onClose,
   members,
 }: {
+  card: string;
   trips: TripData[];
   defaultTripId: string;
   itemId?: string;
@@ -88,6 +88,7 @@ export default function ExpenseDialog({
     ? [...trip.stay, ...trip.transport, ...trip.activities]
     : [];
   const title = editing ? "Edit expense" : "Add expense";
+  const positionClass = isMobile ? "flex-1 min-h-0" : "";
 
   function handleKeyDown(e: KeyboardEvent) {
     if (e.key === "Enter" && !saving) {
@@ -97,24 +98,16 @@ export default function ExpenseDialog({
   }
 
   return (
-    <Dialog
-      open
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-    >
-      <DialogContent
-        placement={isMobile ? "bottom" : "right"}
-        aria-describedby={`${id}-description`}
-      >
+    <aside aria-label={title} className={card + " p-5 " + positionClass}>
+      <div className="scroll-stable scroll-quiet -mx-2 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-2 pb-2">
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line-soft pb-4">
           <div>
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription id={`${id}-description`} className="mt-1">
+            <h2 className="text-lg font-semibold text-ink">{title}</h2>
+            <p className="mt-1 text-sm text-muted-2">
               {onItem
                 ? "A cost on this plan."
                 : "A cost on the stop, not any one plan."}
-            </DialogDescription>
+            </p>
           </div>
           <Button
             variant="ghost"
@@ -217,40 +210,40 @@ export default function ExpenseDialog({
               {error}
             </p>
           )}
-          <div className="flex items-center justify-between gap-2 pt-1">
-            {editing && onDelete ? (
-              <Button
-                variant="soft-destructive"
-                size="sm"
-                disabled={saving}
-                onClick={onDelete}
-              >
-                <Trash2 />
-                Delete
-              </Button>
-            ) : (
-              <span />
-            )}
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={saving}
-                onClick={onClose}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                disabled={saving}
-                onClick={() => onSave(form, tripId, onItem || null)}
-              >
-                {saving ? "Saving…" : editing ? "Save changes" : "Add expense"}
-              </Button>
-            </div>
-          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+      <div className="flex shrink-0 items-center justify-between gap-2 pt-4">
+        {editing && onDelete ? (
+          <Button
+            variant="soft-destructive"
+            size="sm"
+            disabled={saving}
+            onClick={onDelete}
+          >
+            <Trash2 />
+            Delete
+          </Button>
+        ) : (
+          <span />
+        )}
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={saving}
+            onClick={onClose}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            disabled={saving}
+            onClick={() => onSave(form, tripId, onItem || null)}
+          >
+            {saving ? "Saving…" : editing ? "Save changes" : "Add expense"}
+          </Button>
+        </div>
+      </div>
+    </aside>
   );
 }

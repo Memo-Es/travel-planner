@@ -172,14 +172,20 @@ They use Motion for React alongside the existing Radix accessibility behavior.
   one or several (a museum ticket and the taxi there are two expenses on one
   activity), and a cost can also sit loose on a stop with no plan behind it at
   all (a tip, a shared snack). Adding or editing one is always the same small
-  dialog (name, amount, paid by), reached from Finances' "Add expense" button or
+  form (name, amount, paid by), reached from Finances' "Add expense" button or
   by tapping an expense row; a booking's own form (name, link, day, time, notes,
-  documents) has no cost field at all.
+  documents) has no cost field at all. It only ever opens from Finances, so it
+  takes Finances' own column instead of floating a drawer over the page -
+  Finances' content swaps for the form in place, at the same width, then swaps
+  back on Cancel or Save. No backdrop, no separate surface: this follows the
+  same "push, never cover" rule as the stop and Finances columns themselves.
 - With no stop open and more than one stop costed, Finances' stop list offers a
   By stop / All expenses toggle: by stop totals each one, all expenses lists
   every expense across the whole trip with which stop and plan it's under (or
   "Not on a plan"), so nothing is only reachable by opening that stop first.
-  Tapping a row opens that expense for editing, same as a stop's own expense
+  In By stop, tapping a stop expands its own expenses inline, under that row,
+  rather than jumping over to open the stop; tapping one of those expense rows
+  (or a row in All expenses) opens it for editing, same as a stop's own expense
   rows do.
 - Accordions (Finances' stop list and balance card) follow Motion Primitives'
   Accordion: `AccordionBody` animates height and opacity together on a no-bounce
@@ -187,8 +193,10 @@ They use Motion for React alongside the existing Radix accessibility behavior.
   of jumping. Card corners animate through Motion, and list rows that enter or
   leave with a filter use the same motion. Height animation is allowed only on
   these small, isolated surfaces.
-- Drawers/dialogs enter in 200ms and exit in 150ms; focus returns after dismissal.
-  Keep conditional dialogs inside AnimatePresence so exit motion can complete.
+- Drawers/dialogs (the day sheet, trip settings, onboarding) enter in 200ms and
+  exit in 150ms; focus returns after dismissal. Keep conditional dialogs inside
+  AnimatePresence so exit motion can complete. The expense form is not one of
+  these - see above.
 - Month labels crossfade with a small vertical shift; do not animate the calendar
   grid or drag coordinates, which must stay aligned with pointer movement.
 - Counts and totals tween to the latest value in 450ms with ease-out (a fixed
