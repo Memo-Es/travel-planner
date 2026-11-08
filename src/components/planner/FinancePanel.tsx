@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { ChevronDown, Plus, X } from "lucide-react";
 import {
   AnimatedBackground,
@@ -78,6 +78,16 @@ export default function FinancePanel({
   // A stop's row expands in place to show its own expenses rather than
   // jumping the whole app over to that stop - Finances stays put.
   const [expandedStopId, setExpandedStopId] = useState<string | null>(null);
+  // Opening a stop narrows Finances to it, same as the itinerary - but
+  // Finances has its own back door, so looking at everything again doesn't
+  // mean closing the stop you're looking at on the calendar. Resets
+  // whenever the open stop itself changes, so a newly opened stop always
+  // starts narrowed and this is never a stale override from the last one.
+  const [allStops, setAllStops] = useState(false);
+  useEffect(() => {
+    setAllStops(false);
+  }, [stop?.id]);
+  const scopeStop = allStops ? null : stop;
   const reduce = !!useReducedMotion();
   const spring = reduce ? { duration: 0 } : accordionSpring;
   // Stop rows enter and leave like accordion bodies when the filter changes.
@@ -96,7 +106,7 @@ export default function FinancePanel({
   const positionClass = isMobile ? "flex-1 min-h-0" : "";
   const money = (value: number) => formatTotal(value, currency);
 
-  const trips = stop ? [stop] : allTrips;
+  const trips = scopeStop ? [scopeStop] : allTrips;
 
   const active = filter === "all" ? null : filter;
   const keys: ItemSectionKey[] = active
@@ -137,17 +147,17 @@ export default function FinancePanel({
   // With a stop open, its own expenses take the place of the stop list.
   // With none open and the flat view on, every trip's does - same shape,
   // one more field for which stop and plan a row belongs to.
-  const expenseRows = stop ? rowsFor(stop, keys) : [];
-  const allExpenseRows = !stop
+  const expenseRows = scopeStop ? rowsFor(scopeStop, keys) : [];
+  const allExpenseRows = !scopeStop
     ? trips.flatMap((trip) => rowsFor(trip, keys))
     : [];
-  const showFlatToggle = !stop && stops.length > 1;
-  const isFlatList = !!stop || flat;
+  const showFlatToggle = !scopeStop && stops.length > 1;
+  const isFlatList = !!scopeStop || flat;
   const detailFor = (r: ExpenseRow, withStop: boolean) => {
     const plan = r.item ? r.item.t : "Not on a plan";
     return withStop ? `${r.trip.label} · ${plan}` : plan;
   };
-  const rows = stop
+  const rows = scopeStop
     ? expenseRows.map((r) => ({
         id: r.expense.id,
         label: r.expense.title,
@@ -167,7 +177,7 @@ export default function FinancePanel({
   // "By stop", unfolded: each stop carries its own expenses, shown inline
   // when that stop's row is toggled open rather than by navigating there.
   const stopGroups =
-    !stop && !flat
+    !scopeStop && !flat
       ? stops.map(({ trip, subtotal }) => ({
           trip,
           subtotal,
@@ -258,17 +268,31 @@ export default function FinancePanel({
               format={money}
             />
           </p>
-          <h2 className="mt-2.5 text-sm font-medium text-ink">
-            <TransitionText value={`${filter}-${stop?.id ?? ""}`}>
-              {activeCat
-                ? `${activeCat.name} spend${stop ? ` in ${stop.label}` : ""}`
-                : stop
-                  ? `Spent in ${stop.label}`
-                  : "Total spent"}
-            </TransitionText>
-          </h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-medium text-ink">
+              <TransitionText value={`${filter}-${scopeStop?.id ?? ""}`}>
+                {activeCat
+                  ? `${activeCat.name} spend${scopeStop ? ` in ${scopeStop.label}` : ""}`
+                  : scopeStop
+                    ? `Spent in ${scopeStop.label}`
+                    : "Total spent"}
+              </TransitionText>
+            </h2>
+            {/* The itinerary's open stop narrows Finances the same way - but
+                closing that narrowing shouldn't mean closing the stop, so
+                it's a toggle in here rather than a reason to leave. */}
+            {stop && (
+              <button
+                type="button"
+                onClick={() => setAllStops((v) => !v)}
+                className="shrink-0 text-xs font-medium text-muted-2 underline decoration-dotted underline-offset-2 transition-colors duration-150 hover:text-ink"
+              >
+                {allStops ? `${stop.label} only` : "All stops"}
+              </button>
+            )}
+          </div>
           <p className="mt-1 text-pretty text-xs leading-relaxed tabular-nums text-muted-2">
-            <TransitionText value={`${filter}-${stop?.id ?? ""}`}>
+            <TransitionText value={`${filter}-${scopeStop?.id ?? ""}`}>
               {activeCat
                 ? `${activeCat.count} ${activeCat.count === 1 ? "expense" : "expenses"} · ${activeCat.share}% of ${money(total)}`
                 : total > 0
@@ -473,8 +497,8 @@ export default function FinancePanel({
                       <p className="py-4 text-pretty text-xs leading-relaxed text-muted">
                         {activeCat
                           ? `No ${activeCat.name.toLowerCase()} costs yet.`
-                          : stop
-                            ? `Costs on ${stop.label}'s bookings add up here.`
+                          : scopeStop
+                            ? `Costs on ${scopeStop.label}'s bookings add up here.`
                             : "Costs on stays, transport and activities add up here."}
                       </p>
                     </motion.li>

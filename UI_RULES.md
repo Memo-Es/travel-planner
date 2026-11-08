@@ -187,6 +187,12 @@ They use Motion for React alongside the existing Radix accessibility behavior.
   rather than jumping over to open the stop; tapping one of those expense rows
   (or a row in All expenses) opens it for editing, same as a stop's own expense
   rows do.
+- Opening a stop narrows Finances to its costs, but that narrowing has its own
+  way out: an "All stops" link beside "Spent in {stop}" drops it without
+  closing the stop on the calendar, and reading everything again shouldn't
+  mean giving that up. It flips back to "{stop} only" once clicked, and the
+  override itself resets whenever a different stop opens, so a newly opened
+  stop always starts narrowed rather than inheriting the last one's choice.
 - Accordions (Finances' stop list and balance card) follow Motion Primitives'
   Accordion: `AccordionBody` animates height and opacity together on a no-bounce
   spring (~350ms), so one card closing while the other opens trades space instead
