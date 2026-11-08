@@ -40,6 +40,27 @@ export const itemSchema = z
     /** The finish, alongside `time` - a plan can have a start with no
      * known finish, but never a finish with no start. */
     endTime: timeStringSchema.nullable().optional(),
+    /** A real place's name and address, from a Google Places search -
+     * never set without `location`, the way `endTime` never sets without
+     * `time`. */
+    location: z
+      .string()
+      .trim()
+      .max(200)
+      .nullable()
+      .optional()
+      .transform((v) => (v ? v : null)),
+    locationUrl: z
+      .string()
+      .trim()
+      .max(500)
+      .nullable()
+      .optional()
+      .transform((v) => (v ? v : null))
+      .refine(
+        (v) => v === null || /^https?:\/\//i.test(v),
+        "Location link must start with http:// or https://",
+      ),
     notes: z
       .string()
       .trim()
@@ -70,16 +91,20 @@ export type ExpenseInput = z.input<typeof expenseSchema>;
 
 export type ItemInput = z.input<typeof itemSchema>;
 
-/** A time only makes sense on a day, and an end time only alongside a start
- * - each drops with whatever it depends on. */
+/** A time only makes sense on a day, an end time only alongside a start,
+ * and a location link only alongside the location it points to - each
+ * drops with whatever it depends on. */
 export function toItemData(input: ItemInput) {
-  const { date, time, endTime, ...rest } = itemSchema.parse(input);
+  const { date, time, endTime, location, locationUrl, ...rest } =
+    itemSchema.parse(input);
   const keptTime = date ? time : null;
   return {
     ...rest,
     date: date ? new Date(date) : null,
     time: keptTime,
     endTime: keptTime ? (endTime ?? null) : null,
+    location,
+    locationUrl: location ? (locationUrl ?? null) : null,
   };
 }
 

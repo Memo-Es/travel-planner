@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { AnimatedBackground } from "@/components/motion/primitives";
-import { ArrowUpRight, Clock, FileText, Pencil, X } from "lucide-react";
+import { ArrowUpRight, Clock, FileText, MapPin, Pencil, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -186,6 +186,23 @@ export default function DaySheet({
                       <span aria-hidden="true">·</span>
                       {SECTION_DEFS.find((d) => d.key === key)!.name}
                     </p>
+                    {item.location &&
+                      (item.locationUrl ? (
+                        <a
+                          href={item.locationUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="focus-inset mt-0.5 flex items-center gap-1.5 rounded text-sm text-muted-2 hover:text-ink hover:underline"
+                        >
+                          <MapPin className="size-3.5 shrink-0" />
+                          <span className="truncate">{item.location}</span>
+                        </a>
+                      ) : (
+                        <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-2">
+                          <MapPin className="size-3.5 shrink-0" />
+                          <span className="truncate">{item.location}</span>
+                        </p>
+                      ))}
                   </div>
                   <Button
                     variant="ghost"

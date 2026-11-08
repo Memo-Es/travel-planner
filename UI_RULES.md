@@ -190,6 +190,24 @@ They use Motion for React alongside the existing Radix accessibility behavior.
   anywhere a time already was, as "10:00–11:30" instead of "10:00", via
   `fmtTimeRange` in lib/itinerary.ts - except the month calendar's own compact
   chips, which keep the bare start time for space.
+- Activities only - not transport, not stay - can carry a Location: a real
+  place, not a typed address, from the same Google Places lookup check_place
+  already uses (`searchActivityLocation` in actions/places.ts), debounced as
+  the field is typed into. Picking a result sets both the shown text and its
+  Maps link; editing the text by hand afterward clears the link, since it
+  should only ever point at what's shown, never a stale place for new words.
+  Without a team Places API key (or on a transient failure) the field is
+  still plain text with a quiet hint, never blocked - the same fallback
+  `placesKeySet` already governs for the agent-facing toast. Shown as a
+  MapPin line under the time, a plain link when it has a Maps URL and plain
+  text otherwise, in both the stop panel's rows and the day sheet.
+- A human's own location search and an agent's check_place call both spend
+  the same Google Places quota and both get logged, but only the agent's is
+  worth a "the agent just checked X" toast - a person is not news to
+  themselves about their own search. `PlacesCall.source` ("agent" default,
+  "human" for the Location field) is how `placesCallsSince` tells them apart
+  for that toast; `getPlacesUsage`'s count stays unsplit, since Google bills
+  per call regardless of who triggered it.
 - With no stop open and at least one expense anywhere, Finances' stop list
   offers an All / By stop / By person toggle: All lists every expense across
   the whole trip with which stop and plan it's under (or "Not on a plan"); By

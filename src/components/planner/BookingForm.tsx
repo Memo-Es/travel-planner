@@ -1,11 +1,19 @@
 "use client";
 
-import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
-import { FileText, Paperclip, Undo2, X } from "lucide-react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
+import { FileText, MapPin, Paperclip, Undo2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, NativeSelect, Textarea } from "@/components/ui/input";
 import { fmtDay } from "@/lib/itinerary";
 import type { AttachmentData } from "@/lib/types";
+import type { PlaceResult } from "@/lib/places";
 import {
   MAX_PDF_MB,
   attachmentHref,
@@ -22,6 +30,11 @@ export type BookingFormState = {
   time: string;
   /** "HH:mm" or "" - only ever set alongside `time`. */
   endTime: string;
+  /** A real place's name and address, free-typed or picked from a search. */
+  location: string;
+  /** Its Maps link, "" - only ever set alongside `location`, and cleared the
+   * moment the text is edited by hand rather than picked again. */
+  locationUrl: string;
   /** A short free-text note, "" for none. */
   notes: string;
   /** New PDFs to upload on save. */
@@ -36,6 +49,8 @@ export const EMPTY_BOOKING_FORM: BookingFormState = {
   date: "",
   time: "",
   endTime: "",
+  location: "",
+  locationUrl: "",
   notes: "",
   files: [],
   removeIds: [],
@@ -56,6 +71,7 @@ export default function BookingForm({
   framed = true,
   before,
   days,
+  onSearchLocation,
 }: {
   form: BookingFormState;
   onChange: (f: BookingFormState) => void;
@@ -74,6 +90,9 @@ export default function BookingForm({
   before?: ReactNode;
   /** The stop's days; when given, the plan can be placed on a day and time. */
   days?: string[];
+  /** When given, the plan can carry a real place - a Google Places search
+   * as the Location field is typed into. Only activities offer this. */
+  onSearchLocation?: (query: string) => Promise<PlaceResult[] | null>;
 }) {
   const id = useId();
   const errorId = `${id}-error`;
@@ -231,6 +250,24 @@ export default function BookingForm({
           </div>
         </div>
       )}
+      {onSearchLocation && (
+        <LocationField
+          value={form.location}
+          url={form.locationUrl}
+          onChange={(location) => onChange({ ...form, location, locationUrl: "" })}
+          onPick={(place) =>
+            onChange({
+              ...form,
+              location: place.address
+                ? `${place.name}, ${place.address}`
+                : place.name,
+              locationUrl: place.maps_link ?? "",
+            })
+          }
+          onSearch={onSearchLocation}
+          onKeyDown={handleKeyDown}
+        />
+      )}
       <label className="block space-y-1.5">
         <span className="field-label">Booking link</span>
         <Input
@@ -367,5 +404,140 @@ export default function BookingForm({
         </Button>
       </div>
     </div>
+  );
+}
+
+/** A real place: free text that searches Google Places as you type and
+ * offers up to 3 matches, each with its address, to pick from. Picking one
+ * sets `locationUrl` to its Maps link; editing the text by hand afterward
+ * clears it, since the link should only ever point at what's shown. */
+function LocationField({
+  value,
+  url,
+  onChange,
+  onPick,
+  onSearch,
+  onKeyDown,
+}: {
+  value: string;
+  url: string;
+  onChange: (text: string) => void;
+  onPick: (place: PlaceResult) => void;
+  onSearch: (query: string) => Promise<PlaceResult[] | null>;
+  onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
+}) {
+  const [results, setResults] = useState<PlaceResult[]>([]);
+  const [open, setOpen] = useState(false);
+  const [noKey, setNoKey] = useState(false);
+  const [failed, setFailed] = useState(false);
+  // Picking a suggestion rewrites `value` to the picked place's own name and
+  // address, which would otherwise fire a fresh search against the text we
+  // just set from a result - this skips exactly that one re-trigger.
+  const skipNextRef = useRef(false);
+
+  useEffect(() => {
+    if (skipNextRef.current) {
+      skipNextRef.current = false;
+      return;
+    }
+    if (noKey || value.trim().length < 3) {
+      setResults([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const places = await onSearch(value);
+        if (cancelled) return;
+        setFailed(false);
+        if (places === null) {
+          setNoKey(true);
+          setResults([]);
+          return;
+        }
+        setResults(places);
+        setOpen(true);
+      } catch {
+        if (!cancelled) setFailed(true);
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  function pick(place: PlaceResult) {
+    skipNextRef.current = true;
+    setResults([]);
+    setOpen(false);
+    onPick(place);
+  }
+
+  return (
+    <label className="relative block space-y-1.5">
+      <span className="field-label">Location</span>
+      <div className="relative">
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => results.length > 0 && setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setOpen(false);
+            onKeyDown(e);
+          }}
+          placeholder="Search a real place…"
+          className={url ? "pr-9" : undefined}
+        />
+        {url && (
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="focus-inset absolute right-1 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-2 transition-colors duration-150 hover:text-ink"
+            aria-label="Open in Google Maps"
+            title="Open in Google Maps"
+          >
+            <MapPin className="size-4" />
+          </a>
+        )}
+        {open && results.length > 0 && (
+          <ul className="scroll-quiet absolute z-popover mt-1 max-h-60 w-full overflow-y-auto rounded-xl border border-line bg-white py-1 shadow-overlay">
+            {results.map((p) => (
+              <li key={`${p.name}-${p.address}`}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => pick(p)}
+                  className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors duration-150 hover:bg-hover"
+                >
+                  <span className="truncate text-sm font-medium text-ink">
+                    {p.name}
+                  </span>
+                  {p.address && (
+                    <span className="truncate text-xs text-muted-2">
+                      {p.address}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {noKey && (
+        <p className="text-pretty text-xs leading-relaxed text-muted">
+          Add a Google Places API key in Trip settings to search real places
+          as you type - this still saves as plain text without one.
+        </p>
+      )}
+      {!noKey && failed && (
+        <p className="text-pretty text-xs leading-relaxed text-muted">
+          Couldn&apos;t search just now - still saves as plain text.
+        </p>
+      )}
+    </label>
   );
 }

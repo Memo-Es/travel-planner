@@ -24,6 +24,10 @@ export type ItemData = {
   time: string | null;
   /** Local finish time, "HH:mm" - only ever set alongside a start time. */
   endTime: string | null;
+  /** A real place's name and address, from a Google Places search. */
+  location: string | null;
+  /** A Maps link to it - only ever set alongside `location`. */
+  locationUrl: string | null;
   attachments: AttachmentData[];
   /** Who signed up to go, in the order they joined. */
   going: Person[];

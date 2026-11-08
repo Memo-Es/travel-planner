@@ -45,13 +45,18 @@ export async function getPlacesUsage(teamId: string): Promise<PlacesUsage> {
  * close to its free monthly Places lookups - so the agent can mention it
  * rather than keep calling in the dark. Takes the already-resolved places
  * (never calls Google itself), so it's the one piece of check_place that
- * doesn't need a real API key to exercise. */
+ * doesn't need a real API key to exercise.
+ *
+ * `source` tells an agent's call (the default) apart from a person's own
+ * search in the Location field - both spend the same quota, but only the
+ * first is worth surfacing as "the agent checked X". */
 export async function recordCheckPlace(
   teamId: string,
   query: string,
   places: PlaceResult[],
+  source: "agent" | "human" = "agent",
 ): Promise<{ message: string; data: PlaceResult[] | undefined }> {
-  await prisma.placesCall.create({ data: { teamId, query } });
+  await prisma.placesCall.create({ data: { teamId, query, source } });
   const usage = await getPlacesUsage(teamId);
   const note = usage.warn
     ? ` (${usage.count} of ${usage.limit} free Google Places lookups used this month for this team - getting close to the limit, past which Google starts billing)`
@@ -77,17 +82,22 @@ export async function placesCallsSince(
   if (since === null) {
     return { calls: [], cursor: new Date().toISOString() };
   }
+  // Every call advances the cursor, agent or human, so a run of searches
+  // from the Location field doesn't leave the cursor stuck in the past -
+  // only agent calls are worth announcing, not worth excluding from paging.
   const rows = await prisma.placesCall.findMany({
     where: { teamId, createdAt: { gt: new Date(since) } },
     orderBy: { createdAt: "asc" },
     take: 20,
   });
   return {
-    calls: rows.map((r) => ({
-      id: r.id,
-      query: r.query,
-      createdAt: r.createdAt.toISOString(),
-    })),
+    calls: rows
+      .filter((r) => r.source === "agent")
+      .map((r) => ({
+        id: r.id,
+        query: r.query,
+        createdAt: r.createdAt.toISOString(),
+      })),
     cursor: rows.length > 0 ? rows[rows.length - 1].createdAt.toISOString() : since,
   };
 }
