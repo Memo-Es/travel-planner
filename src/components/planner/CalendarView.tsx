@@ -9,6 +9,7 @@ import {
   type CalendarWeek,
 } from "@/lib/calendar";
 import type { Plan } from "@/lib/itinerary";
+import { fmtTimeRange } from "@/lib/itinerary";
 import { stopColor } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -69,11 +70,18 @@ function PlanLine({
     <button
       type="button"
       onClick={() => onOpen(plan)}
-      title={all?.map((p) => `${p.item.time ?? "—"}  ${p.item.t}`).join("\n")}
+      title={all
+        ?.map(
+          (p) => `${fmtTimeRange(p.item.time, p.item.endTime) ?? "—"}  ${p.item.t}`,
+        )
+        .join("\n")}
       aria-label={
         all &&
         `${all.length} ${all.length === 1 ? "plan" : "plans"}: ${all
-          .map((p) => (p.item.time ? `${p.item.time} ${p.item.t}` : p.item.t))
+          .map((p) => {
+            const when = fmtTimeRange(p.item.time, p.item.endTime);
+            return when ? `${when} ${p.item.t}` : p.item.t;
+          })
           .join(", ")}`
       }
       className={cn(

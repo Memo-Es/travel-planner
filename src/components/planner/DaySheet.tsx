@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { GoingControl } from "@/components/planner/Going";
 import type { Plan } from "@/lib/itinerary";
-import { fmtDay } from "@/lib/itinerary";
+import { fmtDay, fmtTimeRange } from "@/lib/itinerary";
 import type { Person } from "@/lib/types";
 import { SECTION_DEFS, hostFromUrl } from "@/lib/tripSections";
 import { attachmentHref } from "@/lib/uploads";
@@ -182,7 +182,7 @@ export default function DaySheet({
                     </p>
                     <p className="mt-0.5 flex items-center gap-1.5 text-sm tabular-nums text-muted-2">
                       <Clock className="size-3.5 shrink-0" />
-                      {item.time ?? "Any time"}
+                      {fmtTimeRange(item.time, item.endTime) ?? "Any time"}
                       <span aria-hidden="true">·</span>
                       {SECTION_DEFS.find((d) => d.key === key)!.name}
                     </p>

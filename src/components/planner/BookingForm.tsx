@@ -20,6 +20,8 @@ export type BookingFormState = {
   date: string;
   /** "HH:mm" or "" for any time that day. */
   time: string;
+  /** "HH:mm" or "" - only ever set alongside `time`. */
+  endTime: string;
   /** A short free-text note, "" for none. */
   notes: string;
   /** New PDFs to upload on save. */
@@ -33,6 +35,7 @@ export const EMPTY_BOOKING_FORM: BookingFormState = {
   url: "",
   date: "",
   time: "",
+  endTime: "",
   notes: "",
   files: [],
   removeIds: [],
@@ -149,7 +152,7 @@ export default function BookingForm({
         />
       </label>
       {days && (
-        <div className="grid grid-cols-[minmax(0,1fr)_8rem] gap-3">
+        <div className="space-y-3">
           <label className="block min-w-0 space-y-1.5">
             <span className="field-label">Day</span>
             <NativeSelect
@@ -159,6 +162,7 @@ export default function BookingForm({
                   ...form,
                   date: e.target.value,
                   time: e.target.value ? form.time : "",
+                  endTime: e.target.value ? form.endTime : "",
                 })
               }
             >
@@ -174,23 +178,57 @@ export default function BookingForm({
               ))}
             </NativeSelect>
           </label>
-          <label className="block space-y-1.5">
-            <span className="field-label">Time</span>
-            <Input
-              type="time"
-              value={form.time}
-              disabled={!form.date}
-              onChange={(e) => onChange({ ...form, time: e.target.value })}
-              onKeyDown={handleKeyDown}
-              className="tabular-nums"
-              aria-describedby={!form.date ? `${id}-time-hint` : undefined}
-            />
-            {!form.date && (
-              <span id={`${id}-time-hint`} className="sr-only">
-                Choose a day first
-              </span>
-            )}
-          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block space-y-1.5">
+              <span className="field-label">Start time</span>
+              <Input
+                type="time"
+                value={form.time}
+                disabled={!form.date}
+                onChange={(e) =>
+                  onChange({
+                    ...form,
+                    time: e.target.value,
+                    endTime: e.target.value ? form.endTime : "",
+                  })
+                }
+                onKeyDown={handleKeyDown}
+                className="tabular-nums"
+                aria-describedby={!form.date ? `${id}-time-hint` : undefined}
+              />
+              {!form.date && (
+                <span id={`${id}-time-hint`} className="sr-only">
+                  Choose a day first
+                </span>
+              )}
+            </label>
+            <label className="block space-y-1.5">
+              <span className="field-label">End time</span>
+              <Input
+                type="time"
+                value={form.endTime}
+                disabled={!form.time}
+                onChange={(e) =>
+                  onChange({ ...form, endTime: e.target.value })
+                }
+                onKeyDown={handleKeyDown}
+                className="tabular-nums"
+                aria-invalid={!!error?.startsWith("End time") || undefined}
+                aria-describedby={
+                  error
+                    ? errorId
+                    : !form.time
+                      ? `${id}-end-time-hint`
+                      : undefined
+                }
+              />
+              {!form.time && (
+                <span id={`${id}-end-time-hint`} className="sr-only">
+                  Add a start time first
+                </span>
+              )}
+            </label>
+          </div>
         </div>
       )}
       <label className="block space-y-1.5">

@@ -75,6 +75,7 @@ function toItem(i: {
   url: string;
   date: Date | null;
   time: string | null;
+  endTime: string | null;
   notes: string | null;
   attachments: AttachmentData[];
   attendees: { user: Person }[];
@@ -92,6 +93,7 @@ function toItem(i: {
     expenses: i.expenses.map(toExpense),
     date: i.date ? i.date.toISOString().slice(0, 10) : null,
     time: i.time,
+    endTime: i.endTime,
     attachments: i.attachments,
     going: i.attendees.map((a) => a.user),
     notes: i.notes,

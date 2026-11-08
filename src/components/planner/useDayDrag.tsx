@@ -255,6 +255,7 @@ function withMoves(
             ...item,
             date: moves[item.id],
             time: moves[item.id] ? item.time : null,
+            endTime: moves[item.id] ? item.endTime : null,
           }
         : item,
     );

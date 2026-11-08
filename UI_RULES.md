@@ -179,6 +179,17 @@ They use Motion for React alongside the existing Radix accessibility behavior.
   Finances' content swaps for the form in place, at the same width, then swaps
   back on Cancel or Save. No backdrop, no separate surface: this follows the
   same "push, never cover" rule as the stop and Finances columns themselves.
+- Transport and activities can carry an end time alongside the start - a
+  flight or a museum visit has a finish worth knowing, where a stay's own form
+  has no time fields at all (checking in is what its day already means). End
+  time sits beside Start time once a day is picked, disabled until there's a
+  start to be relative to, and clears itself if the start time or day is
+  cleared - the same dependency a start time already has on its day. It must
+  be strictly after the start; the form and the server both check this, and
+  the field carries the error inline rather than only a banner. Shown
+  anywhere a time already was, as "10:00–11:30" instead of "10:00", via
+  `fmtTimeRange` in lib/itinerary.ts - except the month calendar's own compact
+  chips, which keep the bare start time for space.
 - With no stop open and at least one expense anywhere, Finances' stop list
   offers an All / By stop / By person toggle: All lists every expense across
   the whole trip with which stop and plan it's under (or "Not on a plan"); By

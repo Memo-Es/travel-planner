@@ -114,9 +114,12 @@ model TripItem {
   title       String
   url         String         @default("")
   // When a plan happens: a calendar day at the destination, plus an optional
-  // local "HH:mm" time. Kept as wall-clock values so they never shift.
+  // local "HH:mm" start and finish. Kept as wall-clock values so they never
+  // shift. endTime only makes sense with a time, the way time only makes
+  // sense with a date - see toItemData in lib/planner.ts.
   date        DateTime?      @db.Date
   time        String?
+  endTime     String?
   /// A short note on the plan — booking details, a reminder, anything that
   /// doesn't belong in the title.
   notes       String?
