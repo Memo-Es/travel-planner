@@ -37,7 +37,7 @@ export const dynamic = "force-dynamic";
 
 const INSTRUCTIONS = `Travel Planner holds trips that people plan together.
 
-A trip (for example "Europe 2026") has stops: a place with a first and last day, like "Barcelona, 10 to 13 Nov". Each stop has plans in three sections: stay (where they sleep), transport (flights, trains, transfers) and activities. A plan has a title and can have a day within its stop, a local start time and - alongside it - a finish time, a cost in the trip's currency, a link and a short note. People on the trip sign up for the plans they're going to, so a group can split up; set_going signs up the person you're helping, never anyone else.
+A trip (for example "Europe 2026") has stops: a place with a first and last day, like "Barcelona, 10 to 13 Nov". Each stop has plans in three sections: stay (where they sleep), transport (flights, trains, transfers) and activities. A plan has a title and can have a day within its stop, a local start time and - alongside it - a finish time, a real place (check_place first, then pass what it returned as location and location_url), a cost in the trip's currency, a link and a short note. People on the trip sign up for the plans they're going to, so a group can split up; set_going signs up the person you're helping, never anyone else.
 
 Start with get_trips to see what exists and get ids. When asked to plan something, add stops and plans rather than replacing what is there, keep a plan's day inside its stop's dates (change the stop's dates first if needed), and only delete a plan when the person asks for it. Dates are YYYY-MM-DD and times are 24 hour HH:mm, local to the place.
 
@@ -112,7 +112,7 @@ function buildServer(userId: string) {
     {
       title: "Get trips",
       description:
-        "Lists the trips this person is part of, each with its currency, its people and its stops in order, and each stop's plans by section with their ids, days, start and end times, costs, links and who's going. Pass trip_id to get one trip.",
+        "Lists the trips this person is part of, each with its currency, its people and its stops in order, and each stop's plans by section with their ids, days, start and end times, locations, costs, links and who's going. Pass trip_id to get one trip.",
       inputSchema: {
         trip_id: z.string().optional().describe("Only this trip"),
       },
@@ -174,6 +174,8 @@ function buildServer(userId: string) {
             date: item.date ? day(item.date) : null,
             time: item.time,
             end_time: item.endTime,
+            location: item.location,
+            location_url: item.locationUrl,
             // A single number for a tool that only ever meant "this plan
             // cost X" - a person may since have logged several expenses on
             // it by hand, which this totals rather than lists.
@@ -311,6 +313,16 @@ function buildServer(userId: string) {
           .string()
           .optional()
           .describe("Local finish time, HH:mm, needs a start time"),
+        location: z
+          .string()
+          .optional()
+          .describe(
+            "A real place's name and address - check_place first and pass what it returned, rather than typing one from memory",
+          ),
+        location_url: z
+          .string()
+          .optional()
+          .describe("Its maps_link from check_place, needs a location"),
         cost: z.number().optional().describe("In the trip's currency"),
         link: z.string().optional().describe("Booking or info page, http(s)"),
         notes: z
@@ -327,6 +339,8 @@ function buildServer(userId: string) {
         date?: string;
         time?: string;
         end_time?: string;
+        location?: string;
+        location_url?: string;
         cost?: number;
         link?: string;
         notes?: string;
@@ -336,12 +350,16 @@ function buildServer(userId: string) {
         if (args.time && !args.date) throw new Error("A time needs a date");
         if (args.end_time && !args.time)
           throw new Error("An end time needs a start time");
+        if (args.location_url && !args.location)
+          throw new Error("A location link needs a location");
         const id = await addItemToStop(stop.id, SECTIONS[args.section], {
           title: args.title,
           url: args.link ?? "",
           date: args.date ?? null,
           time: args.time ?? null,
           endTime: args.end_time ?? null,
+          location: args.location ?? null,
+          locationUrl: args.location_url ?? null,
           notes: args.notes ?? null,
         });
         if (args.cost !== undefined) {
@@ -360,13 +378,25 @@ function buildServer(userId: string) {
     {
       title: "Change a plan",
       description:
-        "Changes a plan's title, day, time, end time, cost or link. Leave out what stays the same, and pass null to clear a day, time, end time, cost or link.",
+        "Changes a plan's title, day, time, end time, location, cost or link. Leave out what stays the same, and pass null to clear a day, time, end time, location, cost or link.",
       inputSchema: {
         plan_id: z.string(),
         title: z.string().optional(),
         date: dateStringSchema.nullable().optional(),
         time: timeStringSchema.nullable().optional(),
         end_time: timeStringSchema.nullable().optional(),
+        location: z
+          .string()
+          .nullable()
+          .optional()
+          .describe(
+            "A real place's name and address - check_place first and pass what it returned",
+          ),
+        location_url: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Its maps_link from check_place, needs a location"),
         cost: z.number().nullable().optional(),
         link: z.string().nullable().optional(),
         notes: z
@@ -384,6 +414,8 @@ function buildServer(userId: string) {
         date?: string | null;
         time?: string | null;
         end_time?: string | null;
+        location?: string | null;
+        location_url?: string | null;
         cost?: number | null;
         link?: string | null;
         notes?: string | null;
@@ -401,6 +433,14 @@ function buildServer(userId: string) {
         const endTime =
           args.end_time === undefined ? item.endTime : args.end_time;
         if (endTime && !time) throw new Error("An end time needs a start time");
+        const location =
+          args.location === undefined ? item.location : args.location;
+        const locationUrl =
+          args.location_url === undefined
+            ? item.locationUrl
+            : args.location_url;
+        if (locationUrl && !location)
+          throw new Error("A location link needs a location");
         const title = args.title ?? item.title;
         const data = toItemData({
           title,
@@ -408,6 +448,8 @@ function buildServer(userId: string) {
           date,
           time,
           endTime,
+          location,
+          locationUrl,
           notes: args.notes === undefined ? item.notes : args.notes,
         });
         await prisma.tripItem.update({ where: { id: item.id }, data });

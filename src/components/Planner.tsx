@@ -67,7 +67,7 @@ import {
   createInvite,
   dismissSignedInToast,
 } from "@/actions/team";
-import { pollPlacesActivity } from "@/actions/places";
+import { pollPlacesActivity, searchActivityLocation } from "@/actions/places";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -702,6 +702,8 @@ export default function Planner({
       date: f.date || null,
       time: f.date && f.time ? f.time : null,
       endTime: f.date && f.time && f.endTime ? f.endTime : null,
+      location: f.location.trim() || null,
+      locationUrl: f.location.trim() && f.locationUrl ? f.locationUrl : null,
       notes: f.notes.trim() || null,
     };
     let itemId = target.itemId;
@@ -1084,6 +1086,7 @@ export default function Planner({
       onMoveItem={handleMoveItem}
       me={{ id: currentUserId, name: userName }}
       onSetGoing={handleSetGoing}
+      onSearchLocation={searchActivityLocation}
     />
   );
 

@@ -120,6 +120,12 @@ model TripItem {
   date        DateTime?      @db.Date
   time        String?
   endTime     String?
+  /// A real place, picked from a Google Places search rather than typed
+  /// free-form - its name and address, and the Maps link alongside it.
+  /// locationUrl never sets without location, the way endTime never sets
+  /// without time.
+  location    String?
+  locationUrl String?
   /// A short note on the plan — booking details, a reminder, anything that
   /// doesn't belong in the title.
   notes       String?
@@ -205,6 +211,11 @@ model PlacesCall {
   team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId    String
   query     String
+  /// "agent" (check_place, over MCP) or "human" (the Location field's own
+  /// search). Both count against the shared monthly quota, but only an
+  /// agent's calls are worth a "the agent just checked X" toast - a
+  /// person's own search is not news to themselves.
+  source    String   @default("agent")
   createdAt DateTime @default(now())
 
   @@index([teamId, createdAt])

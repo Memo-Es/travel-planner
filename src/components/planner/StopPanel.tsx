@@ -12,11 +12,13 @@ import {
   Check,
   FileText,
   Clock,
+  MapPin,
   GripVertical,
   Copy,
   ArrowUpRight,
 } from "lucide-react";
 import type { TripData, ItemSectionKey, ItemData, Person } from "@/lib/types";
+import type { PlaceResult } from "@/lib/places";
 import { fmtRange, nightsBetween } from "@/lib/dates";
 import { statusFor } from "@/lib/tripStatus";
 import { AddRow } from "@/components/planner/AddRow";
@@ -58,6 +60,8 @@ export function editState(item: ItemData): FormState {
     date: item.date ?? "",
     time: item.time ?? "",
     endTime: item.endTime ?? "",
+    location: item.location ?? "",
+    locationUrl: item.locationUrl ?? "",
     notes: item.notes ?? "",
     files: [],
     removeIds: [],
@@ -96,6 +100,12 @@ type ScheduleProps = {
   /** A plan picked on the calendar: its day opens and it's highlighted.
    * The counter re-runs it when the same plan is picked again. */
   focusPlan?: { id: string; n: number } | null;
+  /** Backs the activity form's Location field with a real Google Places
+   * search. Only activities offer a location at all. */
+  onSearchLocation: (
+    tripId: string,
+    query: string,
+  ) => Promise<PlaceResult[] | null>;
 };
 
 /** A stop's schedule: dates, color and its stays, transport and activities
@@ -125,6 +135,7 @@ export function StopSchedule({
   me,
   onSetGoing,
   focusPlan,
+  onSearchLocation,
 }: ScheduleProps & { inline?: boolean }) {
   const dd = useDayDrag(trip, onMoveItem);
   const stopDays = tripDays(trip);
@@ -630,6 +641,11 @@ export function StopSchedule({
               days={
                 PLANNED_SECTIONS.includes(sec.key) ? tripDays(trip) : undefined
               }
+              onSearchLocation={
+                sec.key === "activities"
+                  ? (query) => onSearchLocation(trip.id, query)
+                  : undefined
+              }
             />
           );
           const draggable = sec.key === "activities";
@@ -673,6 +689,24 @@ export function StopSchedule({
                     <Clock className="size-3.5 shrink-0" />
                     <span className="truncate">{when(item) ?? "Any time"}</span>
                   </p>
+                  {item.location &&
+                    (item.locationUrl ? (
+                      <a
+                        href={item.locationUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="focus-inset mt-0.5 flex items-center gap-1.5 rounded text-sm text-muted-2 hover:text-ink hover:underline"
+                      >
+                        <MapPin className="size-3.5 shrink-0" />
+                        <span className="truncate">{item.location}</span>
+                      </a>
+                    ) : (
+                      <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-2">
+                        <MapPin className="size-3.5 shrink-0" />
+                        <span className="truncate">{item.location}</span>
+                      </p>
+                    ))}
                 </div>
                 <DropdownMenu
                   open={dd.menuFor === item.id}
