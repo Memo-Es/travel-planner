@@ -80,10 +80,10 @@ import {
 import LeftPanel from "@/components/planner/LeftPanel";
 import LeftRail from "@/components/planner/LeftRail";
 import FinancePanel from "@/components/planner/FinancePanel";
-import ExpenseDialog, {
+import ExpensePanel, {
   expenseFormFor,
   type ExpenseFormState,
-} from "@/components/planner/ExpenseDialog";
+} from "@/components/planner/ExpensePanel";
 import {
   EMPTY_BOOKING_FORM,
   type BookingFormState,
@@ -1352,22 +1352,47 @@ export default function Planner({
         </main>
       )}
 
-      {showRightPanel && (
-        <FinancePanel
+      {/* The expense editor only ever opens from here, so it takes this
+          same column instead of floating a drawer over the page. */}
+      {showRightPanel && expenseOpen ? (
+        <ExpensePanel
           card={CARD}
-          isMobile={isMobile}
           trips={trips}
-          stop={trip}
-          currency={teamCurrency}
-          onOpenStop={(t) => jumpToTrip(t)}
-          onEditExpense={openEditExpense}
-          onAddExpense={() => openAddExpense(openTripId)}
-          canAddExpense={trips.length > 0}
-          onClose={closeOverlay}
-          showClose={!!activeOverlay}
+          defaultTripId={
+            expenseDefaults.tripId ?? openTripId ?? trips[0]?.id ?? ""
+          }
+          itemId={expenseDefaults.itemId}
+          editing={!!expenseDefaults.editingId}
+          initial={expenseDefaults.initial ?? undefined}
           members={members}
-          currentUserId={currentUserId}
+          currency={teamCurrency}
+          isMobile={isMobile}
+          error={expenseError}
+          onError={setExpenseError}
+          saving={expenseSaving}
+          onSave={saveExpenseForm}
+          onDelete={deleteExpenseForm}
+          onClose={() => {
+            if (!expenseSaving) setExpenseOpen(false);
+          }}
         />
+      ) : (
+        showRightPanel && (
+          <FinancePanel
+            card={CARD}
+            isMobile={isMobile}
+            trips={trips}
+            stop={trip}
+            currency={teamCurrency}
+            onEditExpense={openEditExpense}
+            onAddExpense={() => openAddExpense(openTripId)}
+            canAddExpense={trips.length > 0}
+            onClose={closeOverlay}
+            showClose={!!activeOverlay}
+            members={members}
+            currentUserId={currentUserId}
+          />
+        )
       )}
 
       {showRightRail && (
@@ -1420,30 +1445,6 @@ export default function Planner({
             onClose={() => setDayView(null)}
           />
         )}
-        {expenseOpen && (
-          <ExpenseDialog
-            key="expense"
-            trips={trips}
-            defaultTripId={
-              expenseDefaults.tripId ?? openTripId ?? trips[0]?.id ?? ""
-            }
-            itemId={expenseDefaults.itemId}
-            editing={!!expenseDefaults.editingId}
-            initial={expenseDefaults.initial ?? undefined}
-            members={members}
-            currency={teamCurrency}
-            isMobile={isMobile}
-            error={expenseError}
-            onError={setExpenseError}
-            saving={expenseSaving}
-            onSave={saveExpenseForm}
-            onDelete={deleteExpenseForm}
-            onClose={() => {
-              if (!expenseSaving) setExpenseOpen(false);
-            }}
-          />
-        )}
-
         {settingsOpen && (
           <TripSettingsModal
             key="settings"
