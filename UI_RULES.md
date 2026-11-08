@@ -179,14 +179,15 @@ They use Motion for React alongside the existing Radix accessibility behavior.
   Finances' content swaps for the form in place, at the same width, then swaps
   back on Cancel or Save. No backdrop, no separate surface: this follows the
   same "push, never cover" rule as the stop and Finances columns themselves.
-- With no stop open and more than one stop costed, Finances' stop list offers a
-  By stop / All expenses toggle: by stop totals each one, all expenses lists
-  every expense across the whole trip with which stop and plan it's under (or
-  "Not on a plan"), so nothing is only reachable by opening that stop first.
-  In By stop, tapping a stop expands its own expenses inline, under that row,
-  rather than jumping over to open the stop; tapping one of those expense rows
-  (or a row in All expenses) opens it for editing, same as a stop's own expense
-  rows do.
+- With no stop open and at least one expense anywhere, Finances' stop list
+  offers an All / By stop / By person toggle: All lists every expense across
+  the whole trip with which stop and plan it's under (or "Not on a plan"); By
+  stop totals each stop; By person totals who fronted it, across every stop
+  they paid on (member order, "Nobody yet" last), so nothing is only reachable
+  by opening a particular stop first. In By stop or By person, tapping a group
+  expands its own expenses inline, under that row, rather than jumping over to
+  open the stop; tapping one of those expense rows (or a row in All) opens it
+  for editing, same as a stop's own expense rows do.
 - Opening a stop narrows Finances to its costs, but that narrowing has its own
   way out: an "All stops" link beside "Spent in {stop}" drops it without
   closing the stop on the calendar, and reading everything again shouldn't

@@ -70,14 +70,14 @@ export default function FinancePanel({
 }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [open, setOpen] = useState<Section>("stops");
-  // With no stop open, "by stop" only totals each one - a cost filed under
-  // a stop nobody has opened is otherwise invisible from here. This lists
-  // every expense across the whole trip instead, each one still opening
-  // for editing.
-  const [flat, setFlat] = useState(false);
-  // A stop's row expands in place to show its own expenses rather than
-  // jumping the whole app over to that stop - Finances stays put.
-  const [expandedStopId, setExpandedStopId] = useState<string | null>(null);
+  // How the stop list is grouped, with no stop open: by stop (each one
+  // totaled), by person (who fronted it, across every stop), or flat (every
+  // expense, each with which stop and plan it's under) - a cost filed under
+  // a stop or person nobody's looking at is otherwise invisible from here.
+  const [groupBy, setGroupBy] = useState<"stop" | "person" | "flat">("stop");
+  // A group's row expands in place to show its own expenses rather than
+  // jumping the whole app over to a stop - Finances stays put.
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
   // Opening a stop narrows Finances to it, same as the itinerary - but
   // Finances has its own back door, so looking at everything again doesn't
   // mean closing the stop you're looking at on the calendar. Resets
@@ -144,15 +144,20 @@ export default function FinancePanel({
   const stops = trips
     .map((trip) => ({ trip, subtotal: sum(rowsFor(trip, keys)) }))
     .filter((s) => s.subtotal > 0);
-  // With a stop open, its own expenses take the place of the stop list.
+  // With a stop open, its own expenses take the place of the group list.
   // With none open and the flat view on, every trip's does - same shape,
   // one more field for which stop and plan a row belongs to.
   const expenseRows = scopeStop ? rowsFor(scopeStop, keys) : [];
   const allExpenseRows = !scopeStop
     ? trips.flatMap((trip) => rowsFor(trip, keys))
     : [];
-  const showFlatToggle = !scopeStop && stops.length > 1;
-  const isFlatList = !!scopeStop || flat;
+  const showGroupToggle = !scopeStop && allExpenseRows.length > 0;
+  // A stop open always shows its own flat list; otherwise whichever
+  // grouping is picked - "by stop" and "by person" both unfold into groups,
+  // "flat" lists every expense on its own.
+  const effectiveGroup: "stop" | "person" | "flat" = scopeStop
+    ? "flat"
+    : groupBy;
   const detailFor = (r: ExpenseRow, withStop: boolean) => {
     const plan = r.item ? r.item.t : "Not on a plan";
     return withStop ? `${r.trip.label} · ${plan}` : plan;
@@ -165,7 +170,7 @@ export default function FinancePanel({
         value: r.expense.amount,
         onClick: () => onEditExpense(r.trip, r.item, r.expense),
       }))
-    : flat
+    : effectiveGroup === "flat"
       ? allExpenseRows.map((r) => ({
           id: r.expense.id,
           label: r.expense.title,
@@ -177,14 +182,40 @@ export default function FinancePanel({
   // "By stop", unfolded: each stop carries its own expenses, shown inline
   // when that stop's row is toggled open rather than by navigating there.
   const stopGroups =
-    !scopeStop && !flat
+    effectiveGroup === "stop"
       ? stops.map(({ trip, subtotal }) => ({
-          trip,
+          id: trip.id,
+          label: trip.label,
           subtotal,
           expenseRows: rowsFor(trip, keys),
         }))
       : [];
-  const stopRowCount = isFlatList ? rows.length : stopGroups.length;
+  // "By person": who fronted the money, across every stop in scope. Members
+  // keep their usual order (the same one the "Paid by" picker offers), with
+  // "Nobody yet" last; anyone who paid for nothing in scope is left out,
+  // same as an empty stop would be.
+  const personGroups =
+    effectiveGroup === "person"
+      ? (() => {
+          const byId = new Map<string, ExpenseRow[]>();
+          for (const r of allExpenseRows) {
+            const id = r.expense.paidBy?.id ?? "";
+            byId.set(id, [...(byId.get(id) ?? []), r]);
+          }
+          return [
+            ...members.map((m) => ({ id: m.id, label: m.name })),
+            { id: "", label: "Nobody yet" },
+          ]
+            .map(({ id, label }) => {
+              const expenseRows = byId.get(id) ?? [];
+              return { id, label, subtotal: sum(expenseRows), expenseRows };
+            })
+            .filter((g) => g.expenseRows.length > 0);
+        })()
+      : [];
+  const groups = effectiveGroup === "stop" ? stopGroups : personGroups;
+  const groupRowCount =
+    effectiveGroup === "flat" ? rows.length : groups.length;
 
   // Who owes who is settled across the whole trip, not per stop.
   const showBalances = hasPaidExpenses(allTrips);
@@ -325,19 +356,27 @@ export default function FinancePanel({
                   section === "stops" ? "text-ink" : "text-muted",
                 )}
               >
-                {isFlatList ? "Expenses" : "Expenses by stop"}
+                {effectiveGroup === "flat"
+                  ? "Expenses"
+                  : effectiveGroup === "stop"
+                    ? "Expenses by stop"
+                    : "Expenses by person"}
                 {showBalances && (
                   <span className="flex items-center gap-2.5">
                     {section !== "stops" && (
                       <span className="text-xs font-normal tabular-nums text-muted-2">
-                        {stopRowCount}{" "}
-                        {isFlatList
-                          ? stopRowCount === 1
+                        {groupRowCount}{" "}
+                        {effectiveGroup === "flat"
+                          ? groupRowCount === 1
                             ? "expense"
                             : "expenses"
-                          : stopRowCount === 1
-                            ? "stop"
-                            : "stops"}
+                          : effectiveGroup === "stop"
+                            ? groupRowCount === 1
+                              ? "stop"
+                              : "stops"
+                            : groupRowCount === 1
+                              ? "person"
+                              : "people"}
                       </span>
                     )}
                     <SwapChip open={section === "stops"} />
@@ -351,20 +390,26 @@ export default function FinancePanel({
               labelledBy={`${ids}-stops-head`}
               className="px-4 pb-2"
             >
-              {showFlatToggle && (
+              {showGroupToggle && (
                 <div
                   role="group"
                   aria-label="Group expenses by"
                   className="-mt-1 mb-2 flex gap-0.5"
                 >
-                  {([false, true] as const).map((v) => {
-                    const selected = flat === v;
+                  {(
+                    [
+                      ["flat", "All"],
+                      ["stop", "By stop"],
+                      ["person", "By person"],
+                    ] as const
+                  ).map(([key, label]) => {
+                    const selected = groupBy === key;
                     return (
                       <button
-                        key={String(v)}
+                        key={key}
                         type="button"
                         aria-pressed={selected}
-                        onClick={() => setFlat(v)}
+                        onClick={() => setGroupBy(key)}
                         className={cn(
                           "relative isolate h-7 shrink-0 rounded-full px-2.5 text-xs font-medium focus-inset tap-target transition-colors duration-150",
                           selected ? "text-ink" : "text-muted-2 hover:text-ink",
@@ -376,7 +421,7 @@ export default function FinancePanel({
                             className="bg-secondary"
                           />
                         )}
-                        {v ? "All expenses" : "By stop"}
+                        {label}
                       </button>
                     );
                   })}
@@ -384,7 +429,7 @@ export default function FinancePanel({
               )}
               <ul>
                 <AnimatePresence initial={false}>
-                  {isFlatList &&
+                  {effectiveGroup === "flat" &&
                     rows.map((row) => (
                       <motion.li
                         key={row.id}
@@ -416,12 +461,16 @@ export default function FinancePanel({
                         </div>
                       </motion.li>
                     ))}
-                  {!isFlatList &&
-                    stopGroups.map((group) => {
-                      const expanded = expandedStopId === group.trip.id;
+                  {effectiveGroup !== "flat" &&
+                    groups.map((group) => {
+                      const expanded = expandedGroupId === group.id;
+                      // A stop's own row already says which stop; a
+                      // person's needs it, since their costs span every
+                      // stop they paid on.
+                      const withStop = effectiveGroup === "person";
                       return (
                         <motion.li
-                          key={group.trip.id}
+                          key={group.id}
                           {...rowMotion}
                           className="-mx-2 overflow-hidden"
                         >
@@ -430,12 +479,12 @@ export default function FinancePanel({
                               type="button"
                               aria-expanded={expanded}
                               onClick={() =>
-                                setExpandedStopId(expanded ? null : group.trip.id)
+                                setExpandedGroupId(expanded ? null : group.id)
                               }
                               className="focus-inset -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl px-2 py-3.5 text-left transition-colors duration-150 hover:bg-hover-2/60"
                             >
                               <span className="line-clamp-2 min-w-0 flex-1 break-words text-sm font-semibold text-ink">
-                                {group.trip.label}
+                                {group.label}
                               </span>
                               <AnimatedNumber
                                 value={group.subtotal}
@@ -466,7 +515,7 @@ export default function FinancePanel({
                                           {r.expense.title}
                                         </span>
                                         <span className="block truncate text-xs text-muted-2">
-                                          {detailFor(r, false)}
+                                          {detailFor(r, withStop)}
                                         </span>
                                       </span>
                                       <AnimatedNumber
@@ -488,7 +537,7 @@ export default function FinancePanel({
                         </motion.li>
                       );
                     })}
-                  {stopRowCount === 0 && (
+                  {groupRowCount === 0 && (
                     <motion.li
                       key="empty"
                       {...rowMotion}
