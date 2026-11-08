@@ -35,6 +35,7 @@ import {
   LEFT_W,
   STOP_W,
   RIGHT_W,
+  EXPENSE_W,
   RAIL_W,
   MIN_MAIN,
   MIN_OPEN_MAIN,
@@ -413,7 +414,11 @@ export default function Planner({
   // On compact screens both sides start as rails and open one at a time,
   // pushing the calendar over rather than covering it.
   const activeOverlay = isCompact ? overlay : null;
-  const rightCol = isCompact
+  // Finances' own expansion (below) depends on the left column and vice
+  // versa; using the plain width here, same as the left side's own
+  // dependency on this, is close enough - both expanding at once on a
+  // cramped screen is the one case this doesn't perfectly account for.
+  const rightColBase = isCompact
     ? activeOverlay === "finances"
       ? RIGHT_W
       : RAIL_W
@@ -426,7 +431,7 @@ export default function Planner({
   // MIN_OPEN_MAIN. On mobile the stop takes the Trips tab instead.
   const stopWidth = Math.max(
     LEFT_W,
-    Math.min(STOP_W, vw - 48 - rightCol - MIN_OPEN_MAIN),
+    Math.min(STOP_W, vw - 48 - rightColBase - MIN_OPEN_MAIN),
   );
   // Compact screens have no room for the list beside it, so an open stop's
   // itinerary takes the column alone (its back button returns to the list).
@@ -444,6 +449,18 @@ export default function Planner({
     : showItinerary
       ? stopWidth
       : LEFT_W;
+  // An open expense sits beside Finances' own list, the same way an open
+  // stop sits beside the Trips list - only in full mode, and only once
+  // there's genuinely room for both at EXPENSE_W (list, divider and form
+  // each need their own space, not a shrink-to-fit sliver); otherwise it
+  // falls back to today's full-column swap instead, the same way a
+  // cramped stop takes its column alone rather than squeezing in beside
+  // the list.
+  const expenseInline =
+    mode === "full" &&
+    expenseOpen &&
+    vw - 48 - leftCol - MIN_OPEN_MAIN >= EXPENSE_W;
+  const rightCol = expenseInline ? EXPENSE_W : rightColBase;
   const width = mainWidth(
     vw,
     isMobile ? "mobile" : "full",
@@ -1359,46 +1376,87 @@ export default function Planner({
       )}
 
       {/* The expense editor only ever opens from here, so it takes this
-          same column instead of floating a drawer over the page. */}
-      {showRightPanel && expenseOpen ? (
-        <ExpensePanel
-          card={CARD}
-          trips={trips}
-          defaultTripId={
-            expenseDefaults.tripId ?? openTripId ?? trips[0]?.id ?? ""
+          same column instead of floating a drawer over the page - beside
+          Finances' own list in full mode, the same way an open stop sits
+          beside the Trips list; compact and mobile swap it in instead,
+          the same way a compact stop takes its column alone. */}
+      {showRightPanel && (
+        <aside
+          aria-label={
+            expenseOpen && !expenseInline
+              ? expenseDefaults.editingId
+                ? "Edit expense"
+                : "Add expense"
+              : "Finances"
           }
-          itemId={expenseDefaults.itemId}
-          editing={!!expenseDefaults.editingId}
-          initial={expenseDefaults.initial ?? undefined}
-          members={members}
-          currency={teamCurrency}
-          isMobile={isMobile}
-          error={expenseError}
-          onError={setExpenseError}
-          saving={expenseSaving}
-          onSave={saveExpenseForm}
-          onDelete={deleteExpenseForm}
-          onClose={() => {
-            if (!expenseSaving) setExpenseOpen(false);
-          }}
-        />
-      ) : (
-        showRightPanel && (
-          <FinancePanel
-            card={CARD}
-            isMobile={isMobile}
-            trips={trips}
-            stop={trip}
-            currency={teamCurrency}
-            onEditExpense={openEditExpense}
-            onAddExpense={() => openAddExpense(openTripId)}
-            canAddExpense={trips.length > 0}
-            onClose={closeOverlay}
-            showClose={!!activeOverlay}
-            members={members}
-            currentUserId={currentUserId}
-          />
-        )
+          className={
+            CARD +
+            " p-5 !flex-row " +
+            (isMobile ? "flex-1 min-h-0" : "")
+          }
+        >
+          {(!expenseOpen || expenseInline) && (
+            <div
+              className={
+                "flex min-h-0 flex-col " +
+                (expenseInline ? "w-[320px] shrink-0" : "flex-1")
+              }
+            >
+              <FinancePanel
+                trips={trips}
+                stop={trip}
+                currency={teamCurrency}
+                onEditExpense={openEditExpense}
+                onAddExpense={() => openAddExpense(openTripId)}
+                canAddExpense={trips.length > 0}
+                onClose={closeOverlay}
+                showClose={!!activeOverlay}
+                members={members}
+                currentUserId={currentUserId}
+              />
+            </div>
+          )}
+          <AnimatePresence initial={false}>
+            {expenseOpen && (
+              <motion.div
+                key="expense"
+                initial={expenseInline ? { opacity: 0 } : false}
+                animate={{ opacity: 1 }}
+                exit={expenseInline ? { opacity: 0 } : undefined}
+                transition={{
+                  duration: reduceMotion ? 0 : 0.2,
+                  ease: "easeOut",
+                }}
+                className={
+                  "flex min-h-0 flex-col " +
+                  (expenseInline
+                    ? "ml-5 flex-1 border-l border-dotted border-stone-300 pl-5"
+                    : "flex-1")
+                }
+              >
+                <ExpensePanel
+                  trips={trips}
+                  defaultTripId={
+                    expenseDefaults.tripId ?? openTripId ?? trips[0]?.id ?? ""
+                  }
+                  itemId={expenseDefaults.itemId}
+                  editing={!!expenseDefaults.editingId}
+                  initial={expenseDefaults.initial ?? undefined}
+                  members={members}
+                  currency={teamCurrency}
+                  error={expenseError}
+                  onError={setExpenseError}
+                  saving={expenseSaving}
+                  onSave={saveExpenseForm}
+                  onDelete={deleteExpenseForm}
+                  onClose={() => {
+                    if (!expenseSaving) setExpenseOpen(false);
+                  }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </aside>
       )}
 
       {showRightRail && (

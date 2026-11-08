@@ -175,10 +175,20 @@ They use Motion for React alongside the existing Radix accessibility behavior.
   form (name, amount, paid by), reached from Finances' "Add expense" button or
   by tapping an expense row; a booking's own form (name, link, day, time, notes,
   documents) has no cost field at all. It only ever opens from Finances, so it
-  takes Finances' own column instead of floating a drawer over the page -
-  Finances' content swaps for the form in place, at the same width, then swaps
-  back on Cancel or Save. No backdrop, no separate surface: this follows the
-  same "push, never cover" rule as the stop and Finances columns themselves.
+  takes Finances' own column instead of floating a drawer over the page - no
+  backdrop, no separate surface, the same "push, never cover" rule as the
+  stop and Finances columns themselves.
+  In full mode, with room for `EXPENSE_W` (720px), the form opens BESIDE
+  Finances' own list - a fixed 320px list, a dotted divider, the form taking
+  what's left - exactly the way an open stop sits beside the Trips list at
+  `STOP_W`. Below that width, or in compact/mobile, it falls back to swapping
+  Finances' content for the form in place, the same way a cramped stop takes
+  its own column alone rather than squeezing in beside the list. `EXPENSE_W`
+  is sized for its three parts plus the aside's own padding - widen any of
+  them and widen the constant with it, or the row overflows its own column
+  (measured once: the list rendered 37px past the aside's left edge before
+  the constant was corrected from a guessed 640 to the real 720 the three
+  parts and the padding add up to).
 - Transport and activities can carry an end time alongside the start - a
   flight or a museum visit has a finish worth knowing, where a stay's own form
   has no time fields at all (checking in is what its day already means). End

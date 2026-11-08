@@ -12,6 +12,11 @@ export const LEFT_W = 272;
 /** How wide the Trips panel grows to fit an open stop beside the list. */
 export const STOP_W = 680;
 export const RIGHT_W = 320;
+/** How wide Finances grows to fit an open expense beside its list, the same
+ * way the Trips panel grows for an open stop: the list's own 320px, a 41px
+ * divider (ml-5 + border + pl-5), the form's own ~320px, and the aside's
+ * 40px of padding. */
+export const EXPENSE_W = 720;
 export const RAIL_W = 54;
 export const MIN_MAIN = 600;
 /** The narrowest the calendar gets while a stop is open beside it. */
