@@ -91,6 +91,9 @@ import {
 } from "@/components/planner/BookingForm";
 import RightRail from "@/components/planner/RightRail";
 import CalendarView from "@/components/planner/CalendarView";
+import StopDayCards, {
+  StopDayCardsHeader,
+} from "@/components/planner/StopDayCards";
 import { StopSchedule, editState } from "@/components/planner/StopPanel";
 import DaySheet from "@/components/planner/DaySheet";
 import Onboarding from "@/components/planner/Onboarding";
@@ -1211,9 +1214,15 @@ export default function Planner({
         >
           {/* Like the panels either side: a 40px row of controls, then the
               headline, so the three panels' tops line up. On a phone, where
-              it's alone, the title leads and the view switcher sits below. */}
+              it's alone, the title leads and the view switcher sits below.
+              A focused stop replaces all of this: there's no Month/Week to
+              switch between once only its own days are shown, and on
+              mobile its own pill below already carries the stop's name and
+              range, so the desktop-only header is the only one needed. */}
           <header className="mb-5">
-            {isMobile ? (
+            {trip ? (
+              !isMobile && <StopDayCardsHeader trip={trip} onClose={closeDrawer} />
+            ) : isMobile ? (
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h1
                   className={
@@ -1318,7 +1327,7 @@ export default function Planner({
               </>
             )}
           </header>
-          {isMobile && viewSwitcher}
+          {isMobile && !trip && viewSwitcher}
           {isMobile && trip && (
             // The stop the calendar is focused on, with a way into its
             // itinerary and a way back out.
@@ -1355,22 +1364,26 @@ export default function Planner({
           )}
 
           <motion.div
-            key={`${calView}-${rangeStart}`}
+            key={trip ? `stop-${trip.id}` : `${calView}-${rangeStart}`}
             initial={reduceMotion ? false : { opacity: 0, scale: 0.985 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
             className="flex min-h-0 flex-1 flex-col"
           >
-            <CalendarView
-              view={calView}
-              weeks={weeks}
-              width={width}
-              onBarPointerDown={onBarPointerDown}
-              onOpenTrip={openTrip}
-              onOpenPlan={openPlan}
-              onResizeStart={onResizeStart}
-              plans={shownPlans}
-            />
+            {trip ? (
+              <StopDayCards trip={trip} onOpenPlan={openPlan} />
+            ) : (
+              <CalendarView
+                view={calView}
+                weeks={weeks}
+                width={width}
+                onBarPointerDown={onBarPointerDown}
+                onOpenTrip={openTrip}
+                onOpenPlan={openPlan}
+                onResizeStart={onResizeStart}
+                plans={shownPlans}
+              />
+            )}
           </motion.div>
         </main>
       )}
