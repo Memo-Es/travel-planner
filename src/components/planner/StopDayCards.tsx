@@ -11,17 +11,20 @@ import { fmtRange, nightsBetween } from "@/lib/dates";
 import type { TripData } from "@/lib/types";
 import { StopIcon } from "@/components/planner/StopIcon";
 
-/** A focused stop's own days, as cards rather than calendar columns. A short
- * stop (Hamburg, 2 nights) used to zoom the Month/Week grid to its tightest
- * built-in view, which still forced a full calendar week of mostly-empty
- * columns, each stretched to match whichever day had the most planned. Here
- * only the stop's own days render, and each card is exactly as tall as its
- * own content - a 2-event day doesn't inherit a 6-event day's height.
+/** A focused stop's own days, stacked one after another rather than as
+ * calendar columns. A short stop (Hamburg, 2 nights) used to zoom the
+ * Month/Week grid to its tightest built-in view, which still forced a full
+ * calendar week of mostly-empty columns, each stretched to match whichever
+ * day had the most planned. Here only the stop's own days render, each as
+ * tall as its own content - a 2-event day doesn't inherit a 6-event day's
+ * height - in one column, top to bottom in date order. A wrapping grid was
+ * tried first and dropped: reading several cards per row breaks the
+ * chronological thread a stop's days actually have, where a single stacked
+ * column reads the same way the schedule itself does.
  *
  * Only for a focused stop: the general Month/2 weeks/Week views keep the
  * strict grid, since lining a day up under its weekday is what makes
- * scanning a whole trip's pattern work, which a wrapping card grid gives up
- * in exchange for density. */
+ * scanning a whole trip's pattern work. */
 export default function StopDayCards({
   trip,
   onOpenPlan,
@@ -32,7 +35,7 @@ export default function StopDayCards({
   const { days } = itineraryFor(trip);
   return (
     <div className="scroll-stable scroll-quiet min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(216px,1fr))] items-start gap-3.5 pb-3">
+      <div className="mx-auto flex max-w-xl flex-col gap-3.5 pb-3">
         {days.map(({ date, plans }) => (
           <DayCard key={date} date={date} plans={plans} onOpen={onOpenPlan} />
         ))}

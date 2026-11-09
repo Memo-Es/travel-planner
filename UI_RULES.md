@@ -253,15 +253,18 @@ They use Motion for React alongside the existing Radix accessibility behavior.
 - MotionConfig respects the user's motion preference. Individual components also
   disable height, number, blur and opacity animation when reduced motion is enabled.
 - Opening a stop replaces the Month/2 weeks/Week calendar with that stop's own
-  days as cards, wrapping and sized to their own content instead of sharing a
+  days as cards, stacked one after another in date order instead of sharing a
   calendar row's height - a 2-night stop no longer inherits a full week's worth
   of empty weekday columns, and a 2-event day no longer stretches to match a
-  6-event one. The Month/2 weeks/Week switcher (and its zoom state) stays for
-  the general, no-stop-open view, where lining a day up under its weekday is
-  what makes scanning a whole trip's pattern work - the wrapping grid is only
-  for a single focused stop. The header swaps to the stop's own icon, name and
-  date range with an "All stops" link back; on mobile the existing stop pill
-  already covers this, so the switcher and this header both stay hidden there
-  instead of doubling up. Tapping a plan on a card opens it the same way a
-  calendar bar does - inline in the Trips panel on desktop, the day sheet on
-  mobile.
+  6-event one. They're a single column rather than a wrapping grid: a stop's
+  days are a timeline, and reading several cards per row breaks that
+  chronological thread, where one column top to bottom reads the same way the
+  schedule itself does. The Month/2 weeks/Week switcher (and its zoom state)
+  stays for the general, no-stop-open view, where lining a day up under its
+  weekday is what makes scanning a whole trip's pattern work - the stacked
+  column is only for a single focused stop. The header swaps to the stop's own
+  icon, name and date range with an "All stops" link back; on mobile the
+  existing stop pill already covers this, so the switcher and this header both
+  stay hidden there instead of doubling up. Tapping a plan on a card opens it
+  the same way a calendar bar does - inline in the Trips panel on desktop, the
+  day sheet on mobile.
