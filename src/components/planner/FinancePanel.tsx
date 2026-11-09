@@ -153,9 +153,17 @@ export default function FinancePanel({
   const effectiveGroup: "stop" | "person" | "flat" = scopeStop
     ? "flat"
     : groupBy;
-  const detailFor = (r: ExpenseRow, withStop: boolean) => {
+  // An expense is so often named straight after its plan ("Casa Bonay,
+  // Eixample" booked as "Casa Bonay, Eixample") that showing the plan's own
+  // title underneath just repeats the row's own bold title - worse than
+  // useless once that title is long enough to wrap onto two lines, twice.
+  // Only the part that adds information survives: the stop, when this row
+  // spans several; the plan, only when it says something the title hadn't.
+  const detailFor = (r: ExpenseRow, withStop: boolean): string | null => {
     const plan = r.item ? r.item.t : "Not on a plan";
-    return withStop ? `${r.trip.label} · ${plan}` : plan;
+    const samePlan = !!r.item && plan.trim() === r.expense.title.trim();
+    if (!withStop) return samePlan ? null : plan;
+    return samePlan ? r.trip.label : `${r.trip.label} · ${plan}`;
   };
   const rows = scopeStop
     ? expenseRows.map((r) => ({
@@ -501,7 +509,9 @@ export default function FinancePanel({
                                 something nested inside it. */}
                             <AccordionBody open={expanded} className="pb-1.5">
                               <ul className="space-y-0.5 rounded-xl bg-white p-1">
-                                {group.expenseRows.map((r) => (
+                                {group.expenseRows.map((r) => {
+                                  const detail = detailFor(r, withStop);
+                                  return (
                                   <li key={r.expense.id}>
                                     <button
                                       type="button"
@@ -514,9 +524,11 @@ export default function FinancePanel({
                                         <span className="line-clamp-2 break-words text-sm font-medium text-ink">
                                           {r.expense.title}
                                         </span>
-                                        <span className="block truncate text-xs text-muted-2">
-                                          {detailFor(r, withStop)}
-                                        </span>
+                                        {detail && (
+                                          <span className="block truncate text-xs text-muted-2">
+                                            {detail}
+                                          </span>
+                                        )}
                                       </span>
                                       <AnimatedNumber
                                         value={r.expense.amount}
@@ -525,7 +537,8 @@ export default function FinancePanel({
                                       />
                                     </button>
                                   </li>
-                                ))}
+                                  );
+                                })}
                                 {group.expenseRows.length === 0 && (
                                   <li className="px-2 py-2.5 text-xs text-muted">
                                     No expenses yet.
