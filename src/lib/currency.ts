@@ -14,9 +14,11 @@ export function currencySymbol(code: string): string {
 }
 
 function formatAmount(amount: number): string {
-  const cents = Math.round(amount * 100) % 100 !== 0;
+  // Always two decimals: a list of amounts reads as a column, and a round
+  // number dropping its ".00" next to ones that don't ragged the column
+  // instead of lining it up.
   return amount.toLocaleString("en-US", {
-    minimumFractionDigits: cents ? 2 : 0,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }
