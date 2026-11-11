@@ -114,6 +114,30 @@
   .scroll-stable {
     scrollbar-gutter: stable;
   }
+  /* A panel column with a scroll area and something pinned under it (the
+     Finances list over "Add expense"). The scroll area reaches into the
+     panel's right padding, which is where its scrollbar then sits, and each
+     block in it stays exactly as wide as the column - so what scrolls and
+     what's pinned share one right edge whether or not scrollbars take up
+     room. Without this a reserved gutter narrows only what scrolls, by the
+     scrollbar's own width. 1.25rem is the panel's p-5. */
+  .panel-col {
+    container-type: inline-size;
+  }
+  .panel-col-scroll {
+    margin-right: -1.25rem;
+  }
+  .panel-col-scroll > * {
+    width: 100cqw;
+  }
+  /* In a column too narrow for all of its pinned buttons, one of them keeps
+     its icon and drops its label (the expense form's Delete, beside Cancel
+     and Save). The button names itself with aria-label. */
+  @container (max-width: 300px) {
+    .panel-col-label {
+      display: none;
+    }
+  }
   /* A thin scrollbar that stays hidden until the pointer is over the area,
      then fades in. The thumb color is a registered property so it can
      transition. */

@@ -99,7 +99,19 @@ inventing new ones.
 - Soft cards: `rounded-2xl bg-secondary`, no border, 16px padding; title left,
   gray detail beneath, value right, optionally in a `rounded-full bg-hover-2` pill.
 - Segmented control: text-only options; the selected one sits on a soft gray pill
-  (`AnimatedBackground`); unselected options are gray text, no container.
+  (`AnimatedBackground`); unselected options are gray text, no container. On a
+  soft gray card the pill is white with a light shadow instead, since a gray
+  pill disappears there (Finances' All / By stop / By person).
+- A panel's scroll area and whatever is pinned under it share one right edge
+  (Finances' cards over "Add expense", the expense form over its buttons). The
+  column is a `panel-col` and its scroll area a `panel-col-scroll`, which keeps
+  the scrollbar in the panel's own padding instead of narrowing only what
+  scrolls. A column inside a panel takes `min-w-0`, so content that is too wide
+  scrolls or tightens inside it and never pushes the column past the panel:
+  Finances' filters lose a little padding beside the close button, and the
+  expense form's Delete drops to its icon (`panel-col-label`).
+- Chevrons in a card sit in one column: a row's own chevron takes the same 28px
+  box as the card's chevron chip.
 - Lists: rows separated by dotted stone-300 dividers; a plain gray icon leads,
   amounts or times align right.
 - One primary call to action per surface: `Button size="lg"` (48px, 16px corners,

@@ -94,7 +94,7 @@ export default function ExpensePanel({
 
   return (
     <>
-      <div className="scroll-stable scroll-quiet -mx-2 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-2 pb-2">
+      <div className="panel-col-scroll scroll-stable scroll-quiet -ml-2 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain pb-2 pl-2">
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line-soft pb-4">
           <div>
             <h2 className="text-lg font-semibold text-ink">{title}</h2>
@@ -214,9 +214,10 @@ export default function ExpensePanel({
             size="sm"
             disabled={saving}
             onClick={onDelete}
+            aria-label="Delete"
           >
             <Trash2 />
-            Delete
+            <span className="panel-col-label">Delete</span>
           </Button>
         ) : (
           <span />

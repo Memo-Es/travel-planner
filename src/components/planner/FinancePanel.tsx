@@ -238,12 +238,17 @@ export default function FinancePanel({
 
   return (
     <>
-      <div className="scroll-stable scroll-quiet -mx-2 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-2 pb-2">
+      <div className="panel-col-scroll scroll-stable scroll-quiet -ml-2 min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain pb-2 pl-2">
         <div className="flex min-h-10 items-center justify-between gap-2">
           <div
             role="group"
             aria-label="Filter by category"
-            className="no-scrollbar -m-1 flex min-w-0 gap-0.5 overflow-x-auto p-1"
+            // The close button shares this row when Finances is an overlay;
+            // slightly tighter filters keep all four in view beside it.
+            className={cn(
+              "no-scrollbar -m-1 flex min-w-0 overflow-x-auto p-1",
+              !showClose && "gap-0.5",
+            )}
           >
             {(["all", ...SECTION_DEFS.map((s) => s.key)] as Filter[]).map(
               (f) => {
@@ -255,7 +260,8 @@ export default function FinancePanel({
                     aria-pressed={selected}
                     onClick={() => setFilter(f)}
                     className={cn(
-                      "relative isolate h-8 shrink-0 whitespace-nowrap rounded-full px-2.5 text-sm font-medium focus-inset tap-target transition-colors duration-150",
+                      "relative isolate h-8 shrink-0 whitespace-nowrap rounded-full text-sm font-medium focus-inset tap-target transition-colors duration-150",
+                      showClose ? "px-2" : "px-2.5",
                       selected ? "text-ink" : "text-muted-2 hover:text-ink",
                     )}
                   >
@@ -418,10 +424,12 @@ export default function FinancePanel({
                           selected ? "text-ink" : "text-muted-2 hover:text-ink",
                         )}
                       >
+                        {/* White, not the page's soft grey: this sits on
+                            the grey card, where a grey pill disappears. */}
                         {selected && (
                           <AnimatedBackground
                             layoutId={`${ids}-group`}
-                            className="bg-secondary"
+                            className="bg-white shadow-sm"
                           />
                         )}
                         {label}
@@ -494,13 +502,19 @@ export default function FinancePanel({
                                 format={money}
                                 className="shrink-0 text-sm text-muted-2"
                               />
-                              <ChevronDown
+                              {/* As wide as the cards' own chevron chip, so
+                                  every chevron sits in one column. */}
+                              <span
                                 aria-hidden="true"
-                                className={cn(
-                                  "size-4 shrink-0 text-muted-2 transition-transform duration-150",
-                                  expanded && "rotate-180",
-                                )}
-                              />
+                                className="flex w-7 shrink-0 justify-center"
+                              >
+                                <ChevronDown
+                                  className={cn(
+                                    "size-4 text-muted-2 transition-transform duration-150",
+                                    expanded && "rotate-180",
+                                  )}
+                                />
+                              </span>
                             </button>
                             {/* A flat white plate, not another grey row: the
                                 parent is already the grey surface, so a

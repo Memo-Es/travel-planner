@@ -1411,7 +1411,7 @@ export default function Planner({
           {(!expenseOpen || expenseInline) && (
             <div
               className={
-                "flex min-h-0 flex-col " +
+                "panel-col flex min-h-0 min-w-0 flex-col " +
                 (expenseInline ? "w-[320px] shrink-0" : "flex-1")
               }
             >
@@ -1441,7 +1441,7 @@ export default function Planner({
                   ease: "easeOut",
                 }}
                 className={
-                  "flex min-h-0 flex-col " +
+                  "panel-col flex min-h-0 min-w-0 flex-col " +
                   (expenseInline
                     ? "ml-5 flex-1 border-l border-dotted border-stone-300 pl-5"
                     : "flex-1")
