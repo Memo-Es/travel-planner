@@ -190,12 +190,22 @@ They use Motion for React alongside the existing Radix accessibility behavior.
   takes Finances' own column instead of floating a drawer over the page - no
   backdrop, no separate surface, the same "push, never cover" rule as the
   stop and Finances columns themselves.
-  In full mode, with room for `EXPENSE_W` (720px), the form opens BESIDE
-  Finances' own list - a fixed 320px list, a dotted divider, the form taking
-  what's left - exactly the way an open stop sits beside the Trips list at
-  `STOP_W`. Below that width, or in compact/mobile, it falls back to swapping
-  Finances' content for the form in place, the same way a cramped stop takes
-  its own column alone rather than squeezing in beside the list. `EXPENSE_W`
+  In full mode the form always opens BESIDE Finances' own list - a fixed 320px
+  list, a dotted divider, the form taking what's left - exactly the way an
+  open stop sits beside the Trips list at `STOP_W`, and the row being edited
+  stays marked in the list the way the open stop does. The column grows to
+  `EXPENSE_W` (720px) and the calendar narrows, never below 440px. What
+  doesn't fit on the other side gives way while the expense is open and
+  comes back when it closes: an open stop's itinerary folds away (the stop
+  stays selected and Finances keeps showing its costs) unless the screen is
+  wide enough for both, and on monitors too small for the Trips list as well
+  the pair narrows to `EXPENSE_MIN_W` (680px) and then Trips tucks into its
+  rail - the mirror of Finances tucking away for an open stop. The swap works
+  both ways: opening a stop or a plan, or clicking the Trips rail, closes the
+  expense, so whichever was opened last has the room. The list stays
+  clickable beside the form, and clicking another expense loads that one.
+  In compact and mobile the form swaps into Finances' column in place, the
+  same way a cramped stop takes its own column alone. `EXPENSE_W`
   is sized for its three parts plus the aside's own padding - widen any of
   them and widen the constant with it, or the row overflows its own column
   (measured once: the list rendered 37px past the aside's left edge before

@@ -41,6 +41,7 @@ export default function FinancePanel({
   stop,
   currency,
   onEditExpense,
+  editingExpenseId,
   onAddExpense,
   canAddExpense,
   onClose,
@@ -57,6 +58,9 @@ export default function FinancePanel({
     item: ItemData | null,
     expense: ExpenseData,
   ) => void;
+  /** The expense open in the form beside this list, which keeps its row
+   * marked the way the open stop stays marked in the Trips list. */
+  editingExpenseId: string | null;
   onAddExpense: () => void;
   canAddExpense: boolean;
   onClose: () => void;
@@ -451,7 +455,13 @@ export default function FinancePanel({
                           <button
                             type="button"
                             onClick={row.onClick}
-                            className="focus-inset -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl px-2 py-3.5 text-left transition-colors duration-150 hover:bg-hover-2/60"
+                            aria-current={
+                              row.id === editingExpenseId ? "true" : undefined
+                            }
+                            className={cn(
+                              "focus-inset -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl px-2 py-3.5 text-left transition-colors duration-150 hover:bg-hover-2/60",
+                              row.id === editingExpenseId && "bg-hover-2/60",
+                            )}
                           >
                             <span className="min-w-0 flex-1">
                               <span className="line-clamp-2 break-words text-sm font-semibold text-ink">
@@ -532,7 +542,17 @@ export default function FinancePanel({
                                       onClick={() =>
                                         onEditExpense(r.trip, r.item, r.expense)
                                       }
-                                      className="focus-inset flex w-full items-center gap-3 rounded-lg py-2.5 px-2 text-left transition-colors duration-150 hover:bg-hover"
+                                      aria-current={
+                                        r.expense.id === editingExpenseId
+                                          ? "true"
+                                          : undefined
+                                      }
+                                      className={cn(
+                                        "focus-inset flex w-full items-center gap-3 rounded-lg py-2.5 px-2 text-left transition-colors duration-150",
+                                        r.expense.id === editingExpenseId
+                                          ? "bg-secondary"
+                                          : "hover:bg-hover",
+                                      )}
                                     >
                                       <span className="min-w-0 flex-1">
                                         <span className="line-clamp-2 break-words text-sm font-medium text-ink">

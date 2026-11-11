@@ -17,6 +17,10 @@ export const RIGHT_W = 320;
  * divider (ml-5 + border + pl-5), the form's own ~320px, and the aside's
  * 40px of padding. */
 export const EXPENSE_W = 720;
+/** The narrowest that pair gets before the Trips panel tucks into its rail
+ * to give it room: the same parts with the form at 280px, about what it
+ * has when it takes Finances' column alone. */
+export const EXPENSE_MIN_W = 680;
 export const RAIL_W = 54;
 export const MIN_MAIN = 600;
 /** The narrowest the calendar gets while a stop is open beside it. */

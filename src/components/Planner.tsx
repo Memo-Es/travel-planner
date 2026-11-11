@@ -36,6 +36,7 @@ import {
   STOP_W,
   RIGHT_W,
   EXPENSE_W,
+  EXPENSE_MIN_W,
   RAIL_W,
   MIN_MAIN,
   MIN_OPEN_MAIN,
@@ -407,9 +408,27 @@ export default function Planner({
   const isMobile = mode === "mobile";
   const isCompact = mode === "compact";
   const trip = trips.find((t) => t.id === openTripId) ?? null;
+  // An open expense always sits beside Finances' own list in full mode, the
+  // same way an open stop sits beside the Trips list; compact and mobile
+  // swap it into Finances' column instead, like a compact stop.
+  const expenseInline = mode === "full" && expenseOpen;
+  // Only a very wide screen fits a stop's itinerary and an expense side by
+  // side with a usable calendar between them. Anywhere else the itinerary
+  // gives way while the expense is open (the stop stays selected, Finances
+  // keeps showing its costs) and comes back when the expense closes.
+  const bothFit = vw - 48 - STOP_W - MIN_OPEN_MAIN >= EXPENSE_W;
+  const itineraryWanted = mode === "full" && !!trip && !itineraryFolded;
   // On wide screens the open stop's itinerary shows beside the list unless
   // it was folded away to make room for Finances.
-  const showItinerary = mode === "full" && !!trip && !itineraryFolded;
+  const showItinerary = itineraryWanted && (!expenseInline || bothFit);
+  // The stop is open but its itinerary isn't on screen: folded away for
+  // Finances, or giving way to an expense. Clicking the stop brings it back.
+  const itineraryHidden = mode === "full" && !!trip && !showItinerary;
+  // On monitors too small for the Trips list, a usable calendar and the
+  // expense pair, Trips tucks into its rail while the expense is open - the
+  // mirror of Finances tucking away for an open stop.
+  const leftTucked =
+    expenseInline && vw - 48 - LEFT_W - MIN_OPEN_MAIN < EXPENSE_MIN_W;
   // On smaller monitors the itinerary tucks Finances into its rail, so the
   // calendar keeps a usable width. The rail swaps them back: it folds the
   // itinerary away (the stop stays selected) and Finances returns.
@@ -449,21 +468,19 @@ export default function Planner({
         ? stopAloneWidth
         : LEFT_W
       : RAIL_W
-    : showItinerary
-      ? stopWidth
-      : LEFT_W;
-  // An open expense sits beside Finances' own list, the same way an open
-  // stop sits beside the Trips list - only in full mode, and only once
-  // there's genuinely room for both at EXPENSE_W (list, divider and form
-  // each need their own space, not a shrink-to-fit sliver); otherwise it
-  // falls back to today's full-column swap instead, the same way a
-  // cramped stop takes its column alone rather than squeezing in beside
-  // the list.
-  const expenseInline =
-    mode === "full" &&
-    expenseOpen &&
-    vw - 48 - leftCol - MIN_OPEN_MAIN >= EXPENSE_W;
-  const rightCol = expenseInline ? EXPENSE_W : rightColBase;
+    : leftTucked
+      ? RAIL_W
+      : showItinerary
+        ? stopWidth
+        : LEFT_W;
+  // The expense pair takes what the calendar can spare, between its
+  // narrowest and its full width; the form's column is the part that flexes.
+  const rightCol = expenseInline
+    ? Math.max(
+        EXPENSE_MIN_W,
+        Math.min(EXPENSE_W, vw - 48 - leftCol - MIN_OPEN_MAIN),
+      )
+    : rightColBase;
   const width = mainWidth(
     vw,
     isMobile ? "mobile" : "full",
@@ -494,11 +511,19 @@ export default function Planner({
     }
   }
 
+  /** Shows the open stop's itinerary again. Where it can't share the screen
+   * with an open expense, the one opened last wins - the same swap the
+   * Finances rail makes the other way round. */
+  function revealItinerary() {
+    setItineraryFolded(false);
+    if (mode === "full" && !bothFit && !expenseSaving) setExpenseOpen(false);
+  }
+
   function openTrip(tripId: string) {
     const t = trips.find((x) => x.id === tripId);
     if (t) zoomTo(t);
     setOpenTripId(tripId);
-    setItineraryFolded(false);
+    revealItinerary();
     setItineraryTripId(tripId);
     // On mobile the calendar keeps focus on the stop; its itinerary is a
     // tap away in the focus bar.
@@ -610,7 +635,7 @@ export default function Planner({
     if (openDrawer) {
       zoomTo(t);
       setOpenTripId(t.id);
-      setItineraryFolded(false);
+      revealItinerary();
       if (isCompact) setOverlay("links");
     }
     if (isMobile) setMobileTab(openDrawer ? "links" : "calendar");
@@ -671,7 +696,7 @@ export default function Planner({
       return;
     }
     if (plan.trip.id !== openTripId) openTrip(plan.trip.id);
-    setItineraryFolded(false);
+    revealItinerary();
     setFocusPlan((f) => ({ id: plan.item.id, n: (f?.n ?? 0) + 1 }));
   }
 
@@ -1067,12 +1092,13 @@ export default function Planner({
         gridTemplateColumns: `${leftCol}px minmax(0,1fr) ${rightCol}px`,
       };
 
-  const showLeftRail = isCompact && activeOverlay !== "links";
+  const showLeftRail =
+    (isCompact && activeOverlay !== "links") || leftTucked;
   const showRightRail =
     (isCompact && activeOverlay !== "finances") || rightTucked;
   const showLeftPanel = isMobile
     ? mobileTab === "links"
-    : mode === "full" || activeOverlay === "links";
+    : (mode === "full" && !leftTucked) || activeOverlay === "links";
   const showRightPanel = isMobile
     ? mobileTab === "finances"
     : (mode === "full" && !rightTucked) || activeOverlay === "finances";
@@ -1158,7 +1184,12 @@ export default function Planner({
       {showLeftRail && (
         <LeftRail
           trips={trips}
-          onOpenLinks={() => setOverlay("links")}
+          // Tucked away for an open expense, the rail swaps them back.
+          onOpenLinks={() =>
+            leftTucked
+              ? !expenseSaving && setExpenseOpen(false)
+              : setOverlay("links")
+          }
           onOpenTrip={(t) => jumpToTrip(t)}
         />
       )}
@@ -1188,8 +1219,8 @@ export default function Planner({
           onSelectTrip={(t) =>
             t.id !== openTripId
               ? jumpToTrip(t)
-              : itineraryFolded
-                ? setItineraryFolded(false)
+              : itineraryHidden
+                ? revealItinerary()
                 : closeDrawer()
           }
           detail={trip && showItinerary ? stopSchedule(trip, true) : null}
@@ -1420,6 +1451,9 @@ export default function Planner({
                 stop={trip}
                 currency={teamCurrency}
                 onEditExpense={openEditExpense}
+                editingExpenseId={
+                  expenseOpen ? expenseDefaults.editingId : null
+                }
                 onAddExpense={() => openAddExpense(openTripId)}
                 canAddExpense={trips.length > 0}
                 onClose={closeOverlay}
@@ -1448,6 +1482,10 @@ export default function Planner({
                 }
               >
                 <ExpensePanel
+                  // The list stays clickable beside the form, so the form
+                  // starts over for each expense rather than carrying one
+                  // expense's values into the next one's save.
+                  key={`${expenseDefaults.editingId ?? "new"}:${expenseDefaults.tripId ?? ""}:${expenseDefaults.itemId}`}
                   trips={trips}
                   defaultTripId={
                     expenseDefaults.tripId ?? openTripId ?? trips[0]?.id ?? ""
