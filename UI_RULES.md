@@ -267,4 +267,9 @@ They use Motion for React alongside the existing Radix accessibility behavior.
   existing stop pill already covers this, so the switcher and this header both
   stay hidden there instead of doubling up. Tapping a plan on a card opens it
   the same way a calendar bar does - inline in the Trips panel on desktop, the
-  day sheet on mobile.
+  day sheet on mobile. A plan with a booking link or an attachment shows a
+  small matching icon at the end of its row - the same arrow the link chip
+  itself uses, the same file icon the attachment chip uses - so a card full
+  of one-line plans still says which ones are worth tapping into before you
+  do, rather than only the day sheet or the inline schedule showing it after
+  the fact.
