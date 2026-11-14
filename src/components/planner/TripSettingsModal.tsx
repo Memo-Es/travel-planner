@@ -15,6 +15,7 @@ import {
 import type { InviteData, MemberOption } from "@/lib/types";
 import { CURRENCIES } from "@/lib/currency";
 import AiConnections from "@/components/planner/AiConnections";
+import CalendarSyncSettings from "@/components/planner/CalendarSyncSettings";
 import PlacesKeySetting from "@/components/planner/PlacesKeySetting";
 
 export default function TripSettingsModal({
@@ -257,6 +258,7 @@ export default function TripSettingsModal({
               {copiedId ? "Invite link copied" : ""}
             </span>
           </section>
+          <CalendarSyncSettings />
           <AiConnections />
           <PlacesKeySetting configured={placesKeySet} onSave={onChangePlacesKey} />
           {error && (

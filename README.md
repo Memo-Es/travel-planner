@@ -38,6 +38,10 @@ prototype; this is the real, database-backed version of that design.
   trip list if you belong to more than one.
 - New accounts start with a demo itinerary (Barcelona → Copenhagen) seeded
   in, so the planner isn't empty on first login.
+- **Calendar sync**: an ICS subscribe link or a connected Google Calendar,
+  either way showing only generic "Busy" blocks for your own plans — never
+  the plan's name or location — so a calendar a coworker can see never
+  reveals what you're actually doing.
 
 ## Planning with an AI assistant
 
@@ -69,6 +73,28 @@ these apps implement: the app finds the server from
 `/api/oauth/register`, sends you to `/oauth/authorize` to approve it, and swaps
 the code for tokens at `/api/oauth/token` using PKCE. Only hashes of the
 tokens are stored. The code is in `src/app/mcp/route.ts` and `src/lib/oauth.ts`.
+
+## Syncing with your calendar
+
+Also under Trip settings, Calendar sync covers every trip you're part of
+and offers two ways to keep an outside calendar aware of your busy time —
+deliberately blind to what you're actually doing. A synced event only ever
+says "Busy": never the plan's title, its location, or anything else, so a
+work calendar a teammate can see tells them you're away and nothing more.
+
+- **Subscribe link** — a private ICS address you add once to Google, Apple
+  or Outlook Calendar as a subscribed calendar. No sign-in, refreshes on its
+  own schedule, and regenerating it from the app revokes the old one.
+- **Google Calendar** — connects with OAuth and pushes the same blocks as
+  real events into a dedicated secondary calendar it creates for this, never
+  your primary one, so disconnecting deletes that calendar outright. Needs
+  `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` set on the deployment (see
+  `.env.example`); without them, Connect says so rather than failing oddly.
+
+Either way, only your own plans count: an activity once you've tapped
+Going, transport unconditionally (there's no sign-up for it — a flight is
+something the whole group is on). The code is in `src/lib/calendarSync.ts`
+and `src/lib/googleCalendar.ts`.
 
 ## Local development
 
@@ -125,3 +151,13 @@ src/app/                    Routes: /, /login, /signup, /invite/[token]
   build tooling, and the legacy ESLint 8 toolchain). None are exploitable
   through this app's own code paths, but review them before using this in
   production and upgrade when fixes land.
+- The connected Google Calendar updates when you have the app open (and
+  it's been a few minutes since the last sync), or right away with Sync
+  now — there's no background job pushing changes the moment they happen.
+  The ICS feed has no such gap: it's computed fresh on every fetch.
+- A pushed Google event uses one fixed timezone, read from your browser the
+  moment you connect, because the app doesn't track a timezone per stop
+  either (plan times are destination wall-clock, deliberately not
+  converted). The ICS feed sidesteps this with a floating time instead,
+  which is right for the one case that matters most — your own device,
+  wherever you actually are.
