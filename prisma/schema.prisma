@@ -37,6 +37,7 @@ model User {
   oauthGrants  OAuthGrant[]
   attending    ItemAttendee[]
   paidExpenses Expense[]      @relation("ExpensePaidBy")
+  calendarSync CalendarSync?
 }
 
 model Team {
@@ -107,36 +108,37 @@ model Trip {
 }
 
 model TripItem {
-  id          String         @id @default(cuid())
-  trip        Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  tripId      String
-  section     ItemSection
-  title       String
-  url         String         @default("")
+  id           String         @id @default(cuid())
+  trip         Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId       String
+  section      ItemSection
+  title        String
+  url          String         @default("")
   // When a plan happens: a calendar day at the destination, plus an optional
   // local "HH:mm" start and finish. Kept as wall-clock values so they never
   // shift. endTime only makes sense with a time, the way time only makes
   // sense with a date - see toItemData in lib/planner.ts.
-  date        DateTime?      @db.Date
-  time        String?
-  endTime     String?
+  date         DateTime?      @db.Date
+  time         String?
+  endTime      String?
   /// A real place, picked from a Google Places search rather than typed
   /// free-form - its name and address, and the Maps link alongside it.
   /// locationUrl never sets without location, the way endTime never sets
   /// without time.
-  location    String?
-  locationUrl String?
+  location     String?
+  locationUrl  String?
   /// A short note on the plan — booking details, a reminder, anything that
   /// doesn't belong in the title.
-  notes       String?
-  order       Int            @default(0)
-  attachments Attachment[]
-  attendees   ItemAttendee[]
+  notes        String?
+  order        Int            @default(0)
+  attachments  Attachment[]
+  attendees    ItemAttendee[]
   /// What this plan cost - zero, one or several. A booking's own price lives
   /// here as much as a loose cost on an activity does: an item may or may
   /// not have one, and can have more than one (an entry ticket and a taxi
   /// to get there), so it's never a field on the plan itself. See Expense.
-  expenses    Expense[]
+  expenses     Expense[]
+  syncedEvents SyncedEvent[]
 
   @@index([tripId])
 }
@@ -148,8 +150,8 @@ model TripItem {
 /// behind it at all - a tip, a shared snack, cash from an ATM. See
 /// lib/balances.ts for how it's split.
 model Expense {
-  id        String   @id @default(cuid())
-  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  id        String    @id @default(cuid())
+  trip      Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
   tripId    String
   /// The plan this cost belongs to, if it belongs to one. Cascade, not
   /// SetNull: deleting the plan it was for should take its costs with it,
@@ -161,10 +163,10 @@ model Expense {
   /// Who fronted the money, for splitting costs - see lib/balances.ts.
   /// SetNull rather than Cascade: losing track of who paid shouldn't delete
   /// the expense itself.
-  paidBy    User?    @relation("ExpensePaidBy", fields: [paidById], references: [id], onDelete: SetNull)
+  paidBy    User?     @relation("ExpensePaidBy", fields: [paidById], references: [id], onDelete: SetNull)
   paidById  String?
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
 
   @@index([tripId])
   @@index([itemId])
@@ -271,4 +273,62 @@ model OAuthGrant {
   lastUsedAt       DateTime?
 
   @@index([userId])
+}
+
+/// One person's calendar sync settings. Always generic: every synced event
+/// says only "Busy", never the plan's name or location, so a work calendar
+/// someone else can see never leaks what you're actually doing. The two
+/// delivery methods are independent - disconnecting Google never touches
+/// the ICS link, and regenerating the ICS link never touches Google.
+model CalendarSync {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  /// The secret in the ICS feed's URL (/api/calendar/[icsToken]). A random
+  /// token rather than the user id, so the feed can be revoked (a fresh
+  /// token) without touching the account itself.
+  icsToken String @unique @default(cuid())
+
+  /// Google OAuth tokens, set once the person connects a Google account.
+  /// Null until then; cleared (not the row) on disconnect, so the ICS
+  /// token above survives. Plain text - this app stores no secret any
+  /// more carefully than NEXTAUTH_SECRET itself.
+  googleAccessToken  String?
+  googleRefreshToken String?
+  googleTokenExpiry  DateTime?
+  /// The dedicated secondary calendar this app writes into - never the
+  /// person's primary calendar - created the first time they connect.
+  googleCalendarId   String?
+  /// The timezone the person was in when they connected, read from their
+  /// own browser. There's no per-stop timezone anywhere in this app (plan
+  /// times are kept as destination wall-clock, deliberately not converted
+  /// - see TripItem), so a pushed Google event needs one fixed zone to be
+  /// written in rather than guessing a new one per trip.
+  googleTimeZone     String?
+  googleSyncedAt     DateTime?
+
+  events SyncedEvent[]
+
+  createdAt DateTime @default(now())
+}
+
+/// One plan's matching event in the connected Google Calendar, so a later
+/// change is pushed as an update rather than a duplicate, and a removed
+/// plan's event is deleted rather than left behind.
+model SyncedEvent {
+  id            String       @id @default(cuid())
+  sync          CalendarSync @relation(fields: [syncId], references: [id], onDelete: Cascade)
+  syncId        String
+  item          TripItem     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId        String
+  googleEventId String
+  startDate     String
+  startTime     String
+  endDate       String
+  endTime       String
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([syncId, itemId])
+  @@index([itemId])
 }

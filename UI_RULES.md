@@ -295,3 +295,32 @@ They use Motion for React alongside the existing Radix accessibility behavior.
   of one-line plans still says which ones are worth tapping into before you
   do, rather than only the day sheet or the inline schedule showing it after
   the fact.
+- Calendar sync (Trip settings, below AI assistants - same per-person scope,
+  reaching every trip you're part of rather than the one open) offers two
+  ways to keep an outside calendar aware of your busy time, and both are
+  deliberately blind to what you're actually doing: a synced event only ever
+  says "Busy", never the plan's title, location or anything else, so a work
+  calendar a teammate can see tells them you're away and nothing more. An ICS
+  subscribe link needs no sign-in and updates on its own schedule; connecting
+  Google additionally pushes the same blocks as real events into a dedicated
+  secondary calendar it creates for this, never the person's primary one, so
+  disconnecting can delete that calendar outright. Regenerating the ICS link
+  and disconnecting Google are independent - one row on the same account
+  record, cleared on its own.
+- Only plans this person is actually part of end up in either feed: an
+  activity counts once they've tapped Going, the same signal the day sheet
+  and inline schedule already show, but transport counts unconditionally,
+  since there's no sign-up control for it anywhere in the app - a flight or
+  train is something the whole group is on, not something you opt into the
+  way an activity is. A plan with a start time but no end blocks one hour,
+  which is the one default this feature invents that the rest of the app
+  doesn't need.
+- Google's push can't leave a plan's time floating the way the ICS feed does
+  (no TZID, read by whatever clock the viewer's own device is on, which is
+  what makes a travelling person's own subscribed calendar show the right
+  local time without this app tracking a timezone per stop) - Calendar
+  events need one fixed zone at write time, so the zone the person was in
+  when they first connected is what every pushed event uses. Reconciled
+  against the plan list rather than told about each change, since plans can
+  change through the UI or through an AI assistant over MCP and those don't
+  share one write path - see lib/googleCalendar.ts.

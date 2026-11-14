@@ -361,6 +361,28 @@ export default function Planner({
     return () => clearTimeout(t);
   }, [placesToast]);
 
+  const [calendarToast, setCalendarToast] = useState<string | null>(null);
+  useEffect(() => {
+    // Google's consent screen lands back here with a plain query param -
+    // there's no server-rendered state to carry the result of an OAuth
+    // redirect through, the way the signed-in flash uses a cookie. Cleared
+    // from the URL right away so refreshing the page doesn't repeat it.
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get("calendar");
+    if (!result) return;
+    setCalendarToast(
+      result === "connected" ? "Google Calendar connected" : "Could not connect Google Calendar",
+    );
+    params.delete("calendar");
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+  }, []);
+  useEffect(() => {
+    if (!calendarToast) return;
+    const t = setTimeout(() => setCalendarToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [calendarToast]);
+
   useEffect(() => {
     // A plain `resize` listener can miss the real viewport width on first
     // mount on mobile browsers (the layout viewport can still be settling
@@ -1148,6 +1170,7 @@ export default function Planner({
         <Toast message={notification} onDismiss={() => setNotification(null)} />
       )}
       {!notification && placesToast && <Toast message={placesToast} />}
+      {!notification && !placesToast && calendarToast && <Toast message={calendarToast} />}
       <AlertDialog
         open={!!deleteTarget}
         onOpenChange={(open) => {

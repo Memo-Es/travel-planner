@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   getOptionalUser,
@@ -7,6 +8,7 @@ import {
 } from "@/lib/team";
 import { loadTripData } from "@/lib/loadTrips";
 import { getOrCreatePublicDemoTeam } from "@/lib/publicDemo";
+import { syncUserCalendarIfDue } from "@/lib/googleCalendar";
 import Planner from "@/components/Planner";
 import type { TeamOption, InviteData, MemberOption } from "@/lib/types";
 
@@ -18,6 +20,12 @@ export default async function HomePage() {
 async function SignedInHome({ userId }: { userId: string }) {
   const { team, memberships } = await requireActiveTeam(userId);
   const justSignedIn = await hasSignedInFlash();
+  // Best-effort, after the response is already on its way: a connected
+  // Google Calendar catches up with whatever changed since the last time
+  // this person had the app open, without holding up this render on an
+  // API call to Google. Throttled on its own, so this is safe on every
+  // page load rather than something to guard here.
+  after(() => syncUserCalendarIfDue(userId));
 
   const [tripData, invites, teamMembers, account] = await Promise.all([
     loadTripData(team.id),
