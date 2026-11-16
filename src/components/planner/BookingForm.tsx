@@ -262,6 +262,11 @@ export default function BookingForm({
                 ? `${place.name}, ${place.address}`
                 : place.name,
               locationUrl: place.maps_link ?? "",
+              // Google already found this place's own site; filling the
+              // booking link with it means an activity isn't left with only
+              // a Maps pin when there's a real "visit the website" link
+              // right there. Never overwrites one already typed in by hand.
+              url: form.url.trim() ? form.url : (place.website ?? form.url),
             })
           }
           onSearch={onSearchLocation}
