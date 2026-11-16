@@ -239,6 +239,11 @@ They use Motion for React alongside the existing Radix accessibility behavior.
   way to reach the place itself, since nothing else ever set Booking link
   for an activity unless it was typed in by hand. Never overwrites a link
   already there, typed or picked, so this only ever fills a true gap.
+- An activity's booking link chip and its Going/Join control are one row,
+  wrapping together rather than two blocks stacked on separate lines -
+  they're both short, low-commitment actions next to the plan, not two
+  different kinds of thing that need their own line to read clearly. Same
+  row in both the stop panel's rows and the day sheet.
 - A human's own location search and an agent's check_place call both spend
   the same Google Places quota and both get logged, but only the agent's is
   worth a "the agent just checked X" toast - a person is not news to

@@ -219,47 +219,42 @@ export default function DaySheet({
                     {item.notes}
                   </p>
                 )}
-                {(item.attachments.length > 0 || item.url) && (
-                  <ul className="ml-5 mt-2 flex flex-wrap gap-1.5">
+                {(item.attachments.length > 0 || item.url || key === "activities") && (
+                  <div className="ml-5 mt-2 flex flex-wrap items-center gap-1.5">
                     {item.url && (
-                      <li className="min-w-0 max-w-full">
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex min-w-0 items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-ink-soft transition-colors duration-150 hover:bg-hover-2 hover:text-ink"
-                        >
-                          <span className="truncate">{hostFromUrl(item.url)}</span>
-                          <ArrowUpRight className="size-3 shrink-0" />
-                          <span className="sr-only"> (opens in a new tab)</span>
-                        </a>
-                      </li>
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex min-w-0 max-w-full items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-ink-soft transition-colors duration-150 hover:bg-hover-2 hover:text-ink"
+                      >
+                        <span className="truncate">{hostFromUrl(item.url)}</span>
+                        <ArrowUpRight className="size-3 shrink-0" />
+                        <span className="sr-only"> (opens in a new tab)</span>
+                      </a>
                     )}
                     {item.attachments.map((a) => (
-                      <li key={a.id} className="min-w-0 max-w-full">
-                        <a
-                          href={attachmentHref(a.id)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex min-w-0 items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-ink-soft transition-colors duration-150 hover:bg-hover-2 hover:text-ink"
-                        >
-                          <FileText className="size-3.5 shrink-0 text-muted-2" />
-                          <span className="truncate">{a.name}</span>
-                          <span className="sr-only"> (PDF, opens in a new tab)</span>
-                        </a>
-                      </li>
+                      <a
+                        key={a.id}
+                        href={attachmentHref(a.id)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex min-w-0 max-w-full items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-ink-soft transition-colors duration-150 hover:bg-hover-2 hover:text-ink"
+                      >
+                        <FileText className="size-3.5 shrink-0 text-muted-2" />
+                        <span className="truncate">{a.name}</span>
+                        <span className="sr-only"> (PDF, opens in a new tab)</span>
+                      </a>
                     ))}
-                  </ul>
-                )}
-                {key === "activities" && (
-                  <div className="ml-5 mt-2">
-                    <GoingControl
-                      itemId={item.id}
-                      title={item.t}
-                      going={item.going}
-                      me={me}
-                      onSetGoing={onSetGoing}
-                    />
+                    {key === "activities" && (
+                      <GoingControl
+                        itemId={item.id}
+                        title={item.t}
+                        going={item.going}
+                        me={me}
+                        onSetGoing={onSetGoing}
+                      />
+                    )}
                   </div>
                 )}
               </li>
