@@ -233,6 +233,12 @@ They use Motion for React alongside the existing Radix accessibility behavior.
   `placesKeySet` already governs for the agent-facing toast. Shown as a
   MapPin line under the time, a plain link when it has a Maps URL and plain
   text otherwise, in both the stop panel's rows and the day sheet.
+- Picking a Location result also fills Booking link with that place's own
+  website, when Google found one and the field was still empty - without it,
+  an activity with a real place attached showed only a Maps pin and never a
+  way to reach the place itself, since nothing else ever set Booking link
+  for an activity unless it was typed in by hand. Never overwrites a link
+  already there, typed or picked, so this only ever fills a true gap.
 - A human's own location search and an agent's check_place call both spend
   the same Google Places quota and both get logged, but only the agent's is
   worth a "the agent just checked X" toast - a person is not news to
